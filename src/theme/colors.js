@@ -1,25 +1,27 @@
-// Primary Colors
+// Color constants for the application
+
+// Primary colors
 export const PRIMARY = {
-  purple: '#4A4AFF', // Primary Purple
+  purple: '#4A4AFF',  // Main purple color
 };
 
-// Neutral Colors
+// Neutral colors
 export const NEUTRAL = {
-  headingBlack: '#404D61', // Heading Black
-  textGray: '#858E9F',    // Text Gray
-  color1000: '#3F5C7E',   // Color 1000
-  color900: '#7F7CA5',    // Color 900
-  color800: '#8A83C4',    // Color 800
-  color700: '#9B8DCD',    // Color 700
-  color600: '#CCCA83',    // Color 600
-  color500: '#DFDEF1',    // Color 500
-  color400: '#E1E1FB',    // Color 400
-  color300: '#F8F8FF',    // Color 300
-  color200: '#F9F9FF',    // Color 200
-  white: '#FFFFFF',       // White
+  headingBlack: '#404D61',
+  textGray: '#858E9F',
+  color1000: '#0D2A3E',  // Dark navy blue
+  color900: '#1A365D',
+  color800: '#2D3748',
+  color700: '#4A5568',
+  color600: '#718096',
+  color500: '#A0AEC0',
+  color400: '#CBD5E0',  // Light blue for Primary Exam card
+  color300: '#E2E8F0',
+  color200: '#EDF2F7',
+  white: '#FFFFFF',
 };
 
-// Theme color combinations
+// Theme combinations
 export const THEME = {
   primary: PRIMARY.purple,
   background: NEUTRAL.white,
@@ -28,10 +30,15 @@ export const THEME = {
     secondary: NEUTRAL.textGray,
   },
   surface: {
-    light: NEUTRAL.color300,
-    lighter: NEUTRAL.color200,
+    light: NEUTRAL.color200,
+    lighter: NEUTRAL.color300,
   },
-  border: NEUTRAL.color500,
+  border: NEUTRAL.color300,
+};
+
+// Additional theme colors
+export const ADDITIONAL = {
+  beige: '#FCE9D9',  // NSI Exam card background
 };
 
 // Export all colors as a single object
