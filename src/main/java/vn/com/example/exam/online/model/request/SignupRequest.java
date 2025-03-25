@@ -28,9 +28,6 @@ public class SignupRequest {
     @NotNull
     String lastName;
     String image;
-    OffsetDateTime createAt;
-    OffsetDateTime updateAt;
-    boolean twoFactor;
     @NotNull
     RoleEnum role;
 }

@@ -1,6 +1,5 @@
 package vn.com.example.exam.online.controller;
 
-import com.google.firebase.auth.FirebaseAuthException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -69,7 +68,7 @@ public class AuthController {
             description = "HTTP Status 200 OK"
     )
     @PostMapping("/signup")
-    public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid SignupRequest signupRequest) throws FirebaseAuthException {
+    public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid SignupRequest signupRequest) {
         return ResponseEntity.ok(authService.registerUser(signupRequest));
     }
 }

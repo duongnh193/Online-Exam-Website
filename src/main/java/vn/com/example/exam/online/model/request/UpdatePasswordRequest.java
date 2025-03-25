@@ -11,10 +11,9 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class PasswordRequest {
-    @NotNull(message = "Password cannot be null")
+public class UpdatePasswordRequest {
+    @NotNull
     String newPassword;
-
-    @NotNull(message = "Password cannot be null")
+    @NotNull
     String currentPassword;
 }
