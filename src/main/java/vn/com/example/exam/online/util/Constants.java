@@ -8,7 +8,7 @@ public class Constants {
     public static final String USER_AGENT_DEFAULT = "Unknown User-Agent";
     public static final String SUBJECT_OTP_MAIL = "Your OTP Code";
     public static final String TEXT_MAIL = "Your OTP code is: ";
-    public static final String OTP_FORMAT = "%04d";
+    public static final String OTP_FORMAT = "%06d";
     public static final String USER_NOT_FOUND_ID = "User with id: %s not found";
     public static final String USER_NOT_FOUND_MESSAGE = "User with username or email: %s not found";
     public static final String USER_EXIST_WITH_USERNAME = "User with username: %s already exists";
