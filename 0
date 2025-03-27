@@ -1,0 +1,4 @@
+[33m6098042[m[33m ([m[1;36mHEAD -> [m[1;32mfrontend[m[33m, [m[1;31morigin/frontend[m[33m)[m Add ExploreSection with subject cards based on design
+[33meb90b61[m Restructure project to follow best practices
+[33mbcee696[m Add landing page with navigation, edu section, and exam categories
+[33m4ff5bff[m[33m ([m[1;32mmain[m[33m)[m Initialize project using Create React App
