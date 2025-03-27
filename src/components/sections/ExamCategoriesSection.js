@@ -8,7 +8,7 @@ import nsiExamImage from '../../assets/images/Bitmap.png';
 
 const ExamCategoriesSection = () => {
   return (
-    <Box
+    <Box id="exam-categories-section"
       sx={{
         bgcolor: 'secondary.main',
         color: 'white',

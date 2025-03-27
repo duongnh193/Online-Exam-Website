@@ -5,15 +5,7 @@ import heroImage from '../../assets/images/Bitmap-3.png';
 
 const HeroSection = () => {
   return (
-    <Box
-      sx={{
-        bgcolor: 'background.default',
-        color: 'text.primary',
-        py: { xs: 6, md: 10 },
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
+    <Box id="hero-section" sx={{ position: 'relative', overflow: 'hidden', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg">
         <Grid container spacing={4} alignItems="center">
           <Grid item xs={12} md={6}>

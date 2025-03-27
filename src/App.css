@@ -58,6 +58,7 @@ html {
 /* Navigation bar styles */
 .MuiAppBar-root {
   border-bottom: 1px solid #f0f0f0;
+  z-index: 1300 !important;
 }
 
 .MuiToolbar-root {
@@ -168,4 +169,19 @@ html {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Ensure modals appear above the navbar */
+.modal-backdrop {
+  z-index: 1400 !important;
+}
+
+.modal-open .modal {
+  z-index: 1500 !important;
+}
+
+/* Additional styling for consistent UI */
+.modal-open {
+  padding-right: 0 !important;
+  overflow: auto !important;
 }

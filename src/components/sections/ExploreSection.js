@@ -69,47 +69,55 @@ const ExploreSection = () => {
     {
       title: 'Math',
       description: 'Sky was cloudless and of a deep dark blue spectacle before us was indeed.',
-      iconSrc: '/subject-icons/math.svg', 
+      iconSrc: '/static/subject-icons/math.svg', 
       bgcolor: '#FDF2E9' // Light beige for Math
     },
     {
       title: 'English',
       description: 'Even the all-powerful Pointing has no control about the blind texts.',
-      iconSrc: '/subject-icons/english.svg',
+      iconSrc: '/static/subject-icons/english.svg',
       bgcolor: '#EBF5FB' // Light blue for English
     },
     {
       title: 'Science',
       description: 'Unorthographic life One day however a small line of blind text.',
-      iconSrc: '/subject-icons/science.svg',
+      iconSrc: '/static/subject-icons/science.svg',
       bgcolor: '#F4ECF7' // Light purple for Science
     },
     {
       title: 'Physics',
       description: 'However a small line of blind text by the name.',
-      iconSrc: '/subject-icons/physics.svg', 
+      iconSrc: '/static/subject-icons/physics.svg', 
       bgcolor: '#FEF9E7' // Light yellow for Physics
     },
     {
       title: 'General Knowledge',
       description: 'Text by the name of Lorem Ipsum decided to leave for the far World of Grammar.',
-      iconSrc: '/subject-icons/general.svg',
+      iconSrc: '/static/subject-icons/general.svg',
       bgcolor: '#E8F8F5' // Light mint for General Knowledge
     }
   ];
 
   return (
-    <Box sx={{ py: 8, bgcolor: THEME.background }}>
+    <Box id="explore-section" sx={{ py: 8, bgcolor: THEME.background }}>
       <Container maxWidth="lg">
         {/* Section Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          mb: 6,
+          textAlign: 'center'
+        }}>
           <Typography 
             variant="h3" 
             component="h2" 
             sx={{ 
               fontWeight: 700, 
               fontSize: { xs: '2rem', md: '2.5rem' },
-              color: '#004D40' // Dark teal color matching the image
+              color: '#004D40', // Dark teal color matching the image
+              mb: 3
             }}
           >
             Explore Our Exam

@@ -2,9 +2,9 @@ import React from 'react';
 import { Box, Container, Grid, Typography, Link, Divider } from '@mui/material';
 
 const Footer = () => {
-  return (
-    <Box sx={{ bgcolor: '#f8f9fa', pt: 6, pb: 3 }}>
-      <Container maxWidth="lg">
+  // return (
+    // <x`Box sx={{ bgcolor: '#f8f9fa', pt: 6, pb: 3 }}>
+      {/* <Container maxWidth="lg">
         <Grid container spacing={4}>
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="h6" color="text.primary" gutterBottom>
@@ -87,9 +87,9 @@ const Footer = () => {
         <Typography variant="body2" color="text.secondary" align="center">
           © {new Date().getFullYear()} Online Exam Platform. All rights reserved.
         </Typography>
-      </Container>
-    </Box>
-  );
+      </Container> */}
+    {/* </Box> */}
+  // );
 };
 
 export default Footer; 

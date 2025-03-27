@@ -4,6 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import AppRoutes from './routes/AppRoutes';
 import theme from './theme/theme';
 import './App.css';
+import './styles/scroll.css';
 
 function App() {
   return (

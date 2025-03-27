@@ -1,0 +1,158 @@
+.footer {
+  padding: 30px 0;
+  background-color: white;
+  border-top: 1px solid #f0f0f0;
+}
+
+.footer-column {
+  padding-right: 80px;
+}
+
+.footer-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: #222;
+}
+
+.footer-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #6610f2;
+  text-decoration: none;
+}
+
+.footer-divider {
+  border-top: 1px solid #eee;
+  margin: 20px 0;
+}
+
+.copyright {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.social-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.follow-text {
+  font-size: 0.85rem;
+  color: #666;
+  margin-right: 15px;
+}
+
+.social-links {
+  display: flex;
+  gap: 8px;
+}
+
+.social-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.social-button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.facebook {
+  background-color: #f56040;
+}
+
+.twitter {
+  background-color: #1da1f2;
+}
+
+.instagram {
+  background-color: #c32aa3;
+}
+
+.button-column {
+  display: flex;
+  justify-content: center;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn-register {
+  background-color: #6610f2;
+  border-color: #6610f2;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 150px;
+  display: block;
+}
+
+.btn-register:hover {
+  background-color: #590bd7;
+  border-color: #590bd7;
+}
+
+.btn-login, .btn-admin {
+  background-color: white;
+  border: 1px solid #6610f2;
+  border-radius: 8px;
+  color: #6610f2;
+  padding: 8px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 150px;
+  display: block;
+}
+
+.btn-login:hover, .btn-admin:hover {
+  background-color: #f8f9fa;
+  border-color: #5c0dda;
+  color: #5c0dda;
+}
+
+/* Responsive styles */
+@media (max-width: 991px) {
+  .footer-column {
+    padding-right: 15px;
+  }
+  
+  .button-column {
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .social-container {
+    justify-content: flex-start;
+    margin-top: 20px;
+  }
+  
+  .button-group {
+    margin-top: 20px;
+  }
+} 
