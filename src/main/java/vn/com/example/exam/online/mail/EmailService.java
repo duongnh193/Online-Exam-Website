@@ -22,7 +22,7 @@ public class EmailService {
     }
 
     public String generateOtp() {
-        return String.format(Constants.OTP_FORMAT, new Random().nextInt(1000000));
+        return String.format(Constants.OTP_FORMAT, new Random().nextInt(10000));
     }
 }
 
