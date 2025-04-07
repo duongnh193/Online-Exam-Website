@@ -47,15 +47,6 @@ CREATE TABLE student_class
     FOREIGN KEY (class_id) REFERENCES class (id) ON DELETE CASCADE
 );
 
-CREATE TABLE student_class_pending
-(
-	id		 VARCHAR(20) NOT NULL,
-    user_id  BIGINT NOT NULL,
-    class_id BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
-    FOREIGN KEY (class_id) REFERENCES class (id) ON DELETE CASCADE
-);
-
 CREATE TABLE exam
 (
     id        BIGINT AUTO_INCREMENT PRIMARY KEY,

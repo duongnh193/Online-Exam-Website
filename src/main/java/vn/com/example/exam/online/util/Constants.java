@@ -19,4 +19,10 @@ public class Constants {
     public static final String USERNAME = "username";
     public static final String EMAIL = "email";
     public static final String INVALID_PASSWORD = "Invalid Password";
+    public static final String CLASS_NOT_FOUND_ID = "Class with id: %s not found";
+    public static final String DEFAULT_PAGE = "0";
+    public static final String DEFAULT_SIZE = "10";
+    public static final String PASSWORD_NOT_MATCH = "Password does not match";
+    public static final String NOT_USE_2FA = "User does not use 2FA";
+    public static final String RESET_PASSWORD_SUCCESS = "Reset password successful";
 }

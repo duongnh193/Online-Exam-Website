@@ -18,6 +18,7 @@ import vn.com.example.exam.online.mapper.User2UserResponse;
 import vn.com.example.exam.online.model.entity.LoginHistory;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.request.LoginRequest;
+import vn.com.example.exam.online.model.request.ResetPasswordRequest;
 import vn.com.example.exam.online.model.request.SignupRequest;
 import vn.com.example.exam.online.model.response.JwtResponse;
 import vn.com.example.exam.online.model.response.UserResponse;
@@ -75,7 +76,7 @@ public class AuthService {
             loginHistory.setUserAgent(userAgent);
             loginHistoryRepository.save(loginHistory);
 
-            return new JwtResponse(token);
+            return new JwtResponse(token, user.getId());
         }
     }
 
@@ -103,7 +104,7 @@ public class AuthService {
 
         otpStore.remove(user.getEmail());
 
-        return new JwtResponse(token);
+        return new JwtResponse(token, user.getId());
     }
 
     public UserResponse registerUser(@RequestBody SignupRequest signUpRequest) {
@@ -118,5 +119,51 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
         user.setCreateAt(OffsetDateTime.now());
         return User2UserResponse.INSTANCE.map(userRepository.save(user));
+    }
+
+    public String resendOtp(String usernameOrEmail) {
+        User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
+                .orElseThrow(() -> new UserNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(usernameOrEmail)));
+
+        if (!user.isTwoFactor()) {
+            throw new IllegalStateException(Constants.NOT_USE_2FA);
+        }
+
+        String otp = emailService.generateOtp();
+        otpStore.put(user.getEmail(), otp);
+        emailService.sendOtpEmail(user.getEmail(), otp);
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(Constants.TIME_TO_DELETE_OTP);
+                otpStore.remove(user.getEmail());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+        return Constants.OTP_RETURN_TEXT + user.getEmail();
+    }
+
+    public String resetPassword(ResetPasswordRequest resetPasswordRequest) {
+        String emailOrUsername = resetPasswordRequest.getEmailOrUsername();
+        User user = userRepository.findByUsernameOrEmail(emailOrUsername, emailOrUsername)
+                .orElseThrow(() ->
+                        new UserNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(emailOrUsername)));
+        String email = user.getEmail();
+        String newPassword = resetPasswordRequest.getNewPassword();
+        String confirmPassword = resetPasswordRequest.getConfirmPassword();
+        String storedOtp = otpStore.get(email);
+        if (storedOtp == null || !storedOtp.equals(resetPasswordRequest.getOtp())) {
+            throw new IllegalArgumentException(Constants.OTP_INVALID);
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException(Constants.PASSWORD_NOT_MATCH);
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        otpStore.remove(email);
+
+        return Constants.RESET_PASSWORD_SUCCESS;
     }
 }

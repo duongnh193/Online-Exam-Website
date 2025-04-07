@@ -41,4 +41,10 @@ public class ApiExceptionHandler {
     public ErrorMessage handleInvalidPasswordException(InvalidPasswordException ex) {
         return new ErrorMessage(10102, ex.getMessage());
     }
+
+    @ExceptionHandler(ClassNotFoundException.class)
+    @ResponseStatus(value = HttpStatus.CONFLICT)
+    public ErrorMessage handleClassNotFoundException(ClassNotFoundException ex) {
+        return new ErrorMessage(10103, ex.getMessage());
+    }
 }

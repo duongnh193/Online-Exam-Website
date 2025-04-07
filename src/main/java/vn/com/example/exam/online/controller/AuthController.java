@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.example.exam.online.model.request.LoginRequest;
+import vn.com.example.exam.online.model.request.ResetPasswordRequest;
 import vn.com.example.exam.online.model.request.SignupRequest;
 import vn.com.example.exam.online.model.response.JwtResponse;
 import vn.com.example.exam.online.model.response.UserResponse;
@@ -70,5 +71,31 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<UserResponse> registerUser(@RequestBody @Valid SignupRequest signupRequest) {
         return ResponseEntity.ok(authService.registerUser(signupRequest));
+    }
+
+    @Operation(
+            summary = "Resend OTP REST API",
+            description = "Resend OTP for users who enabled 2FA"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "OTP resent to user's email"
+    )
+    @PostMapping("/resend-otp")
+    public ResponseEntity<String> resendOtp(@RequestParam String usernameOrEmail) {
+        return ResponseEntity.ok(authService.resendOtp(usernameOrEmail));
+    }
+
+    @Operation(
+            summary = "Reset Password REST API",
+            description = "Reset password using email, OTP, and new password"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Password reset successful"
+    )
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody @Valid ResetPasswordRequest resetPasswordRequest) {
+        return ResponseEntity.ok(authService.resetPassword(resetPasswordRequest));
     }
 }

@@ -6,8 +6,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vn.com.example.exam.online.mapper.User2UserResponse;
 import vn.com.example.exam.online.model.request.SignupRequest;
 import vn.com.example.exam.online.model.request.UpdatePasswordRequest;
 import vn.com.example.exam.online.model.request.UpdateUserRequest;
@@ -38,7 +37,7 @@ public class UserController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> create(@RequestBody @Valid SignupRequest signupRequest) {
-        return ResponseEntity.ok(userService.create(signupRequest));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.create(signupRequest)));
     }
 
     @Operation(
@@ -50,7 +49,7 @@ public class UserController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or @userService.isAccountOwner(#id)")
     public ResponseEntity<UserResponse> update(@RequestBody @Valid UpdateUserRequest updateUserRequest, @PathVariable Long id) {
-        return ResponseEntity.ok(userService.update(updateUserRequest, id));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.update(updateUserRequest, id)));
     }
 
     @Operation(
@@ -62,7 +61,7 @@ public class UserController {
     @PutMapping("/{id}/password")
     @PreAuthorize("isAuthenticated() and @userService.isAccountOwner(#id)")
     public ResponseEntity<UserResponse> updatePassword(@RequestBody @Valid UpdatePasswordRequest updatePasswordRequest, @PathVariable Long id) {
-        return ResponseEntity.ok(userService.updatePassword(updatePasswordRequest, id));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.updatePassword(updatePasswordRequest, id)));
     }
 
     @Operation(
@@ -74,7 +73,7 @@ public class UserController {
     @PutMapping("/{id}/2fa")
     @PreAuthorize("isAuthenticated() and @userService.isAccountOwner(#id)")
     public ResponseEntity<UserResponse> update2FA(@RequestParam boolean twoFA, @PathVariable Long id) {
-        return ResponseEntity.ok(userService.update2FA(id, twoFA));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.update2FA(id, twoFA)));
     }
 
     @Operation(
@@ -86,7 +85,7 @@ public class UserController {
     @PutMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateRole(@RequestParam String role, @PathVariable Long id) {
-        return ResponseEntity.ok(userService.updateRole(id, role));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.updateRole(id, role)));
     }
 
     @Operation(
@@ -98,7 +97,7 @@ public class UserController {
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or @userService.isAccountOwner(#id)")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.getUserById(id));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.getUserById(id)));
     }
 
     @Operation(
@@ -110,7 +109,7 @@ public class UserController {
     @GetMapping("/by-username")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> getUserByUsername(@RequestParam String username) {
-        return ResponseEntity.ok(userService.getUserByUsername(username));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.getUserByUsername(username)));
     }
 
     @Operation(
@@ -122,7 +121,7 @@ public class UserController {
     @GetMapping("/by-email")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> getUserByEmail(@RequestParam String email) {
-        return ResponseEntity.ok(userService.getUserByEmail(email));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.getUserByEmail(email)));
     }
 
     @Operation(
@@ -134,6 +133,6 @@ public class UserController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> delete(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.delete(id));
+        return ResponseEntity.ok(User2UserResponse.INSTANCE.map(userService.delete(id)));
     }
 }

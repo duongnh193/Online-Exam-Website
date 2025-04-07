@@ -6,17 +6,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class JwtResponse {
-    String accessToken;
-    String tokenType = "Bearer";
-    Long userId;
+import java.time.OffsetDateTime;
+import java.util.List;
 
-    public JwtResponse(String accessToken, Long userId) {
-        this.accessToken = accessToken;
-        this.userId = userId;
-    }
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class ClassResponse {
+    Long id;
+    String name;
+    String description;
+    String image;
+    OffsetDateTime createAt;
+    Long teacherId;
+    List<Long> examIds;
 }

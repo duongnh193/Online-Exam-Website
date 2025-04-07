@@ -30,21 +30,21 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserResponse create(SignupRequest signupRequest) {
+    public User create(SignupRequest signupRequest) {
         checkUsername(signupRequest.getUsername());
         checkEmail(signupRequest.getEmail());
         User user = SignupRequest2UserMapper.INSTANCE.map(signupRequest);
         user.setCreateAt(OffsetDateTime.now());
         user.setPasswordHash(passwordEncoder.encode(signupRequest.getPassword()));
-        return User2UserResponse.INSTANCE.map(userRepository.save(user));
+        return userRepository.save(user);
     }
 
-    public UserResponse update(UpdateUserRequest updateUserRequest,  Long id) {
+    public User update(UpdateUserRequest updateUserRequest,  Long id) {
         try {
             User user = findUserById(id);
             UpdateUserRequest2UserMapper.INSTANCE.mapTo(updateUserRequest, user);
             user.setUpdateAt(OffsetDateTime.now());
-            return User2UserResponse.INSTANCE.map(userRepository.save(user));
+            return userRepository.save(user);
         } catch (DataIntegrityViolationException ex) {
             Throwable cause = ex.getCause();
             if (cause instanceof ConstraintViolationException constraintEx) {
@@ -79,48 +79,48 @@ public class UserService {
         );
     }
 
-    public UserResponse updatePassword(UpdatePasswordRequest updatePasswordRequest, Long id) {
+    public User updatePassword(UpdatePasswordRequest updatePasswordRequest, Long id) {
         User user = findUserById(id);
         if (!passwordEncoder.encode(updatePasswordRequest.getCurrentPassword()).equals(user.getPasswordHash())) {
             throw new InvalidPasswordException(Constants.INVALID_PASSWORD);
         }
         user.setPasswordHash(passwordEncoder.encode(updatePasswordRequest.getNewPassword()));
         user.setUpdateAt(OffsetDateTime.now());
-        return User2UserResponse.INSTANCE.map(userRepository.save(user));
+        return userRepository.save(user);
     }
 
-    public UserResponse update2FA(Long id, boolean twoFactor) {
+    public User update2FA(Long id, boolean twoFactor) {
         User user = findUserById(id);
         user.setTwoFactor(twoFactor);
         user.setUpdateAt(OffsetDateTime.now());
-        return User2UserResponse.INSTANCE.map(userRepository.save(user));
+        return userRepository.save(user);
     }
 
-    public UserResponse updateRole(Long id, String role) {
+    public User updateRole(Long id, String role) {
         User user = findUserById(id);
         user.setRole(RoleEnum.valueOf(role));
         user.setUpdateAt(OffsetDateTime.now());
-        return User2UserResponse.INSTANCE.map(userRepository.save(user));
+        return userRepository.save(user);
     }
 
-    public UserResponse getUserById(Long id) {
-        return User2UserResponse.INSTANCE.map(findUserById(id));
+    public User getUserById(Long id) {
+        return findUserById(id);
     }
 
-    public UserResponse getUserByUsername(String username) {
-        return User2UserResponse.INSTANCE.map(userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(username))));
+    public User getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(username)));
     }
 
-    public UserResponse getUserByEmail(String email) {
-        return User2UserResponse.INSTANCE.map(userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(email))));
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(email)));
     }
 
-    public UserResponse delete(Long id) {
+    public User delete(Long id) {
         User user = findUserById(id);
         userRepository.delete(user);
-        return User2UserResponse.INSTANCE.map(user);
+        return user;
     }
 
     public boolean isAccountOwner(Long userId) {
