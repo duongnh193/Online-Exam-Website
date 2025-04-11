@@ -20,14 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.example.exam.online.mapper.Class2ClassResponse;
-import vn.com.example.exam.online.mapper.User2UserResponse;
 import vn.com.example.exam.online.model.entity.Class;
 import vn.com.example.exam.online.model.request.CreateClassRequest;
-import vn.com.example.exam.online.model.request.SignupRequest;
-import vn.com.example.exam.online.model.request.UpdatePasswordRequest;
-import vn.com.example.exam.online.model.request.UpdateUserRequest;
 import vn.com.example.exam.online.model.response.ClassResponse;
-import vn.com.example.exam.online.model.response.UserResponse;
 import vn.com.example.exam.online.service.ClassService;
 import vn.com.example.exam.online.util.Constants;
 
@@ -98,7 +93,7 @@ public class ClassController {
             @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
             @RequestParam(required = false) Sort sort
-            ) {
+    ) {
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<Class> classPage = classService.getAllClasses(pageable);
         return ResponseEntity.ok(classPage.map(Class2ClassResponse.INSTANCE::map));

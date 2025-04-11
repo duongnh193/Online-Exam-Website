@@ -25,4 +25,11 @@ public class Constants {
     public static final String PASSWORD_NOT_MATCH = "Password does not match";
     public static final String NOT_USE_2FA = "User does not use 2FA";
     public static final String RESET_PASSWORD_SUCCESS = "Reset password successful";
+    public static final String CLASS_NOT_FOUND = "Class with id: %s not found";
+    public static final String ADD_STUDENT_CSV_SUCCESS = "Added %s students to the class";
+    public static final String ADD_STUDENT_SUCCESS = "Student added successfully";
+    public static final String ADD_STUDENT_FAILED = "Failed to add student. Check if the student exists or is already in the class";
+    public static final String REMOVE_STUDENT_SUCCESS = "Student removed successfully";
+    public static final String REMOVE_STUDENT_FAILED = "Failed to remove student from class";
+
 }
