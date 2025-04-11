@@ -72,7 +72,7 @@ const RegisterModal = ({ show, handleClose, onSwitchToLogin }) => {
         </div>
 
         {error && <Alert variant="danger">{error}</Alert>}
-        {success && <Alert variant="success">Registration successful! Redirecting to dashboard...</Alert>}
+        {success && <Alert variant="success">Registration successful!</Alert>}
         
         <Form onSubmit={handleSubmit}>
           <Form.Group className="mb-3">

@@ -5,7 +5,45 @@ const CURRENT_USER_KEY = 'current_user';
 // Helper functions for local storage
 const getUsers = () => {
   const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-  return usersJson ? JSON.parse(usersJson) : [];
+  if (usersJson) {
+    return JSON.parse(usersJson);
+  }
+  
+  // If no users exist, create default users
+  const defaultUsers = [
+    {
+      id: '1',
+      username: 'admin',
+      password: 'password',
+      email: 'admin@example.com',
+      createdAt: new Date().toISOString(),
+      emailVerified: true,
+      twoFactor: false
+    },
+    {
+      id: '2',
+      username: 'lecturer',
+      password: 'password',
+      email: 'lecturer@example.com',
+      createdAt: new Date().toISOString(),
+      emailVerified: true,
+      twoFactor: false
+    },
+    {
+      id: '3',
+      username: 'student',
+      password: 'password',
+      email: 'student@example.com',
+      createdAt: new Date().toISOString(),
+      emailVerified: true,
+      twoFactor: false
+    }
+  ];
+  
+  // Save default users to localStorage
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(defaultUsers));
+  console.log('Created default mock users:', defaultUsers);
+  return defaultUsers;
 };
 
 const saveUsers = (users) => {

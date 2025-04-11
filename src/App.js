@@ -5,13 +5,22 @@ import AppRoutes from './routes/AppRoutes';
 import theme from './theme/theme';
 import './App.css';
 import './styles/scroll.css';
+import { AuthProvider } from './hooks/useAuth';
+import { BrowserRouter } from 'react-router-dom';
+
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppRoutes />
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <div className="App">
+            <AppRoutes />
+          </div>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
 

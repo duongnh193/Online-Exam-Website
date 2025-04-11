@@ -82,7 +82,7 @@ const OTPModal = ({ show, handleClose, data, onSuccess, onSwitchToLogin }) => {
       setIsLoading(false);
       
       if (onSuccess) {
-        onSuccess();
+        onSuccess(response);
       }
     } catch (err) {
       console.error('OTP verification error:', err);

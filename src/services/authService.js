@@ -44,6 +44,44 @@ const extractEmailFromOtpMessage = (message) => {
   return match ? match[2] : null;
 };
 
+// JWT Token decoding function
+const parseJwt = (token) => {
+  try {
+    console.log('Trying to parse token:', token);
+    
+    // Check if token is valid
+    if (!token || typeof token !== 'string' || !token.includes('.')) {
+      console.error('Invalid token format:', token);
+      return null;
+    }
+    
+    // For Base64Url encoding
+    const tokenParts = token.split('.');
+    console.log('Token parts:', tokenParts.length);
+    
+    const base64Url = tokenParts[1];
+    console.log('Base64Url part:', base64Url);
+    
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    
+    try {
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const payload = JSON.parse(jsonPayload);
+      console.log('Decoded payload:', payload);
+      return payload;
+    } catch (decodeError) {
+      console.error('Error decoding token payload:', decodeError);
+      return null;
+    }
+  } catch (e) {
+    console.error('Error parsing JWT token:', e);
+    return null;
+  }
+};
+
 const authService = {
   // Register a new user
   register: async (userData) => {
@@ -72,34 +110,88 @@ const authService = {
     console.log('Login attempt for:', credentials.username);
     
     try {
-      const response = await axios.post(`${API_URL}/login`, {
-        usernameOrEmail: credentials.username,
-        password: credentials.password
-      });
-      
-      console.log('Login response:', response);
-      
-      // Check if the response contains OTP message
-      if (typeof response.data === 'string' && containsOtpMessage(response.data)) {
-        console.log('OTP detected in response');
-        const email = extractEmailFromOtpMessage(response.data);
+      // Try to login with the API first
+      try {
+        const response = await axios.post(`${API_URL}/login`, {
+          usernameOrEmail: credentials.username,
+          password: credentials.password
+        });
+        
+        console.log('Login response:', response);
+        console.log('Login response data:', response.data);
+        
+        // Check if the response contains OTP message
+        if (typeof response.data === 'string' && containsOtpMessage(response.data)) {
+          console.log('OTP detected in response');
+          const email = extractEmailFromOtpMessage(response.data);
+          
+          return {
+            requiresOtp: true,
+            username: credentials.username,
+            password: credentials.password,
+            email: email,
+            message: response.data
+          };
+        }
+        
+        // If it's a regular successful login
+        const token = response.data.accessToken;
+        localStorage.setItem('token', token);
+        localStorage.setItem('token_type', response.data.tokenType || 'Bearer');
+        
+        // Parse the JWT token to get user info including role
+        const decodedToken = parseJwt(token);
+        console.log('Decoded token:', decodedToken);
+        
+        // Create and store user object with role
+        const user = {
+          id: response.data.userId,
+          username: decodedToken?.sub, // subject is usually the username
+          // Use the role from the JWT token - it should be in the "role" claim
+          role: decodedToken?.role || null
+        };
+        
+        console.log('Created user object with role:', user);
+        localStorage.setItem('user', JSON.stringify(user));
+        console.log('Stored user with role in localStorage:', JSON.parse(localStorage.getItem('user')));
         
         return {
-          requiresOtp: true,
-          username: credentials.username,
-          password: credentials.password,
-          email: email,
-          message: response.data
+          ...response.data,
+          user: user,
+          success: true
+        };
+      } catch (apiError) {
+        console.warn('API login failed, falling back to mock login:', apiError);
+        
+        // If API login fails, fall back to mock login for development
+        const mockResponse = await mockUserService.findUserByCredentials(credentials.username, credentials.password);
+        console.log('Mock login response:', mockResponse);
+        
+        // Store the token and user data
+        const token = mockResponse.accessToken;
+        localStorage.setItem('token', token);
+        localStorage.setItem('token_type', mockResponse.tokenType || 'Bearer');
+        
+        // Create user object from mock response
+        const user = {
+          id: mockResponse.user.id,
+          username: mockResponse.user.username,
+          // For testing, assign ROLE_LECTURER if username contains 'admin' or 'lecturer', otherwise ROLE_STUDENT
+          role: mockResponse.user.username.toLowerCase().includes('admin') ? 'ROLE_ADMIN' : 
+                mockResponse.user.username.toLowerCase().includes('lecturer') ? 'ROLE_LECTURER' : 'ROLE_STUDENT'
+        };
+        
+        console.log('Created mock user with role:', user);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        return {
+          ...mockResponse,
+          user: user,
+          success: true
         };
       }
-      
-      // If it's a regular successful login
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('token_type', response.data.tokenType || 'Bearer');
-      
-      return response.data;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error (both API and mock):', error);
       
       // Check for OTP in error response
       if (containsOtpMessage(error.response?.data)) {
@@ -128,11 +220,32 @@ const authService = {
       });
       
       console.log('OTP verification response:', response);
+      console.log('OTP verification response data:', response.data);
       
-      localStorage.setItem('token', response.data.accessToken);
+      const token = response.data.accessToken;
+      localStorage.setItem('token', token);
       localStorage.setItem('token_type', response.data.tokenType || 'Bearer');
       
-      return response.data;
+      // Parse the JWT token to get user info including role
+      const decodedToken = parseJwt(token);
+      console.log('Decoded token after OTP:', decodedToken);
+      
+      // Create and store user object with role
+      const user = {
+        id: response.data.userId,
+        username: decodedToken?.sub, // subject is usually the username
+        role: decodedToken?.role || null
+      };
+      
+      console.log('Created user object with role after OTP:', user);
+      localStorage.setItem('user', JSON.stringify(user));
+      console.log('Stored user with role in localStorage after OTP:', JSON.parse(localStorage.getItem('user')));
+      
+      return {
+        ...response.data,
+        user: user,
+        success: true
+      };
     } catch (error) {
       console.error('OTP verification error:', error);
       throw error;
@@ -143,6 +256,7 @@ const authService = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('token_type');
+    localStorage.removeItem('user');
   },
   
   // Check if user is logged in

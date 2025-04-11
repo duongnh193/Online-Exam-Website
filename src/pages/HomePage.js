@@ -5,7 +5,6 @@ import ExamCategoriesSection from '../components/sections/ExamCategoriesSection'
 import ExploreSection from '../components/sections/ExploreSection';
 import ContactSection from '../components/sections/ContactSection';
 import ResourceSection from '../components/sections/ResourceSection';
-import Footer from '../components/Footer';
 
 const HomePage = () => {
   return (
@@ -15,7 +14,6 @@ const HomePage = () => {
       <ExploreSection />
       <ContactSection />
       <ResourceSection />
-      <Footer />
     </Box>
   );
 };

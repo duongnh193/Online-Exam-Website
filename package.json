@@ -13,6 +13,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.8.4",
     "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
     "framer-motion": "^10.16.16",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.9",
@@ -21,6 +22,7 @@
     "react-router-dom": "^6.21.1",
     "react-scripts": "5.0.1",
     "react-scroll": "^1.9.3",
+    "recharts": "^2.15.2",
     "styled-components": "^6.1.16",
     "web-vitals": "^2.1.4"
   },
