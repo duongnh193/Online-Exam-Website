@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -129,5 +131,21 @@ public class UserService {
         return userRepository.findById(userId)
                 .map(account -> account.getUsername().equals(currentUsername))
                 .orElse(false);
+    }
+
+    public Page<UserResponse> getUsers(Pageable pageable) {
+        return userRepository.findAll(pageable).map(User2UserResponse.INSTANCE::map);
+    }
+
+    public Page<UserResponse> getUsersAdmin(Pageable pageable) {
+        return userRepository.findAllByRole(RoleEnum.ROLE_ADMIN ,pageable).map(User2UserResponse.INSTANCE::map);
+    }
+
+    public Page<UserResponse> getUsersLecturer(Pageable pageable) {
+        return userRepository.findAllByRole(RoleEnum.ROLE_LECTURER ,pageable).map(User2UserResponse.INSTANCE::map);
+    }
+
+    public Page<UserResponse> getUsersStudent(Pageable pageable) {
+        return userRepository.findAllByRole(RoleEnum.ROLE_STUDENT ,pageable).map(User2UserResponse.INSTANCE::map);
     }
 }
