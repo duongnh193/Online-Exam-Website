@@ -5,7 +5,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
+import vn.com.example.exam.online.exception.ExamNotFoundException;
 import vn.com.example.exam.online.exception.InvalidPasswordException;
 import vn.com.example.exam.online.exception.UserExistException;
 import vn.com.example.exam.online.exception.UserNotFoundException;
@@ -45,6 +45,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ClassNotFoundException.class)
     @ResponseStatus(value = HttpStatus.CONFLICT)
     public ErrorMessage handleClassNotFoundException(ClassNotFoundException ex) {
+        return new ErrorMessage(10103, ex.getMessage());
+    }
+
+    @ExceptionHandler(ExamNotFoundException.class)
+    @ResponseStatus(value = HttpStatus.CONFLICT)
+    public ErrorMessage handleExamNotFoundException(ExamNotFoundException ex) {
         return new ErrorMessage(10103, ex.getMessage());
     }
 }

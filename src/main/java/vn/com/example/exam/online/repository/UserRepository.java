@@ -14,14 +14,20 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
+
     Optional<User> findByEmail(String email);
+
     Optional<User> findByUsernameOrEmail(String username, String email);
+
     Boolean existsByUsername(String username);
+
     Boolean existsByEmail(String email);
+
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.username = :username AND u.id <> :id")
     boolean existsByUsernameAndNotId(@Param("username") String username, @Param("id") Long id);
 
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email AND u.id <> :id")
     boolean existsByEmailAndNotId(@Param("email") String email, @Param("id") Long id);
+
     Page<User> findAllByRole(RoleEnum role, Pageable pageable);
 }
