@@ -85,6 +85,7 @@ CREATE TABLE question
     exam_id   BIGINT          NOT NULL,
     user_id   BIGINT          NOT NULL,
     title     VARCHAR(255) NOT NULL,
+    type      ENUM('ESSAY', 'MULTIPLE_CHOICE', 'SINGLE_CHOICE') NOT NULL,
     choice    TEXT,
     answer    TEXT         NOT NULL,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

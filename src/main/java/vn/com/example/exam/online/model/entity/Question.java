@@ -14,6 +14,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
+import vn.com.example.exam.online.model.QuestionType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,7 @@ public class Question {
     @JoinColumn(name = "user_id")
     User creator;
     String title;
+    QuestionType type;
     String choice;
     String answer;
     @OneToMany(mappedBy = "question")

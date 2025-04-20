@@ -21,6 +21,7 @@ public class Constants {
     public static final String INVALID_PASSWORD = "Invalid Password";
     public static final String CLASS_NOT_FOUND_ID = "Class with id: %s not found";
     public static final String EXAM_NOT_FOUND_ID = "Exam with id: %s not found";
+    public static final String QUESTION_NOT_FOUND_ID = "Question with id: %s not found";
     public static final String DEFAULT_PAGE = "0";
     public static final String DEFAULT_SIZE = "10";
     public static final String PASSWORD_NOT_MATCH = "Password does not match";

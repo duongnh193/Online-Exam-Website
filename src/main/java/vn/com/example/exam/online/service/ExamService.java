@@ -49,7 +49,7 @@ public class ExamService {
         return examRepository.findByClassEntityId(classId, pageable).map(Exam2ExamResponseMapper.INSTANCE::map);
     }
 
-    private Exam getById(Long examId) {
+    public Exam getById(Long examId) {
         return examRepository.findById(examId)
                 .orElseThrow(() -> new ExamNotFoundException(Constants.EXAM_NOT_FOUND_ID.formatted(examId)));
     }

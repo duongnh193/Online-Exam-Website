@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import vn.com.example.exam.online.exception.ExamNotFoundException;
 import vn.com.example.exam.online.exception.InvalidPasswordException;
+import vn.com.example.exam.online.exception.QuestionNotFoundException;
 import vn.com.example.exam.online.exception.UserExistException;
 import vn.com.example.exam.online.exception.UserNotFoundException;
 
@@ -52,5 +53,11 @@ public class ApiExceptionHandler {
     @ResponseStatus(value = HttpStatus.CONFLICT)
     public ErrorMessage handleExamNotFoundException(ExamNotFoundException ex) {
         return new ErrorMessage(10103, ex.getMessage());
+    }
+
+    @ExceptionHandler(QuestionNotFoundException.class)
+    @ResponseStatus(value = HttpStatus.CONFLICT)
+    public ErrorMessage handleQuestionNotFoundException(QuestionNotFoundException ex) {
+        return new ErrorMessage(10104, ex.getMessage());
     }
 }
