@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import vn.com.example.exam.online.model.RoleEnum;
 
 import java.time.OffsetDateTime;
 
@@ -22,4 +23,5 @@ public class UserResponse {
     OffsetDateTime createAt;
     OffsetDateTime updateAt;
     boolean twoFactor;
+    RoleEnum role;
 }
