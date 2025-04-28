@@ -91,10 +91,9 @@ public class ClassController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<ClassResponse>> getAllClasses(
             @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
-            @RequestParam(required = false) Sort sort
+            @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size
     ) {
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PageRequest.of(page, size);
         Page<Class> classPage = classService.getAllClasses(pageable);
         return ResponseEntity.ok(classPage.map(Class2ClassResponse.INSTANCE::map));
     }
@@ -110,10 +109,9 @@ public class ClassController {
     public ResponseEntity<Page<ClassResponse>> getClasses(
             @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
-            @RequestParam(required = false) Sort sort,
             @RequestParam(required = true) Long teacherId
     ) {
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PageRequest.of(page, size);
         Page<Class> classPage = classService.getClassesByTeacherId(teacherId, pageable);
         return ResponseEntity.ok(classPage.map(Class2ClassResponse.INSTANCE::map));
     }

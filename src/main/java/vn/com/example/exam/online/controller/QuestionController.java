@@ -93,10 +93,9 @@ public class QuestionController {
     public ResponseEntity<Page<QuestionResponse>> getQuestions(
             @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
-            @RequestParam(required = false) Sort sort,
             @RequestParam() Long examId
     ) {
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(questionService.getQuestionsByExam(examId, pageable));
     }
 
