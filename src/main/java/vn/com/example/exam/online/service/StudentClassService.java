@@ -2,8 +2,11 @@ package vn.com.example.exam.online.service;
 
 import com.opencsv.CSVReader;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import vn.com.example.exam.online.exception.UserNotFoundException;
 import vn.com.example.exam.online.model.entity.Class;
 import vn.com.example.exam.online.model.entity.StudentClass;
 import vn.com.example.exam.online.model.entity.User;
@@ -13,6 +16,7 @@ import vn.com.example.exam.online.repository.UserRepository;
 import vn.com.example.exam.online.util.Constants;
 
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 @Service
@@ -31,7 +35,7 @@ public class StudentClassService {
         }
         Class clazz = classOpt.get();
 
-        try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
+        try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String[] line;
             reader.readNext(); // Bỏ header
 
@@ -113,5 +117,4 @@ public class StudentClassService {
 
         return false;
     }
-
 }

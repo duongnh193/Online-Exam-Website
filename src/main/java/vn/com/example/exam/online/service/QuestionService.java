@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.com.example.exam.online.exception.QuestionNotFoundException;
 import vn.com.example.exam.online.mapper.CreateQuestionRequest2QuestionMapper;
 import vn.com.example.exam.online.mapper.Question2QuestionResponseMapper;
+import vn.com.example.exam.online.model.ChoiceDto;
 import vn.com.example.exam.online.model.QuestionType;
 import vn.com.example.exam.online.model.entity.Exam;
 import vn.com.example.exam.online.model.entity.Question;
@@ -71,7 +72,7 @@ public class QuestionService {
         questionRepository.delete(question);
     }
 
-    public List<QuestionResponse> importFromCsv(MultipartFile file) {
+    public List<QuestionResponse> importFromCsv(MultipartFile file, Long examId) {
         List<Question> questions = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(
@@ -88,26 +89,37 @@ public class QuestionService {
             String username = authentication.getName();
             User creator = userService.getUserByUsername(username);
 
-            for (int i = 0; i < records.size(); i++) {
-                QuestionCsvRecord record = records.get(i);
+            Exam exam = examService.getById(examId);
 
+            for (QuestionCsvRecord record : records) {
                 try {
-                    if (record.getExamId() == null || record.getTitle() == null || record.getType() == null) {
+                    if (record.getTitle() == null || record.getType() == null) {
                         continue;
                     }
 
-                    Exam exam = examService.getById(record.getExamId());
-
                     QuestionType type = record.getType();
-                    String choice = (type == QuestionType.ESSAY) ? null : record.getChoice();
-                    String answer = (type == QuestionType.ESSAY) ? null : record.getAnswer();
+                    List<ChoiceDto> choices = null;
+                    String answer = null;
+
+                    if (type != QuestionType.ESSAY) {
+                        choices = createChoices(record.getChoiceA(), record.getChoiceB(), record.getChoiceC(), record.getChoiceD());
+                    }
+
+                    if (type == QuestionType.ESSAY) {
+                        answer = record.getAnswer(); //
+                    } else if (type == QuestionType.SINGLE_CHOICE) {
+                        List<String> answers = parseAnswers(record.getAnswer());
+                        answer = (answers.isEmpty()) ? null : answers.get(0);
+                    } else if (type == QuestionType.MULTIPLE_CHOICE) {
+                        answer = String.join(",", parseAnswers(record.getAnswer()));
+                    }
 
                     Question question = new Question()
                             .setExam(exam)
                             .setCreator(creator)
                             .setTitle(record.getTitle())
                             .setType(type)
-                            .setChoice(choice)
+                            .setChoices(choices)
                             .setAnswer(answer);
 
                     questions.add(question);
@@ -124,6 +136,35 @@ public class QuestionService {
             throw new RuntimeException("Không thể đọc file CSV: " + e.getMessage(), e);
         }
 
+
         return questions.stream().map(Question2QuestionResponseMapper.INSTANCE::map).toList();
     }
+
+    private List<ChoiceDto> createChoices(String choiceA, String choiceB, String choiceC, String choiceD) {
+        List<ChoiceDto> choices = new ArrayList<>();
+        if (choiceA != null && !choiceA.trim().isEmpty()) {
+            choices.add(new ChoiceDto("A", choiceA));
+        }
+        if (choiceB != null && !choiceB.trim().isEmpty()) {
+            choices.add(new ChoiceDto("B", choiceB));
+        }
+        if (choiceC != null && !choiceC.trim().isEmpty()) {
+            choices.add(new ChoiceDto("C", choiceC));
+        }
+        if (choiceD != null && !choiceD.trim().isEmpty()) {
+            choices.add(new ChoiceDto("D", choiceD));
+        }
+        return choices;
+    }
+
+    private List<String> parseAnswers(String answers) {
+        if (answers != null && !answers.trim().isEmpty()) {
+            return List.of(answers.split("\\s*,\\s*"));
+        }
+        return new ArrayList<>();
+    }
+
+
+
+
 }

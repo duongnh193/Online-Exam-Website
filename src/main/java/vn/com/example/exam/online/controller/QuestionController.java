@@ -106,8 +106,8 @@ public class QuestionController {
             responseCode = "200",
             description = "HTTP Status 200 OK")
     @PostMapping("/questions/import")
-    public ResponseEntity<List<QuestionResponse>> importQuestions(@RequestParam("file") MultipartFile file) {
-        return ResponseEntity.ok(questionService.importFromCsv(file));
+    public ResponseEntity<List<QuestionResponse>> importQuestions(@RequestParam("file") MultipartFile file, @RequestParam Long examId) {
+        return ResponseEntity.ok(questionService.importFromCsv(file, examId));
     }
 
 }

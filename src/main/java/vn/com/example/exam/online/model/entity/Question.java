@@ -1,5 +1,7 @@
 package vn.com.example.exam.online.model.entity;
 
+import jakarta.persistence.Convert;
+import jakarta.persistence.Converter;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,10 +16,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
+import vn.com.example.exam.online.model.ChoiceDto;
 import vn.com.example.exam.online.model.QuestionType;
+import vn.com.example.exam.online.util.ChoiceDtoConverter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -38,7 +43,8 @@ public class Question {
     User creator;
     String title;
     QuestionType type;
-    String choice;
+    @Convert(converter = ChoiceDtoConverter.class)
+    List<ChoiceDto> choices;
     String answer;
     @OneToMany(mappedBy = "question")
     List<ExamSubmission> examSubmissions = new ArrayList<>();

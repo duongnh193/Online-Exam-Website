@@ -5,7 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import vn.com.example.exam.online.model.ChoiceDto;
 import vn.com.example.exam.online.model.QuestionType;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -15,6 +18,6 @@ public class CreateQuestionRequest {
     Long examId;
     String title;
     QuestionType type;
-    String choice;
+    List<ChoiceDto> choices;
     String answer;
 }

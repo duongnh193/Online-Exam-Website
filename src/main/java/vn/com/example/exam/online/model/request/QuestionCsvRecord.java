@@ -7,16 +7,19 @@ import vn.com.example.exam.online.model.QuestionType;
 @Data
 public class QuestionCsvRecord {
     @CsvBindByName
-    private Long examId;
-
-    @CsvBindByName
     private String title;
 
     @CsvBindByName
     private QuestionType type;
 
     @CsvBindByName
-    private String choice;
+    private String choiceA;
+    @CsvBindByName
+    private String choiceB;
+    @CsvBindByName
+    private String choiceC;
+    @CsvBindByName
+    private String choiceD;
 
     @CsvBindByName
     private String answer;
