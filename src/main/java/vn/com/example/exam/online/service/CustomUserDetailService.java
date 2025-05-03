@@ -25,6 +25,6 @@ public class CustomUserDetailService implements UserDetailsService {
         User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
                 .orElseThrow(() -> new UsernameNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(usernameOrEmail)));
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRoleName()));
-        return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPasswordHash(), authorities);
+        return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPasswordHash(), authorities);
     }
 }
