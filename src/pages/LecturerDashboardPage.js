@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Link, useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
+import authService from '../services/authService';
 
 // Styled Components
 const DashboardContainer = styled.div`
@@ -249,22 +250,27 @@ const ExpandButton = styled.div`
   }
 `;
 
-function DashboardPage() {
+function LecturerDashboardPage() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [sortOption, setSortOption] = useState('recent');
   const [examCount, setExamCount] = useState(0);
-  const [studentCount, setStudentCount] = useState(0);
+  const [classCount, setClassCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [updating2FA, setUpdating2FA] = useState(false);
   const dropdownRef = useRef(null);
   
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
+        // Load exam count
         const examCountData = await dashboardService.getExamCount();
-        const studentCountData = await dashboardService.getStudentCount();
-        
         setExamCount(examCountData);
-        setStudentCount(studentCountData);
+        
+        // We could add a method to get class count for this lecturer
+        // For now using a placeholder
+        setClassCount(5); // placeholder
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       }
@@ -272,6 +278,15 @@ function DashboardPage() {
     
     loadDashboardData();
   }, []);
+  
+  useEffect(() => {
+    if (user) {
+      // Check 2FA status using authService
+      const is2FAEnabled = authService.is2FAEnabled();
+      setTwoFactorEnabled(is2FAEnabled);
+      console.log('2FA status initialized:', is2FAEnabled);
+    }
+  }, [user]);
   
   useEffect(() => {
     function handleClickOutside(event) {
@@ -287,29 +302,37 @@ function DashboardPage() {
   }, []);
   
   const examData = [
-    { name: 'Jan', count: 40 },
-    { name: 'Feb', count: 20 },
-    { name: 'Mar', count: 40 },
-    { name: 'Apr', count: 30 },
-    { name: 'May', count: 50 },
-    { name: 'Jun', count: 60 },
-    { name: 'Jul', count: 70 },
-    { name: 'Aug', count: examCount }
+    { name: 'Jan', count: 4 },
+    { name: 'Feb', count: 2 },
+    { name: 'Mar', count: 5 },
+    { name: 'Apr', count: 3 },
+    { name: 'May', count: 6 },
+    { name: 'Jun', count: 8 },
+    { name: 'Jul', count: 7 },
+    { name: 'Aug', count: examCount || 4 }
   ];
   
-  const studentData = [
-    { name: 'Jan', count: 100 },
-    { name: 'Feb', count: 80 },
-    { name: 'Mar', count: 40 },
-    { name: 'Apr', count: 100 },
-    { name: 'May', count: 60 },
-    { name: 'Jun', count: 80 },
-    { name: 'Jul', count: 100 },
-    { name: 'Aug', count: studentCount }
+  const classData = [
+    { name: 'Jan', count: 2 },
+    { name: 'Feb', count: 3 },
+    { name: 'Mar', count: 3 },
+    { name: 'Apr', count: 4 },
+    { name: 'May', count: 4 },
+    { name: 'Jun', count: 5 },
+    { name: 'Jul', count: 5 },
+    { name: 'Aug', count: classCount || 5 }
   ];
   
   const handleLogout = () => {
-    logout();
+    console.log('LecturerDashboardPage: Initiating logout process');
+    // Make sure the dropdowns are closed
+    setShowDropdown(false);
+    
+    // Add a small delay to ensure state changes have time to propagate
+    setTimeout(() => {
+      console.log('LecturerDashboardPage: Executing logout');
+      logout();
+    }, 100);
   };
   
   // Get user's first initial
@@ -338,13 +361,54 @@ function DashboardPage() {
     switch(name) {
       case 'dashboard': return '🏠';
       case 'exams': return '📝';
-      case 'register': return '📋';
+      case 'class': return '📋';
       case 'reports': return '📊';
-      case 'payment': return '💳';
       case 'settings': return '⚙️';
       case 'signout': return '🚪';
       default: return '•';
     }
+  };
+
+  const handle2FAToggle = async () => {
+    if (!user || !user.id) {
+      alert('User information not available');
+      return;
+    }
+    
+    try {
+      setUpdating2FA(true);
+      // Toggle the current state
+      const newTwoFAState = !twoFactorEnabled;
+      
+      // Call the API to update 2FA using authService
+      let response;
+      if (newTwoFAState) {
+        response = await authService.enable2FA();
+        console.log('Enabling 2FA response:', response);
+      } else {
+        response = await authService.disable2FA();
+        console.log('Disabling 2FA response:', response);
+      }
+      
+      // Update the local state
+      setTwoFactorEnabled(newTwoFAState);
+      
+      // Display success message
+      alert(`Two-factor authentication has been ${newTwoFAState ? 'enabled' : 'disabled'}`);
+      
+      // Close the dropdown
+      setShowDropdown(false);
+    } catch (error) {
+      console.error('Error updating 2FA:', error);
+      alert(`Error: ${error.response?.data?.message || 'Failed to update two-factor authentication'}`);
+    } finally {
+      setUpdating2FA(false);
+    }
+  };
+  
+  const goToSettings = () => {
+    navigate('/settings');
+    setShowDropdown(false);
   };
 
   return (
@@ -352,7 +416,7 @@ function DashboardPage() {
       <Sidebar>
         <Logo>logo</Logo>
         <SidebarMenu>
-          <NavItem to="/dashboard" className="active">
+          <NavItem to="/lecturer-dashboard" className="active">
             <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
             Dashboard
           </NavItem>
@@ -360,17 +424,13 @@ function DashboardPage() {
             <NavIcon>{getMenuIcon('exams')}</NavIcon>
             Exams
           </NavItem>
-          <NavItem to="/register">
-            <NavIcon>{getMenuIcon('register')}</NavIcon>
-            Register
+          <NavItem to="/class">
+            <NavIcon>{getMenuIcon('class')}</NavIcon>
+            Class
           </NavItem>
           <NavItem to="/reports">
             <NavIcon>{getMenuIcon('reports')}</NavIcon>
             Reports
-          </NavItem>
-          <NavItem to="/payment">
-            <NavIcon>{getMenuIcon('payment')}</NavIcon>
-            Payment
           </NavItem>
         </SidebarMenu>
         <BottomMenu>
@@ -388,7 +448,7 @@ function DashboardPage() {
       <MainContent>
         <Header>
           <PageTitle>
-            <h1>Dashboard</h1>
+            <h1>Lecturer Dashboard</h1>
             <p>Welcome back, {getFullName()}</p>
           </PageTitle>
           
@@ -406,11 +466,15 @@ function DashboardPage() {
               <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
               {showDropdown && (
                 <Dropdown>
-                  <DropdownItem>
+                  <DropdownItem onClick={goToSettings}>
                     <span>👤</span> Profile
                   </DropdownItem>
-                  <DropdownItem>
+                  <DropdownItem onClick={goToSettings}>
                     <span>⚙️</span> Settings
+                  </DropdownItem>
+                  <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
+                    <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
+                    {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
                   </DropdownItem>
                   <DropdownItem onClick={handleLogout}>
                     <span>🚪</span> Sign out
@@ -423,8 +487,8 @@ function DashboardPage() {
         
         <CardsContainer>
           <Card>
-            <CardHeader>Exams</CardHeader>
-            <CardValue>{examCount || 203}</CardValue>
+            <CardHeader>My Exams</CardHeader>
+            <CardValue>{examCount || 4}</CardValue>
             <ExpandButton />
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
@@ -445,14 +509,14 @@ function DashboardPage() {
           </Card>
           
           <Card>
-            <CardHeader>Students</CardHeader>
-            <CardValue>{studentCount || 351}</CardValue>
+            <CardHeader>My Classes</CardHeader>
+            <CardValue>{classCount || 5}</CardValue>
             <ExpandButton />
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={studentData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <BarChart data={classData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorClasses" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#ff2e8e" stopOpacity={1} />
                       <stop offset="100%" stopColor="#ff2e8e" stopOpacity={0.2} />
                     </linearGradient>
@@ -460,7 +524,7 @@ function DashboardPage() {
                   <XAxis dataKey="name" hide />
                   <YAxis hide />
                   <Tooltip cursor={false} />
-                  <Bar dataKey="count" fill="url(#colorStudents)" radius={[5, 5, 0, 0]} />
+                  <Bar dataKey="count" fill="url(#colorClasses)" radius={[5, 5, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -471,4 +535,4 @@ function DashboardPage() {
   );
 }
 
-export default DashboardPage; 
+export default LecturerDashboardPage; 

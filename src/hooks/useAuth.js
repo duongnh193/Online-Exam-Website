@@ -1,14 +1,16 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 
-const AuthContext = createContext();
+// Create the AuthContext and export it so it can be imported elsewhere
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Check if the user is authenticated on initial load
   useEffect(() => {
@@ -85,6 +87,32 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
+  // Check if we're returning from a logout
+  useEffect(() => {
+    // Check if we have a logout parameter in the URL
+    if (location && location.search) {
+      const queryParams = new URLSearchParams(location.search);
+      const hasLogoutParam = queryParams.has('logout');
+      
+      if (hasLogoutParam) {
+        console.log('Auth provider detected return from logout, clearing any lingering state');
+        // Double-check that all auth data is cleared
+        localStorage.removeItem('token');
+        localStorage.removeItem('token_type');
+        localStorage.removeItem('user');
+        sessionStorage.clear();
+        
+        // Remove the logout parameter to prevent confusion
+        queryParams.delete('logout');
+        const newSearch = queryParams.toString();
+        const newUrl = location.pathname + (newSearch ? `?${newSearch}` : '');
+        
+        // Update URL without triggering refresh
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [location]);
+
   // Login function
   const login = async (credentials) => {
     try {
@@ -94,28 +122,34 @@ export const AuthProvider = ({ children }) => {
       
       if (response.success && response.user) {
         console.log('useAuth: Login successful with user data:', response.user);
+        
+        // Normalize role for comparison (uppercase)
+        const role = response.user?.role?.toUpperCase();
+        console.log('useAuth: Normalized user role for redirection:', role);
+        
         setUser(response.user);
         setIsAuthenticated(true);
         
-        // Add direct navigation based on role
-        if (response.user?.role === 'ROLE_LECTURER' || response.user?.role === 'ROLE_ADMIN') {
-          console.log('useAuth: Navigating to dashboard from useAuth, role:', response.user.role);
+        // Add direct navigation based on normalized role
+        if (role === 'ROLE_LECTURER' || role === 'ROLE_ADMIN') {
+          console.log('useAuth: Navigating to dashboard (admin/lecturer)');
           
-          // Important: Use setTimeout to ensure state updates before navigation
+          // Use window.location for hard refresh navigation
           setTimeout(() => {
             console.log('useAuth: Executing navigation to dashboard');
-            navigate('/dashboard');
+            window.location.href = '/dashboard';
           }, 100);
-        } else if (response.user?.role === 'ROLE_STUDENT') {
-          console.log('useAuth: Navigating to student-dashboard from useAuth, role:', response.user.role);
+        } else if (role === 'ROLE_STUDENT') {
+          console.log('useAuth: Navigating to student dashboard');
           
-          // Important: Use setTimeout to ensure state updates before navigation
+          // Use window.location for hard refresh navigation
           setTimeout(() => {
             console.log('useAuth: Executing navigation to student dashboard');
-            navigate('/student-dashboard');
+            window.location.href = '/student-dashboard';
           }, 100);
         } else {
-          console.warn('useAuth: No role found for redirection, user:', response.user);
+          console.warn('useAuth: No recognized role for redirection, user:', response.user);
+          window.location.href = '/';
         }
       } else if (response.requiresOtp) {
         console.log('useAuth: OTP required for login');
@@ -139,28 +173,34 @@ export const AuthProvider = ({ children }) => {
       
       if (response.success && response.user) {
         console.log('useAuth: OTP verification successful with user data:', response.user);
+        
+        // Normalize role for comparison (uppercase)
+        const role = response.user?.role?.toUpperCase();
+        console.log('useAuth: Normalized user role after OTP:', role);
+        
         setUser(response.user);
         setIsAuthenticated(true);
         
-        // Add direct navigation based on role
-        if (response.user?.role === 'ROLE_LECTURER' || response.user?.role === 'ROLE_ADMIN') {
-          console.log('useAuth: Navigating to dashboard from useAuth after OTP, role:', response.user.role);
+        // Add direct navigation based on normalized role
+        if (role === 'ROLE_LECTURER' || role === 'ROLE_ADMIN') {
+          console.log('useAuth: Navigating to dashboard after OTP (admin/lecturer)');
           
-          // Important: Use setTimeout to ensure state updates before navigation
+          // Use window.location for hard refresh navigation
           setTimeout(() => {
             console.log('useAuth: Executing navigation to dashboard after OTP');
-            navigate('/dashboard');
+            window.location.href = '/dashboard';
           }, 100);
-        } else if (response.user?.role === 'ROLE_STUDENT') {
-          console.log('useAuth: Navigating to student-dashboard from useAuth after OTP, role:', response.user.role);
+        } else if (role === 'ROLE_STUDENT') {
+          console.log('useAuth: Navigating to student dashboard after OTP');
           
-          // Important: Use setTimeout to ensure state updates before navigation
+          // Use window.location for hard refresh navigation
           setTimeout(() => {
             console.log('useAuth: Executing navigation to student dashboard after OTP');
-            navigate('/student-dashboard');
+            window.location.href = '/student-dashboard';
           }, 100);
         } else {
-          console.warn('useAuth: No role found for redirection after OTP, user:', response.user);
+          console.warn('useAuth: No recognized role for redirection after OTP, user:', response.user);
+          window.location.href = '/';
         }
       } else {
         console.warn('useAuth: OTP verification response success but missing user or unusual format:', response);
@@ -193,21 +233,71 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    console.log('useAuth: Logout called, clearing all auth data');
+    
+    // Clear all auth-related data
+    authService.logout();
+    
+    // Set local state to logged out
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/');
+    
+    // Force a hard refresh of the page to ensure clean state
+    // This is more reliable than just navigating
+    window.location.href = '/';
   };
+
+  // Add a function to refresh user data from localStorage
+  const refreshUser = () => {
+    try {
+      console.log('useAuth: Refreshing user data from localStorage');
+      const storedUserData = localStorage.getItem('user');
+      
+      if (storedUserData) {
+        const userData = JSON.parse(storedUserData);
+        console.log('useAuth: Refreshed user data:', userData);
+        
+        // Only update if the data is different
+        if (JSON.stringify(userData) !== JSON.stringify(user)) {
+          console.log('useAuth: User data changed, updating state');
+          
+          // Reset any caching mechanisms in the app
+          // This will trigger re-fetches of data that depends on user state
+          window.__resetUserDataCache = true;
+          
+          setUser(userData);
+        } else {
+          console.log('useAuth: User data unchanged');
+        }
+        
+        return userData;
+      }
+      
+      return user;
+    } catch (error) {
+      console.error('useAuth: Error refreshing user data:', error);
+      return user;
+    }
+  };
+
+  // Add an effect to refresh user data when navigating to the settings page
+  useEffect(() => {
+    if (location.pathname === '/settings' && isAuthenticated) {
+      console.log('useAuth: On settings page, refreshing user data');
+      refreshUser();
+    }
+  }, [location.pathname, isAuthenticated]);
 
   const value = {
     user,
+    setUser,
     isAuthenticated,
     isLoading,
     login,
-    verifyOtp,
     register,
-    logout
+    logout,
+    verifyOtp,
+    refreshUser
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -369,14 +369,23 @@ function ExamPage() {
     switch(name) {
       case 'dashboard': return '🏠';
       case 'exams': return '📝';
-      case 'register': return '📋';
+      case 'class': return '📋';
       case 'reports': return '📊';
       case 'payment': return '💳';
+      case 'users': return '👥';
       case 'settings': return '⚙️';
       case 'signout': return '🚪';
+      case 'myClasses': return '📚';
+      case 'register': return '📋';
+      case 'results': return '📊';
       default: return '•';
     }
   };
+
+  // Determine user role
+  const isStudent = user && user.role === 'ROLE_STUDENT';
+  const isLecturer = user && user.role === 'ROLE_LECTURER';
+  const isAdmin = user && user.role === 'ROLE_ADMIN';
 
   // Check if time is expired (red color)
   const isExpired = (time) => {
@@ -388,26 +397,75 @@ function ExamPage() {
       <Sidebar>
         <Logo>logo</Logo>
         <SidebarMenu>
-          <NavItem to="/dashboard">
-            <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
-            Dashboard
-          </NavItem>
-          <NavItem to="/exams" className="active">
-            <NavIcon>{getMenuIcon('exams')}</NavIcon>
-            Exams
-          </NavItem>
-          <NavItem to="/register">
-            <NavIcon>{getMenuIcon('register')}</NavIcon>
-            Register
-          </NavItem>
-          <NavItem to="/reports">
-            <NavIcon>{getMenuIcon('reports')}</NavIcon>
-            Reports
-          </NavItem>
-          <NavItem to="/payment">
-            <NavIcon>{getMenuIcon('payment')}</NavIcon>
-            Payment
-          </NavItem>
+          {isStudent ? (
+            // Student navigation
+            <>
+              <NavItem to="/student-dashboard">
+                <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+                Dashboard
+              </NavItem>
+              <NavItem to="/my-classes">
+                <NavIcon>{getMenuIcon('myClasses')}</NavIcon>
+                My Classes
+              </NavItem>
+              <NavItem to="/exams" className="active">
+                <NavIcon>{getMenuIcon('exams')}</NavIcon>
+                Exams
+              </NavItem>
+              <NavItem to="/results">
+                <NavIcon>{getMenuIcon('results')}</NavIcon>
+                Results
+              </NavItem>
+            </>
+          ) : isLecturer ? (
+            // Lecturer navigation
+            <>
+              <NavItem to="/lecturer-dashboard">
+                <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+                Dashboard
+              </NavItem>
+              <NavItem to="/exams" className="active">
+                <NavIcon>{getMenuIcon('exams')}</NavIcon>
+                Exams
+              </NavItem>
+              <NavItem to="/class">
+                <NavIcon>{getMenuIcon('class')}</NavIcon>
+                Class
+              </NavItem>
+              <NavItem to="/reports">
+                <NavIcon>{getMenuIcon('reports')}</NavIcon>
+                Reports
+              </NavItem>
+            </>
+          ) : (
+            // Admin navigation
+            <>
+              <NavItem to="/admin-dashboard">
+                <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+                Dashboard
+              </NavItem>
+              <NavItem to="/exams" className="active">
+                <NavIcon>{getMenuIcon('exams')}</NavIcon>
+                Exams
+              </NavItem>
+              <NavItem to="/class">
+                <NavIcon>{getMenuIcon('class')}</NavIcon>
+                Class
+              </NavItem>
+              <NavItem to="/reports">
+                <NavIcon>{getMenuIcon('reports')}</NavIcon>
+                Reports
+              </NavItem>
+              <NavItem to="/payment">
+                <NavIcon>{getMenuIcon('payment')}</NavIcon>
+                Payment
+              </NavItem>
+              <NavItem to="/users">
+                <NavIcon>{getMenuIcon('users')}</NavIcon>
+                Users
+              </NavItem>
+            </>
+          )}
         </SidebarMenu>
         <BottomMenu>
           <NavItem to="/settings">

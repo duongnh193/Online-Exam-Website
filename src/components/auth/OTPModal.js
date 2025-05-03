@@ -3,11 +3,13 @@ import { Button, Form, Modal, Alert } from 'react-bootstrap';
 import authService from '../../services/authService';
 import './AuthModal.css';
 
-const OTPModal = ({ show, handleClose, data, onSuccess, onSwitchToLogin }) => {
+const OTPModal = ({ show, handleClose, otpData, onSuccess, onSubmit, onSwitchToLogin }) => {
   const [otp, setOtp] = useState(['', '', '', '']);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -25,6 +27,7 @@ const OTPModal = ({ show, handleClose, data, onSuccess, onSwitchToLogin }) => {
       setOtp(['', '', '', '']);
       setError('');
       setTimeLeft(60);
+      setResendSuccess(false);
       
       // Focus on first input when modal opens
       setTimeout(() => {
@@ -71,40 +74,67 @@ const OTPModal = ({ show, handleClose, data, onSuccess, onSwitchToLogin }) => {
     setError('');
     
     try {
-      console.log('Verifying OTP:', otpValue);
-      const response = await authService.verifyOtp({
-        otp: otpValue,
-        username: data?.username,
-        password: data?.password
-      });
+      console.log('OTPModal: Submitting OTP:', otpValue);
       
-      console.log('OTP verification response:', response);
-      setIsLoading(false);
-      
-      if (onSuccess) {
-        onSuccess(response);
+      // Use the onSubmit prop if available, otherwise use the direct service call
+      if (onSubmit) {
+        const result = await onSubmit(otpValue);
+        
+        if (result && result.error) {
+          setError(result.error);
+          setIsLoading(false);
+          return;
+        }
+        
+        setIsLoading(false);
+        // Success is handled by the parent component
+      } else {
+        // Fallback to direct service call
+        console.log('OTPModal: Using direct service call for OTP verification');
+        const response = await authService.verifyOtp({
+          otp: otpValue,
+          username: otpData?.username,
+          password: otpData?.password
+        });
+        
+        console.log('OTPModal: OTP verification response:', response);
+        setIsLoading(false);
+        
+        if (onSuccess) {
+          onSuccess(response);
+        }
       }
     } catch (err) {
-      console.error('OTP verification error:', err);
+      console.error('OTPModal: OTP verification error:', err);
       setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
       setIsLoading(false);
     }
   };
 
   const handleResendOtp = async () => {
-    if (timeLeft > 0) return;
+    if (timeLeft > 0 || resendLoading) return;
+    
+    setResendLoading(true);
+    setError('');
+    setResendSuccess(false);
     
     try {
-      await authService.resendOtp({
-        username: data?.username,
-        email: data?.email
-      });
+      console.log('OTPModal: Resending OTP for:', otpData?.username);
+      const response = await authService.resendOtp(otpData?.username);
       
+      console.log('OTPModal: Resend OTP response:', response);
       setTimeLeft(60);
-      setError('');
+      setResendSuccess(true);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setResendSuccess(false);
+      }, 3000);
     } catch (err) {
-      console.error('Resend OTP error:', err);
-      setError('Failed to resend OTP. Please try again.');
+      console.error('OTPModal: Resend OTP error:', err);
+      setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -126,6 +156,7 @@ const OTPModal = ({ show, handleClose, data, onSuccess, onSwitchToLogin }) => {
         </div>
 
         {error && <Alert variant="danger">{error}</Alert>}
+        {resendSuccess && <Alert variant="success">OTP has been resent successfully!</Alert>}
         
         <Form onSubmit={handleSubmit}>
           <div className="otp-container">
@@ -144,12 +175,14 @@ const OTPModal = ({ show, handleClose, data, onSuccess, onSwitchToLogin }) => {
           </div>
           
           <div className="text-center mb-3">
-            <p className="otp-resend" onClick={handleResendOtp}>
-              Didn't receive email?
+            <p className={`otp-resend ${timeLeft === 0 && !resendLoading ? 'active' : ''}`} onClick={handleResendOtp}>
+              {resendLoading ? 'Sending...' : "Didn't receive email?"}
             </p>
-            <p className="otp-timer">
-              You can request code in {timeLeft} s
-            </p>
+            {timeLeft > 0 && (
+              <p className="otp-timer">
+                You can request code in {timeLeft} s
+              </p>
+            )}
           </div>
 
           <div className="d-grid mb-3">

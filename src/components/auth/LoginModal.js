@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Button, Form, Modal, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import OTPModal from './OTPModal';
+import ResetPasswordModal from './ResetPasswordModal';
 import './AuthModal.css';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebook, FaApple } from 'react-icons/fa';
+import { AuthContext } from '../../hooks/useAuth';
 
 const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPassword }) => {
   const navigate = useNavigate();
+  const { login, verifyOtp } = useContext(AuthContext);
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,6 +19,7 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpData, setOtpData] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
 
   const handleCloseOtpModal = () => {
     setShowOtpModal(false);
@@ -29,7 +33,6 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
   // Helper function to redirect based on user role
   const redirectBasedOnRole = (user) => {
     console.log('LoginModal: redirectBasedOnRole called with user:', user);
-    console.log('LoginModal: User role from localStorage:', localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).role : 'not found');
     
     // Debug localStorage state
     const localStorageState = {
@@ -40,38 +43,44 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
     };
     console.log('LoginModal: Current localStorage state:', localStorageState);
     
-    // Check if we have a valid user and role
-    if (!user) {
-      console.error('LoginModal: No user object provided to redirectBasedOnRole');
-      navigate('/');
+    // Use the role from localStorage as the source of truth (it's what will be used for subsequent requests)
+    const storedUser = localStorageState.parsedUser;
+    const roleFromStorage = storedUser?.role;
+    const roleFromParam = user?.role;
+    
+    console.log('Role comparison:', { 
+      roleFromStorage, 
+      roleFromParam,
+      match: roleFromStorage === roleFromParam
+    });
+    
+    // Determine which role to use - prefer localStorage
+    const effectiveRole = roleFromStorage || roleFromParam;
+    
+    console.log('LoginModal: Using effective role for redirection:', effectiveRole);
+    
+    // If no valid role found in either source, redirect to home
+    if (!effectiveRole) {
+      console.error('LoginModal: No valid role found for redirection');
+      window.location.href = '/';
       return;
     }
     
-    if (!user.role) {
-      console.error('LoginModal: User object has no role:', user);
-      navigate('/');
-      return;
-    }
+    // Normalize role for comparison - strict equality check against expected values
+    const normalizedRole = effectiveRole.toUpperCase();
     
-    if (user?.role === 'ROLE_LECTURER' || user?.role === 'ROLE_ADMIN') {
+    // Redirect based on normalized role
+    console.log('LoginModal: Redirecting based on normalized role:', normalizedRole);
+    
+    if (normalizedRole === 'ROLE_LECTURER' || normalizedRole === 'ROLE_ADMIN') {
       console.log('LoginModal: Detected LECTURER or ADMIN role, navigating to /dashboard');
-      // Use setTimeout to ensure state updates before navigation
-      setTimeout(() => {
-        console.log('LoginModal: Executing navigation to dashboard');
-        navigate('/dashboard');
-      }, 100);
-    } else if (user?.role === 'ROLE_STUDENT') {
+      window.location.href = '/dashboard';
+    } else if (normalizedRole === 'ROLE_STUDENT') {
       console.log('LoginModal: Detected STUDENT role, navigating to /student-dashboard');
-      // Use setTimeout to ensure state updates before navigation
-      setTimeout(() => {
-        console.log('LoginModal: Executing navigation to student dashboard');
-        navigate('/student-dashboard');
-      }, 100);
+      window.location.href = '/student-dashboard';
     } else {
-      // Default redirect if role is undefined or not recognized
-      console.warn('LoginModal: Unknown or missing user role:', user?.role);
-      console.log('LoginModal: Full user object:', user);
-      navigate('/');
+      console.warn('LoginModal: Unrecognized role format:', normalizedRole);
+      window.location.href = '/';
     }
   };
 
@@ -87,16 +96,11 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
         user: localStorage.getItem('user')
       });
       
+      // Call authService directly to get the full response with OTP info
       const response = await authService.login({ username: usernameOrEmail, password });
       
       console.log('LoginModal: Login response:', response);
-      console.log('LoginModal: User from response:', response.user);
-      console.log('LoginModal: Role from response:', response.user?.role);
-      console.log('LoginModal: Updated localStorage state:', {
-        token: localStorage.getItem('token'),
-        user: localStorage.getItem('user')
-      });
-
+      
       // Check if OTP is required
       if (response.requiresOtp) {
         console.log('LoginModal: OTP required, showing OTP modal');
@@ -110,15 +114,69 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
         setIsLoading(false);
         return;
       }
-
-      // Login successful
-      console.log('LoginModal: Login successful, user:', response.user);
+      
+      // If we got here, no OTP required - regular login success
+      // Use the login function from context to update auth state
+      if (response.success && response.user) {
+        login(response.token, response.user);
+      }
+      
+      // Clear the form
+      setUsernameOrEmail('');
+      setPassword('');
+      setIsLoading(false);
+      
+      // Close the modal
       handleClose();
-      redirectBasedOnRole(response.user);
+      
+      // Redirect based on role if success
+      if (response.success && response.user) {
+        redirectBasedOnRole(response.user);
+      }
     } catch (err) {
       console.error('LoginModal: Login error:', err);
       setError(err.response?.data?.message || err.message || 'Login failed. Please check your credentials.');
       setIsLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (otpValue) => {
+    try {
+      // Call authService directly for OTP verification
+      const verificationData = {
+        username: otpData.username,
+        password: otpData.password,
+        otp: otpValue
+      };
+      
+      console.log('LoginModal: Verifying OTP with data:', {
+        ...verificationData,
+        password: '********' // Don't log the actual password
+      });
+      
+      const response = await authService.verifyOtp(verificationData);
+      console.log('LoginModal: OTP verification response:', response);
+      
+      // Update auth context if successful
+      if (response.success && response.user) {
+        login(response.token, response.user);
+        
+        // Close modals
+        setOtpData(null);
+        handleCloseOtpModal();
+        handleClose();
+        
+        // Redirect based on role
+        redirectBasedOnRole(response.user);
+      }
+      
+      return { success: true };
+    } catch (err) {
+      console.error('OTP verification failed:', err);
+      return { 
+        error: err.response?.data?.message || err.message || 'OTP verification failed.',
+        success: false
+      };
     }
   };
 
@@ -141,6 +199,21 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
     if (onSwitchToResetPassword) {
       onSwitchToResetPassword();
     }
+  };
+
+  const handleResetPasswordClick = () => {
+    setShowResetPasswordModal(true);
+    handleClose(); // Close the login modal
+  };
+
+  const handleResetPasswordModalClose = () => {
+    setShowResetPasswordModal(false);
+  };
+
+  const handleSwitchToLogin = () => {
+    setShowResetPasswordModal(false);
+    setTimeout(() => handleClose(false), 100); // Close ResetPasswordModal
+    setTimeout(() => handleClose(true), 200); // Show LoginModal
   };
 
   return (
@@ -237,12 +310,23 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
         </Modal.Body>
       </Modal>
 
-      <OTPModal 
-        show={showOtpModal} 
-        handleClose={handleCloseOtpModal} 
-        data={otpData} 
-        onSuccess={handleOtpSuccess} 
-      />
+      {showOtpModal && otpData && (
+        <OTPModal
+          show={showOtpModal}
+          handleClose={handleCloseOtpModal}
+          otpData={otpData}
+          onSuccess={handleOtpSuccess}
+          onSubmit={handleOtpSubmit}
+        />
+      )}
+
+      {showResetPasswordModal && (
+        <ResetPasswordModal
+          show={showResetPasswordModal}
+          handleClose={handleResetPasswordModalClose}
+          onSwitchToLogin={handleSwitchToLogin}
+        />
+      )}
     </>
   );
 };

@@ -152,40 +152,50 @@ select.auth-input:focus {
   justify-content: center;
 }
 
+.otp-inputs {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+
 .otp-input {
-  width: 50px;
-  height: 50px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  width: 3.5rem !important;
+  height: 3.5rem !important;
   text-align: center;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 500;
+  border-radius: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  background-color: #f8fafc;
 }
 
-.back-link {
-  color: #5048E5;
-  cursor: pointer;
-  text-align: center;
-  display: block;
-  margin-top: 15px;
-}
-
-.back-link:hover {
-  text-decoration: underline;
+.otp-input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
 }
 
 .otp-resend {
-  color: #5048E5;
+  color: #6366f1;
   cursor: pointer;
-  text-align: center;
-  margin-bottom: 15px;
-  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.otp-resend:not(.active) {
+  color: #94a3b8;
+  cursor: default;
+}
+
+.otp-resend.active:hover {
+  text-decoration: underline;
 }
 
 .otp-timer {
-  color: #6B7280;
-  font-size: 0.85rem;
-  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
 }
 
 /* Reset Password Styles */

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
-import authService from '../services/authService';
 
 // Styled Components
 const DashboardContainer = styled.div`
@@ -225,6 +224,11 @@ const CardValue = styled.div`
   margin-bottom: 1rem;
 `;
 
+const ChartContainer = styled.div`
+  height: 120px;
+  margin-top: 1rem;
+`;
+
 const ExpandButton = styled.div`
   position: absolute;
   top: 1.5rem;
@@ -245,20 +249,12 @@ const ExpandButton = styled.div`
   }
 `;
 
-const ChartContainer = styled.div`
-  height: 120px;
-  margin-top: 1rem;
-`;
-
-function StudentDashboardPage() {
+function AdminDashboardPage() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [sortOption, setSortOption] = useState('recent');
-  const [upcomingExams, setUpcomingExams] = useState(0);
-  const [completedExams, setCompletedExams] = useState(0);
+  const [examCount, setExamCount] = useState(0);
+  const [studentCount, setStudentCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [updating2FA, setUpdating2FA] = useState(false);
   const dropdownRef = useRef(null);
   
   useEffect(() => {
@@ -267,8 +263,8 @@ function StudentDashboardPage() {
         const examCountData = await dashboardService.getExamCount();
         const studentCountData = await dashboardService.getStudentCount();
         
-        setUpcomingExams(examCountData);
-        setCompletedExams(studentCountData);
+        setExamCount(examCountData);
+        setStudentCount(studentCountData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       }
@@ -276,15 +272,6 @@ function StudentDashboardPage() {
     
     loadDashboardData();
   }, []);
-  
-  useEffect(() => {
-    if (user) {
-      // Check 2FA status using authService
-      const is2FAEnabled = authService.is2FAEnabled();
-      setTwoFactorEnabled(is2FAEnabled);
-      console.log('2FA status initialized:', is2FAEnabled);
-    }
-  }, [user]);
   
   useEffect(() => {
     function handleClickOutside(event) {
@@ -299,7 +286,7 @@ function StudentDashboardPage() {
     };
   }, []);
   
-  const upcomingExamsData = [
+  const examData = [
     { name: 'Jan', count: 40 },
     { name: 'Feb', count: 20 },
     { name: 'Mar', count: 40 },
@@ -307,10 +294,10 @@ function StudentDashboardPage() {
     { name: 'May', count: 50 },
     { name: 'Jun', count: 60 },
     { name: 'Jul', count: 70 },
-    { name: 'Aug', count: upcomingExams }
+    { name: 'Aug', count: examCount }
   ];
   
-  const completedExamsData = [
+  const studentData = [
     { name: 'Jan', count: 100 },
     { name: 'Feb', count: 80 },
     { name: 'Mar', count: 40 },
@@ -318,17 +305,17 @@ function StudentDashboardPage() {
     { name: 'May', count: 60 },
     { name: 'Jun', count: 80 },
     { name: 'Jul', count: 100 },
-    { name: 'Aug', count: completedExams }
+    { name: 'Aug', count: studentCount }
   ];
   
   const handleLogout = () => {
-    console.log('StudentDashboardPage: Initiating logout process');
+    console.log('AdminDashboardPage: Initiating logout process');
     // Make sure the dropdowns are closed
     setShowDropdown(false);
     
     // Add a small delay to ensure state changes have time to propagate
     setTimeout(() => {
-      console.log('StudentDashboardPage: Executing logout');
+      console.log('AdminDashboardPage: Executing logout');
       logout();
     }, 100);
   };
@@ -358,55 +345,15 @@ function StudentDashboardPage() {
   const getMenuIcon = (name) => {
     switch(name) {
       case 'dashboard': return '🏠';
-      case 'myClasses': return '📚';
       case 'exams': return '📝';
-      case 'results': return '📊';
+      case 'class': return '📋';
+      case 'reports': return '📊';
+      case 'payment': return '💳';
+      case 'users': return '👥';
       case 'settings': return '⚙️';
       case 'signout': return '🚪';
       default: return '•';
     }
-  };
-
-  const handle2FAToggle = async () => {
-    if (!user || !user.id) {
-      alert('User information not available');
-      return;
-    }
-    
-    try {
-      setUpdating2FA(true);
-      // Toggle the current state
-      const newTwoFAState = !twoFactorEnabled;
-      
-      // Call the API to update 2FA using authService
-      let response;
-      if (newTwoFAState) {
-        response = await authService.enable2FA();
-        console.log('Enabling 2FA response:', response);
-      } else {
-        response = await authService.disable2FA();
-        console.log('Disabling 2FA response:', response);
-      }
-      
-      // Update the local state
-      setTwoFactorEnabled(newTwoFAState);
-      
-      // Display success message
-      alert(`Two-factor authentication has been ${newTwoFAState ? 'enabled' : 'disabled'}`);
-      
-      // Close the dropdown
-      setShowDropdown(false);
-    } catch (error) {
-      console.error('Error updating 2FA:', error);
-      alert(`Error: ${error.response?.data?.message || 'Failed to update two-factor authentication'}`);
-    } finally {
-      setUpdating2FA(false);
-    }
-  };
-  
-  const goToSettings = () => {
-    navigate('/settings');
-    setShowDropdown(false);
   };
 
   return (
@@ -414,21 +361,29 @@ function StudentDashboardPage() {
       <Sidebar>
         <Logo>logo</Logo>
         <SidebarMenu>
-          <NavItem to="/student-dashboard" className="active">
+          <NavItem to="/admin-dashboard" className="active">
             <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
             Dashboard
-          </NavItem>
-          <NavItem to="/my-classes">
-            <NavIcon>{getMenuIcon('myClasses')}</NavIcon>
-            My Classes
           </NavItem>
           <NavItem to="/exams">
             <NavIcon>{getMenuIcon('exams')}</NavIcon>
             Exams
           </NavItem>
-          <NavItem to="/results">
-            <NavIcon>{getMenuIcon('results')}</NavIcon>
-            Results
+          <NavItem to="/class">
+            <NavIcon>{getMenuIcon('class')}</NavIcon>
+            Class
+          </NavItem>
+          <NavItem to="/reports">
+            <NavIcon>{getMenuIcon('reports')}</NavIcon>
+            Reports
+          </NavItem>
+          <NavItem to="/payment">
+            <NavIcon>{getMenuIcon('payment')}</NavIcon>
+            Payment
+          </NavItem>
+          <NavItem to="/users">
+            <NavIcon>{getMenuIcon('users')}</NavIcon>
+            Users
           </NavItem>
         </SidebarMenu>
         <BottomMenu>
@@ -446,7 +401,7 @@ function StudentDashboardPage() {
       <MainContent>
         <Header>
           <PageTitle>
-            <h1>Student Dashboard</h1>
+            <h1>Admin Dashboard</h1>
             <p>Welcome back, {getFullName()}</p>
           </PageTitle>
           
@@ -464,15 +419,11 @@ function StudentDashboardPage() {
               <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
               {showDropdown && (
                 <Dropdown>
-                  <DropdownItem onClick={goToSettings}>
+                  <DropdownItem>
                     <span>👤</span> Profile
                   </DropdownItem>
-                  <DropdownItem onClick={goToSettings}>
+                  <DropdownItem>
                     <span>⚙️</span> Settings
-                  </DropdownItem>
-                  <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
-                    <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
-                    {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
                   </DropdownItem>
                   <DropdownItem onClick={handleLogout}>
                     <span>🚪</span> Sign out
@@ -485,12 +436,12 @@ function StudentDashboardPage() {
         
         <CardsContainer>
           <Card>
-            <CardHeader>Upcoming Exams</CardHeader>
-            <CardValue>{upcomingExams || 3}</CardValue>
+            <CardHeader>Total Exams</CardHeader>
+            <CardValue>{examCount || 203}</CardValue>
             <ExpandButton />
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={upcomingExamsData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <BarChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
@@ -507,12 +458,12 @@ function StudentDashboardPage() {
           </Card>
           
           <Card>
-            <CardHeader>Completed Exams</CardHeader>
-            <CardValue>{completedExams || 12}</CardValue>
+            <CardHeader>Total Students</CardHeader>
+            <CardValue>{studentCount || 351}</CardValue>
             <ExpandButton />
             <ChartContainer>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={completedExamsData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <BarChart data={studentData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#ff2e8e" stopOpacity={1} />
@@ -533,4 +484,4 @@ function StudentDashboardPage() {
   );
 }
 
-export default StudentDashboardPage; 
+export default AdminDashboardPage; 

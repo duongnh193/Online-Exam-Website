@@ -1,9 +1,12 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import HomePage from '../pages/HomePage';
-import DashboardPage from '../pages/DashboardPage';
+import AdminDashboardPage from '../pages/AdminDashboardPage';
+import LecturerDashboardPage from '../pages/LecturerDashboardPage';
 import StudentDashboardPage from '../pages/StudentDashboardPage';
 import ExamPage from '../pages/ExamPage';
+import SettingsPage from '../pages/SettingsPage';
+import ClassPage from '../pages/ClassPage';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '../hooks/useAuth';
@@ -55,8 +58,18 @@ const RoleRoute = ({ children, allowedRoles }) => {
 
   console.log('RoleRoute check - user:', user);
   console.log('RoleRoute check - allowedRoles:', allowedRoles);
-  console.log('RoleRoute check - user role:', user?.role);
-  console.log('RoleRoute check - is allowed:', user?.role ? allowedRoles.includes(user.role) : false);
+  
+  // Get user's role and normalize it (ensure it's uppercase for comparison)
+  const userRole = user?.role?.toUpperCase();
+  console.log('RoleRoute check - normalized user role:', userRole);
+  
+  // Normalize allowed roles for comparison
+  const normalizedAllowedRoles = allowedRoles.map(role => role.toUpperCase());
+  console.log('RoleRoute check - normalized allowed roles:', normalizedAllowedRoles);
+  
+  // Check if user role is allowed (case-insensitive)
+  const isRoleAllowed = userRole ? normalizedAllowedRoles.includes(userRole) : false;
+  console.log('RoleRoute check - is role allowed:', isRoleAllowed);
 
   if (isLoading) {
     console.log('RoleRoute - Still loading');
@@ -68,13 +81,13 @@ const RoleRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  if (!allowedRoles.includes(user?.role)) {
-    console.log('RoleRoute - User role not allowed:', user?.role);
+  if (!isRoleAllowed) {
+    console.log('RoleRoute - User role not allowed:', userRole);
     // Redirect to appropriate dashboard based on role
-    if (user?.role === 'ROLE_STUDENT') {
+    if (userRole === 'ROLE_STUDENT') {
       console.log('RoleRoute - Redirecting to student dashboard');
       return <Navigate to="/student-dashboard" replace />;
-    } else if (user?.role === 'ROLE_LECTURER') {
+    } else if (userRole === 'ROLE_LECTURER' || userRole === 'ROLE_ADMIN') {
       console.log('RoleRoute - Redirecting to lecturer dashboard');
       return <Navigate to="/dashboard" replace />;
     } else {
@@ -95,9 +108,12 @@ const LoginSuccessRoute = () => {
   if (user?.role === 'ROLE_STUDENT') {
     console.log('LoginSuccessRoute - Redirecting to student dashboard');
     return <Navigate to="/student-dashboard" state={{ from: location }} replace />;
-  } else if (user?.role === 'ROLE_LECTURER' || user?.role === 'ROLE_ADMIN') {
+  } else if (user?.role === 'ROLE_LECTURER') {
     console.log('LoginSuccessRoute - Redirecting to lecturer dashboard');
-    return <Navigate to="/dashboard" state={{ from: location }} replace />;
+    return <Navigate to="/lecturer-dashboard" state={{ from: location }} replace />;
+  } else if (user?.role === 'ROLE_ADMIN') {
+    console.log('LoginSuccessRoute - Redirecting to admin dashboard');
+    return <Navigate to="/admin-dashboard" state={{ from: location }} replace />;
   } else {
     console.log('LoginSuccessRoute - Unknown role, redirecting to home');
     return <Navigate to="/" state={{ from: location }} replace />;
@@ -117,13 +133,25 @@ const AppRoutes = () => {
         } 
       />
 
-      {/* Protected lecturer routes */}
+      {/* Protected admin route */}
       <Route 
-        path="/dashboard" 
+        path="/admin-dashboard" 
         element={
           <ProtectedRoute>
-            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN']}>
-              <DashboardPage />
+            <RoleRoute allowedRoles={['ROLE_ADMIN']}>
+              <AdminDashboardPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Protected lecturer route */}
+      <Route 
+        path="/lecturer-dashboard" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_LECTURER']}>
+              <LecturerDashboardPage />
             </RoleRoute>
           </ProtectedRoute>
         } 
@@ -141,26 +169,35 @@ const AppRoutes = () => {
         } 
       />
 
-      {/* Exams route - available to all authenticated users but with role-specific views */}
+      {/* Student-specific routes */}
       <Route 
-        path="/exams" 
+        path="/my-classes" 
         element={
           <ProtectedRoute>
-            <ExamPage />
+            <RoleRoute allowedRoles={['ROLE_STUDENT']}>
+              <Navigate to="/student-dashboard" replace />
+            </RoleRoute>
           </ProtectedRoute>
         } 
       />
-
-      {/* Results route - for students */}
+      
       <Route 
         path="/results" 
         element={
           <ProtectedRoute>
             <RoleRoute allowedRoles={['ROLE_STUDENT']}>
-              <PublicLayout>
-                <div>Results Page</div>
-              </PublicLayout>
+              <Navigate to="/student-dashboard" replace />
             </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Legacy dashboard route - redirect based on role */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <LoginSuccessRoute />
           </ProtectedRoute>
         } 
       />
@@ -171,6 +208,40 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <LoginSuccessRoute />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Exams route - available to all authenticated users but with role-specific views */}
+      <Route 
+        path="/exams" 
+        element={
+          <ProtectedRoute>
+            <ExamPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Class route - for managing examinees */}
+      <Route 
+        path="/class" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN']}>
+              <ClassPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Settings route - for all users */}
+      <Route 
+        path="/settings" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN', 'ROLE_STUDENT']}>
+              <SettingsPage />
+            </RoleRoute>
           </ProtectedRoute>
         } 
       />
