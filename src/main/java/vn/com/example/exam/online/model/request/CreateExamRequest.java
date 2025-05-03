@@ -19,5 +19,6 @@ public class CreateExamRequest {
     Integer duration;
     LocalDateTime startAt;
     LocalDateTime endAt;
+    String password;
     ExamStatus status;
 }

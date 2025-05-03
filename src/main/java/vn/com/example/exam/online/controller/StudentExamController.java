@@ -21,8 +21,8 @@ public class StudentExamController {
 
     @PostMapping("/start")
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<StudentExamResponse> startExam(@RequestParam Long examId) {
-        return ResponseEntity.ok(studentExamService.startExam(examId));
+    public ResponseEntity<StudentExamResponse> startExam(@RequestParam Long examId, @RequestParam String password) {
+        return ResponseEntity.ok(studentExamService.startExam(examId, password));
     }
 
     @PostMapping("/submit-answer")

@@ -43,6 +43,7 @@ public class Exam {
     Integer duration;
     LocalDateTime startAt;
     LocalDateTime endAt;
+    String password;
     @Enumerated(EnumType.STRING)
     ExamStatus status;
     @OneToMany(mappedBy = "exam")

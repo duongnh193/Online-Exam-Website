@@ -36,12 +36,15 @@ public class StudentExamService {
     private final QuestionRepository questionRepository;
     private final StudentClassRepository studentClassRepository;
 
-    public StudentExamResponse startExam(Long examId) {
+    public StudentExamResponse startExam(Long examId, String password) {
         User student = getAuthenticatedStudent();
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found"));
         if(!isCurrentUserInClass(student.getId(), exam.getClassEntity().getId())) {
             throw new RuntimeException("Student is not in class");
+        }
+        if(!password.equals(exam.getPassword())) {
+            throw new RuntimeException("Wrong password");
         }
         String studentExamId = student.getId() + "-" + examId;
 

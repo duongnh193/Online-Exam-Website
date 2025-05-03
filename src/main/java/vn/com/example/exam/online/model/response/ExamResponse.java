@@ -24,6 +24,7 @@ public class ExamResponse {
     Integer duration;
     LocalDateTime startAt;
     LocalDateTime endAt;
+    String password;
     ExamStatus status;
     List<Question> questions = new ArrayList<>();
 }
