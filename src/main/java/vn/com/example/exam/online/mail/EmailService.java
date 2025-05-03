@@ -24,5 +24,13 @@ public class EmailService {
     public String generateOtp() {
         return String.format(Constants.OTP_FORMAT, new Random().nextInt(10000));
     }
+
+    public void sendResetPasswordEmail(String toEmail, String newPassword) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Your New Password");
+        message.setText(String.format("Your new password is: %s\nPlease log in and change your password once logged in.", newPassword));
+        mailSender.send(message);
+    }
 }
 

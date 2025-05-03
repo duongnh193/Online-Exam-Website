@@ -88,14 +88,13 @@ public class AuthController {
 
     @Operation(
             summary = "Reset Password REST API",
-            description = "Reset password using email, OTP, and new password"
-    )
+            description = "Send a random password to your email")
     @ApiResponse(
             responseCode = "200",
             description = "Password reset successful"
     )
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestBody @Valid ResetPasswordRequest resetPasswordRequest) {
-        return ResponseEntity.ok(authService.resetPassword(resetPasswordRequest));
+    public ResponseEntity<String> resetPassword(@RequestParam String emailOrUsername) {
+        return ResponseEntity.ok(authService.resetPassword(emailOrUsername));
     }
 }

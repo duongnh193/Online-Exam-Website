@@ -26,6 +26,7 @@ import vn.com.example.exam.online.repository.LoginHistoryRepository;
 import vn.com.example.exam.online.repository.UserRepository;
 import vn.com.example.exam.online.util.Constants;
 
+import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -145,25 +146,27 @@ public class AuthService {
         return Constants.OTP_RETURN_TEXT + user.getEmail();
     }
 
-    public String resetPassword(ResetPasswordRequest resetPasswordRequest) {
-        String emailOrUsername = resetPasswordRequest.getEmailOrUsername();
+    public String resetPassword(String emailOrUsername) {
         User user = userRepository.findByUsernameOrEmail(emailOrUsername, emailOrUsername)
                 .orElseThrow(() ->
                         new UserNotFoundException(Constants.USER_NOT_FOUND_MESSAGE.formatted(emailOrUsername)));
         String email = user.getEmail();
-        String newPassword = resetPasswordRequest.getNewPassword();
-        String confirmPassword = resetPasswordRequest.getConfirmPassword();
-        String storedOtp = otpStore.get(email);
-        if (storedOtp == null || !storedOtp.equals(resetPasswordRequest.getOtp())) {
-            throw new IllegalArgumentException(Constants.OTP_INVALID);
-        }
-        if (!newPassword.equals(confirmPassword)) {
-            throw new IllegalArgumentException(Constants.PASSWORD_NOT_MATCH);
-        }
+        String newPassword = generateRandomPassword();
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        otpStore.remove(email);
+        emailService.sendResetPasswordEmail(emailOrUsername, newPassword);
 
-        return Constants.RESET_PASSWORD_SUCCESS;
+        return Constants.RESET_PASSWORD_SUCCESS + " " + email;
+    }
+
+    private String generateRandomPassword() {
+        int length = 10;
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 }
