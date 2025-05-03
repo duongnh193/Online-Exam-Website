@@ -20,6 +20,7 @@ import vn.com.example.exam.online.repository.StudentClassRepository;
 import vn.com.example.exam.online.repository.StudentExamRepository;
 import vn.com.example.exam.online.repository.UserRepository;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -113,13 +114,16 @@ public class StudentExamService {
         long correctAnswersCount = submissions.stream()
                 .filter(ExamSubmission::getIsCorrect)
                 .count();
+        int totalQuestions = submissions.size();
+        double score = totalQuestions > 0 ? (correctAnswersCount * 100.0) / totalQuestions : 0.0;
 
-        studentExam.setScore((double) correctAnswersCount);
+        studentExam.setScore(score);
         studentExam.setStatus(StudentExamStatus.COMPLETED);
         studentExam.setFinishAt(OffsetDateTime.now());
+        long minutesSpent = Duration.between(studentExam.getStartAt(), studentExam.getFinishAt()).toMinutes();
+        studentExam.setTime((int) minutesSpent);
         studentExamRepository.save(studentExam);
-
-        return new ExamResult(correctAnswersCount, submissions.size() - correctAnswersCount);
+        return new ExamResult(correctAnswersCount, totalQuestions - correctAnswersCount, totalQuestions, score, Duration.between(studentExam.getFinishAt(), studentExam.getStartAt()));
     }
 
     private boolean checkAnswer(Question question, String answer) {
