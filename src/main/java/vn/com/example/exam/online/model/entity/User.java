@@ -56,7 +56,12 @@ public class User {
     List<LoginHistory> loginHistories;
 
     public String getRoleName() {
-        return this.role.name();
+        return this.role.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "User [id=" + id + ", username=" + username + ", passwordHash=" + passwordHash;
     }
 }
 

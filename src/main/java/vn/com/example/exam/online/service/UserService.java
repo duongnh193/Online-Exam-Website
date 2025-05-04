@@ -83,7 +83,7 @@ public class UserService {
 
     public User updatePassword(UpdatePasswordRequest updatePasswordRequest, Long id) {
         User user = findUserById(id);
-        if (!passwordEncoder.encode(updatePasswordRequest.getCurrentPassword()).equals(user.getPasswordHash())) {
+        if (!passwordEncoder.matches(updatePasswordRequest.getCurrentPassword(), user.getPasswordHash())) {
             throw new InvalidPasswordException(Constants.INVALID_PASSWORD);
         }
         user.setPasswordHash(passwordEncoder.encode(updatePasswordRequest.getNewPassword()));
