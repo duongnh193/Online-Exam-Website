@@ -2,6 +2,8 @@ package vn.com.example.exam.online.service;
 
 import com.opencsv.CSVReader;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -116,5 +118,10 @@ public class StudentClassService {
         }
 
         return false;
+    }
+
+    public Page<Class> findClassByStudent(Long studentId, Pageable pageable) {
+        return studentClassRepository.findByStudentId(studentId, pageable)
+                .map(StudentClass::getClassEntity);
     }
 }

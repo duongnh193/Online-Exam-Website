@@ -24,6 +24,7 @@ import vn.com.example.exam.online.model.entity.Class;
 import vn.com.example.exam.online.model.request.CreateClassRequest;
 import vn.com.example.exam.online.model.response.ClassResponse;
 import vn.com.example.exam.online.service.ClassService;
+import vn.com.example.exam.online.service.StudentClassService;
 import vn.com.example.exam.online.util.Constants;
 
 @RestController
@@ -31,6 +32,7 @@ import vn.com.example.exam.online.util.Constants;
 @RequiredArgsConstructor
 public class ClassController {
     private final ClassService classService;
+    private final StudentClassService studentClassService;
 
     @Operation(
             summary = "Create REST API",
@@ -104,7 +106,7 @@ public class ClassController {
     @ApiResponse(
             responseCode = "200",
             description = "HTTP Status 200 OK")
-    @GetMapping()
+    @GetMapping("/by-teacher")
     @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
     public ResponseEntity<Page<ClassResponse>> getClasses(
             @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
@@ -113,6 +115,23 @@ public class ClassController {
     ) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Class> classPage = classService.getClassesByTeacherId(teacherId, pageable);
+        return ResponseEntity.ok(classPage.map(Class2ClassResponse.INSTANCE::map));
+    }
+
+    @Operation(
+            summary = "Get classes REST API",
+            description = "Get all classes by student")
+    @ApiResponse(
+            responseCode = "200",
+            description = "HTTP Status 200 OK")
+    @GetMapping("/by-student")
+    public ResponseEntity<Page<ClassResponse>> getClassesByStudent(
+            @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
+            @RequestParam(required = true) Long studentId
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Class> classPage = studentClassService.findClassByStudent(studentId, pageable);
         return ResponseEntity.ok(classPage.map(Class2ClassResponse.INSTANCE::map));
     }
 }
