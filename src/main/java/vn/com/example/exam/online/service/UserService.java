@@ -16,11 +16,13 @@ import vn.com.example.exam.online.mapper.SignupRequest2UserMapper;
 import vn.com.example.exam.online.mapper.UpdateUserRequest2UserMapper;
 import vn.com.example.exam.online.mapper.User2UserResponse;
 import vn.com.example.exam.online.model.RoleEnum;
+import vn.com.example.exam.online.model.entity.LoginHistory;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.request.SignupRequest;
 import vn.com.example.exam.online.model.request.UpdatePasswordRequest;
 import vn.com.example.exam.online.model.request.UpdateUserRequest;
 import vn.com.example.exam.online.model.response.UserResponse;
+import vn.com.example.exam.online.repository.LoginHistoryRepository;
 import vn.com.example.exam.online.repository.UserRepository;
 import vn.com.example.exam.online.util.Constants;
 
@@ -31,6 +33,7 @@ import java.time.OffsetDateTime;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LoginHistoryRepository loginHistoryRepository;
 
     public User create(SignupRequest signupRequest) {
         checkUsername(signupRequest.getUsername());
@@ -147,5 +150,9 @@ public class UserService {
 
     public Page<UserResponse> getUsersStudent(Pageable pageable) {
         return userRepository.findAllByRole(RoleEnum.ROLE_STUDENT ,pageable).map(User2UserResponse.INSTANCE::map);
+    }
+
+    public Page<LoginHistory> getLoginHistory(Long userId, Pageable pageable) {
+        return loginHistoryRepository.findByUserId(userId, pageable);
     }
 }

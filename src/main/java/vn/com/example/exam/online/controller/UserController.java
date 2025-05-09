@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.example.exam.online.mapper.User2UserResponse;
+import vn.com.example.exam.online.model.entity.LoginHistory;
 import vn.com.example.exam.online.model.request.SignupRequest;
 import vn.com.example.exam.online.model.request.UpdatePasswordRequest;
 import vn.com.example.exam.online.model.request.UpdateUserRequest;
@@ -203,5 +204,23 @@ public class UserController {
     ) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(userService.getUsersStudent(pageable));
+    }
+
+    @Operation(
+            summary = "Get login history REST API",
+            description = "Get login history of user by userId"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "HTTP Status 200 OK"
+    )
+    @GetMapping("/login-history/{userId}")
+    public ResponseEntity<Page<LoginHistory>> getLoginHistory(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(userService.getLoginHistory(userId, pageable));
     }
 }
