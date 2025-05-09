@@ -124,4 +124,9 @@ public class StudentClassService {
         return studentClassRepository.findByStudentId(studentId, pageable)
                 .map(StudentClass::getClassEntity);
     }
+
+    public Page<User> findStudentsInClass(Long classId, Pageable pageable) {
+        return studentClassRepository.findByClassEntityId(classId, pageable)
+                .map(StudentClass::getStudent);
+    }
 }
