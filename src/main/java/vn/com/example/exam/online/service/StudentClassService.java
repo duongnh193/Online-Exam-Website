@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.com.example.exam.online.exception.UserNotFoundException;
+import vn.com.example.exam.online.model.RoleEnum;
 import vn.com.example.exam.online.model.entity.Class;
 import vn.com.example.exam.online.model.entity.StudentClass;
 import vn.com.example.exam.online.model.entity.User;
@@ -49,7 +50,7 @@ public class StudentClassService {
                 Optional<User> userOpt = userRepository.findByEmail(email);
                 if (userOpt.isPresent()) {
                     User user = userOpt.get();
-
+                    if (user.getRole() != RoleEnum.ROLE_STUDENT) continue;
                     StudentClass sc = new StudentClass()
                             .setStudent(user)
                             .setClassEntity(clazz);
@@ -82,6 +83,9 @@ public class StudentClassService {
         }
 
         User user = userOpt.get();
+        if (user.getRole() != RoleEnum.ROLE_STUDENT) {
+            return false;
+        }
 
         StudentClass sc = new StudentClass()
                 .setStudent(user)
