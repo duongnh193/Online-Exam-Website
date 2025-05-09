@@ -5,6 +5,7 @@ import AdminDashboardPage from '../pages/AdminDashboardPage';
 import LecturerDashboardPage from '../pages/LecturerDashboardPage';
 import StudentDashboardPage from '../pages/StudentDashboardPage';
 import ExamPage from '../pages/ExamPage';
+import CreateExamPage from '../pages/CreateExamPage';
 import SettingsPage from '../pages/SettingsPage';
 import ClassPage from '../pages/ClassPage';
 import Navbar from '../components/layout/Navbar';
@@ -175,7 +176,7 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <RoleRoute allowedRoles={['ROLE_STUDENT']}>
-              <Navigate to="/student-dashboard" replace />
+              <ClassPage />
             </RoleRoute>
           </ProtectedRoute>
         } 
@@ -218,6 +219,30 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ExamPage />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Create exam route - only for lecturers and admins */}
+      <Route 
+        path="/create-exam" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN']}>
+              <CreateExamPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Edit exam route - only for lecturers and admins */}
+      <Route 
+        path="/edit-exam/:examId" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN']}>
+              <CreateExamPage />
+            </RoleRoute>
           </ProtectedRoute>
         } 
       />

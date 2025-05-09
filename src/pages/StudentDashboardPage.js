@@ -5,6 +5,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
 import authService from '../services/authService';
+import classService from '../services/classService';
+import examService from '../services/examService';
+import { FaEllipsisV } from 'react-icons/fa';
 
 // Styled Components
 const DashboardContainer = styled.div`
@@ -250,32 +253,123 @@ const ChartContainer = styled.div`
   margin-top: 1rem;
 `;
 
+// Add a color palette for card backgrounds
+const CARD_COLORS = [
+  '#43a047', // green
+  '#6a1b9a', // purple
+  '#00695c', // teal
+  '#388e3c', // dark green
+  '#fbc02d', // yellow
+  '#0288d1', // blue
+  '#8d6e63', // brown
+  '#c62828', // red
+  '#2e7d32', // forest green
+  '#5d4037', // dark brown
+];
+
+function getRandomColor(index) {
+  return CARD_COLORS[index % CARD_COLORS.length];
+}
+
 function StudentDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sortOption, setSortOption] = useState('recent');
-  const [upcomingExams, setUpcomingExams] = useState(0);
-  const [completedExams, setCompletedExams] = useState(0);
+  const [upcomingExams, setUpcomingExams] = useState([]);
+  const [completedExams, setCompletedExams] = useState([]);
+  const [myClasses, setMyClasses] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [updating2FA, setUpdating2FA] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const dropdownRef = useRef(null);
+  const [openMenuIdx, setOpenMenuIdx] = useState(null);
+  const menuRefs = useRef([]);
+
+  // Color palette for color picker
+  const COLOR_PICKER = [
+    '#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab',
+    '#1e88e5', '#039be5', '#00acc1', '#00897b', '#43a047',
+    '#7cb342', '#c0ca33', '#fbc02d', '#ffa000', '#fb8c00',
+    '#f4511e', '#6d4c41', '#757575', '#546e7a', '#00bcd4',
+  ];
+  const [customColors, setCustomColors] = useState({});
+  const [nicknames, setNicknames] = useState({});
   
   useEffect(() => {
     const loadDashboardData = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      setError(null);
+      
       try {
-        const examCountData = await dashboardService.getExamCount();
-        const studentCountData = await dashboardService.getStudentCount();
+        // Fetch student's classes
+        const classesResponse = await classService.getStudentClasses(user.id);
+        console.log('Classes response:', classesResponse);
         
-        setUpcomingExams(examCountData);
-        setCompletedExams(studentCountData);
+        // Handle both paginated and non-paginated responses
+        const classes = Array.isArray(classesResponse.data) 
+          ? classesResponse.data 
+          : (classesResponse.data.content || []);
+          
+        console.log('Processed classes:', classes);
+        setMyClasses(classes);
+        
+        if (classes.length === 0) {
+          setUpcomingExams([]);
+          setCompletedExams([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch upcoming exams for all classes
+        const upcomingExamsPromises = classes.map(classItem => 
+          examService.getExamsByClass(classItem.id)
+        );
+        
+        const upcomingExamsResponses = await Promise.all(upcomingExamsPromises);
+        const allUpcomingExams = upcomingExamsResponses.flatMap(response => {
+          const exams = Array.isArray(response.data) 
+            ? response.data 
+            : (response.data.content || []);
+          return exams.filter(exam => 
+            exam.status === 'SCHEDULED' || exam.status === 'ONGOING'
+          );
+        });
+        
+        // Sort by start time
+        allUpcomingExams.sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
+        setUpcomingExams(allUpcomingExams);
+        
+        // Fetch completed exams
+        const completedExamsPromises = classes.map(classItem =>
+          examService.getExamsByClass(classItem.id)
+        );
+        
+        const completedExamsResponses = await Promise.all(completedExamsPromises);
+        const allCompletedExams = completedExamsResponses.flatMap(response => {
+          const exams = Array.isArray(response.data) 
+            ? response.data 
+            : (response.data.content || []);
+          return exams.filter(exam => exam.status === 'COMPLETED');
+        });
+        
+        // Sort by completion time
+        allCompletedExams.sort((a, b) => new Date(b.endAt) - new Date(a.endAt));
+        setCompletedExams(allCompletedExams);
+        
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        setError('Failed to load dashboard data. Please try again later.');
+      } finally {
+        setLoading(false);
       }
     };
     
     loadDashboardData();
-  }, []);
+  }, [user]);
   
   useEffect(() => {
     if (user) {
@@ -288,37 +382,37 @@ function StudentDashboardPage() {
   
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
+      if (openMenuIdx !== null) {
+        const menuRef = menuRefs.current[openMenuIdx];
+        if (menuRef && !menuRef.contains(event.target)) {
+          setOpenMenuIdx(null);
+        }
       }
     }
-    
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [openMenuIdx]);
   
   const upcomingExamsData = [
-    { name: 'Jan', count: 40 },
-    { name: 'Feb', count: 20 },
-    { name: 'Mar', count: 40 },
-    { name: 'Apr', count: 30 },
-    { name: 'May', count: 50 },
-    { name: 'Jun', count: 60 },
-    { name: 'Jul', count: 70 },
-    { name: 'Aug', count: upcomingExams }
+    { name: 'Mon', count: upcomingExams.filter(e => new Date(e.startAt).getDay() === 1).length },
+    { name: 'Tue', count: upcomingExams.filter(e => new Date(e.startAt).getDay() === 2).length },
+    { name: 'Wed', count: upcomingExams.filter(e => new Date(e.startAt).getDay() === 3).length },
+    { name: 'Thu', count: upcomingExams.filter(e => new Date(e.startAt).getDay() === 4).length },
+    { name: 'Fri', count: upcomingExams.filter(e => new Date(e.startAt).getDay() === 5).length },
+    { name: 'Sat', count: upcomingExams.filter(e => new Date(e.startAt).getDay() === 6).length },
+    { name: 'Sun', count: upcomingExams.filter(e => new Date(e.startAt).getDay() === 0).length }
   ];
   
   const completedExamsData = [
-    { name: 'Jan', count: 100 },
-    { name: 'Feb', count: 80 },
-    { name: 'Mar', count: 40 },
-    { name: 'Apr', count: 100 },
-    { name: 'May', count: 60 },
-    { name: 'Jun', count: 80 },
-    { name: 'Jul', count: 100 },
-    { name: 'Aug', count: completedExams }
+    { name: 'Mon', count: completedExams.filter(e => new Date(e.endAt).getDay() === 1).length },
+    { name: 'Tue', count: completedExams.filter(e => new Date(e.endAt).getDay() === 2).length },
+    { name: 'Wed', count: completedExams.filter(e => new Date(e.endAt).getDay() === 3).length },
+    { name: 'Thu', count: completedExams.filter(e => new Date(e.endAt).getDay() === 4).length },
+    { name: 'Fri', count: completedExams.filter(e => new Date(e.endAt).getDay() === 5).length },
+    { name: 'Sat', count: completedExams.filter(e => new Date(e.endAt).getDay() === 6).length },
+    { name: 'Sun', count: completedExams.filter(e => new Date(e.endAt).getDay() === 0).length }
   ];
   
   const handleLogout = () => {
@@ -358,8 +452,6 @@ function StudentDashboardPage() {
   const getMenuIcon = (name) => {
     switch(name) {
       case 'dashboard': return '🏠';
-      case 'myClasses': return '📚';
-      case 'exams': return '📝';
       case 'results': return '📊';
       case 'settings': return '⚙️';
       case 'signout': return '🚪';
@@ -409,6 +501,16 @@ function StudentDashboardPage() {
     setShowDropdown(false);
   };
 
+  const handleMenuOpen = (idx) => setOpenMenuIdx(idx);
+  const handleMenuClose = () => setOpenMenuIdx(null);
+  const handleColorChange = (classId, color) => {
+    setCustomColors(prev => ({ ...prev, [classId]: color }));
+    setOpenMenuIdx(null);
+  };
+  const handleNicknameChange = (classId, value) => {
+    setNicknames(prev => ({ ...prev, [classId]: value }));
+  };
+
   return (
     <DashboardContainer>
       <Sidebar>
@@ -417,14 +519,6 @@ function StudentDashboardPage() {
           <NavItem to="/student-dashboard" className="active">
             <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
             Dashboard
-          </NavItem>
-          <NavItem to="/my-classes">
-            <NavIcon>{getMenuIcon('myClasses')}</NavIcon>
-            My Classes
-          </NavItem>
-          <NavItem to="/exams">
-            <NavIcon>{getMenuIcon('exams')}</NavIcon>
-            Exams
           </NavItem>
           <NavItem to="/results">
             <NavIcon>{getMenuIcon('results')}</NavIcon>
@@ -483,51 +577,190 @@ function StudentDashboardPage() {
           </HeaderRight>
         </Header>
         
-        <CardsContainer>
-          <Card>
-            <CardHeader>Upcoming Exams</CardHeader>
-            <CardValue>{upcomingExams || 3}</CardValue>
-            <ExpandButton />
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={upcomingExamsData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#6a00ff" stopOpacity={0.2} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Tooltip cursor={false} />
-                  <Bar dataKey="count" fill="url(#colorExams)" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </Card>
-          
-          <Card>
-            <CardHeader>Completed Exams</CardHeader>
-            <CardValue>{completedExams || 12}</CardValue>
-            <ExpandButton />
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={completedExamsData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ff2e8e" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#ff2e8e" stopOpacity={0.2} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Tooltip cursor={false} />
-                  <Bar dataKey="count" fill="url(#colorStudents)" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </Card>
-        </CardsContainer>
+        {error && (
+          <div style={{ color: 'red', marginBottom: '1rem' }}>
+            {error}
+          </div>
+        )}
+        
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            Loading dashboard data...
+          </div>
+        ) : (
+          <>
+            {/* Stats Cards with Charts */}
+            <CardsContainer>
+              <Card>
+                <CardHeader>Completed Exams</CardHeader>
+                <CardValue>{completedExams.length}</CardValue>
+                <ExpandButton onClick={() => navigate('/results')} />
+                <ChartContainer>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={completedExamsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorCompletedExams" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#9c27b0" stopOpacity={0.6} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" hide={true} />
+                      <YAxis hide={true} />
+                      <Tooltip cursor={false} />
+                      <Bar dataKey="count" fill="url(#colorCompletedExams)" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </Card>
+
+              <Card>
+                <CardHeader>Upcoming Exams</CardHeader>
+                <CardValue>{upcomingExams.length}</CardValue>
+                <ExpandButton onClick={() => navigate(`/student-exams`)} />
+                <ChartContainer>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={upcomingExamsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorUpcomingExams" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ff4081" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#f06292" stopOpacity={0.6} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" hide={true} />
+                      <YAxis hide={true} />
+                      <Tooltip cursor={false} />
+                      <Bar dataKey="count" fill="url(#colorUpcomingExams)" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </Card>
+            </CardsContainer>
+
+            {/* My Classes Section (cards) */}
+            <div style={{ marginTop: '2rem' }}>
+              <h2 style={{ marginBottom: '1rem' }}>My Classes</h2>
+              {myClasses.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', background: 'white', borderRadius: '1rem' }}>
+                  You are not enrolled in any classes yet.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                  {myClasses.map((classItem, idx) => {
+                    const color = customColors[classItem.id] || getRandomColor(idx);
+                    return (
+                      <div
+                        key={classItem.id}
+                        style={{
+                          borderRadius: '1rem',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                          background: 'white',
+                          overflow: 'hidden',
+                          cursor: openMenuIdx === idx ? 'default' : 'pointer',
+                          minHeight: '200px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          transition: 'transform 0.1s',
+                        }}
+                        onClick={e => {
+                          // Prevent card click if menu is open or menu button is clicked
+                          if (openMenuIdx === idx) return;
+                          navigate(`/exams?classId=${classItem.id}`);
+                        }}
+                      >
+                        {/* Top colored section with 3-dot menu */}
+                        <div style={{
+                          background: color,
+                          height: '50%',
+                          minHeight: '70px',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'flex-end',
+                          padding: '0.5rem 0.5rem 0 0',
+                        }}>
+                          <div
+                            style={{ cursor: 'pointer', zIndex: 2 }}
+                            onClick={e => { e.stopPropagation(); handleMenuOpen(idx); }}
+                          >
+                            <FaEllipsisV color="#fff" size={20} />
+                          </div>
+                          {/* Popover menu */}
+                          {openMenuIdx === idx && (
+                            <div
+                              ref={el => (menuRefs.current[idx] = el)}
+                              style={{
+                                position: 'absolute',
+                                top: '2.2rem',
+                                right: '0.5rem',
+                                background: '#fff',
+                                borderRadius: '8px',
+                                boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                                padding: '1rem',
+                                minWidth: '180px',
+                                zIndex: 10,
+                              }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <span style={{ fontWeight: 600, fontSize: '1rem' }}>Color</span>
+                                <span style={{ cursor: 'pointer', fontSize: 18, color: '#888' }} onClick={handleMenuClose}>×</span>
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                                {COLOR_PICKER.map(c => (
+                                  <div
+                                    key={c}
+                                    style={{
+                                      width: 22, height: 22, borderRadius: 4, background: c,
+                                      border: color === c ? '2px solid #333' : '1px solid #eee',
+                                      cursor: 'pointer',
+                                    }}
+                                    onClick={() => handleColorChange(classItem.id, c)}
+                                  />
+                                ))}
+                              </div>
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: 4 }}>Nickname</div>
+                                <input
+                                  type="text"
+                                  value={nicknames[classItem.id] || ''}
+                                  onChange={e => handleNicknameChange(classItem.id, e.target.value)}
+                                  style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #ccc' }}
+                                  placeholder="Enter nickname"
+                                />
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                                <button type="button" style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid #ccc', background: '#f5f5f5', cursor: 'pointer' }} onClick={handleMenuClose}>Cancel</button>
+                                <button type="button" style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer' }} onClick={handleMenuClose}>Apply</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {/* Bottom white section with left-aligned text */}
+                        <div style={{
+                          flex: 1,
+                          background: 'white',
+                          padding: '1rem 1.2rem 1.2rem 1.2rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'flex-start',
+                          textAlign: 'left',
+                        }}>
+                          <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem', color: color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {nicknames[classItem.id] || classItem.name || classItem.title}
+                          </div>
+                          <div style={{ fontSize: '0.95rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {classItem.description || 'No description available'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </MainContent>
     </DashboardContainer>
   );

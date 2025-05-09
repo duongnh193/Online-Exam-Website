@@ -28,7 +28,7 @@ class ClassService {
 
   // Get classes by teacher ID
   getClassesByTeacher(teacherId, page = 0, size = 10, sort = 'id,asc') {
-    const url = `${API_URL}?teacherId=${teacherId}&page=${page}&size=${size}&sort=${sort}`;
+    const url = `${API_URL}/by-teacher?teacherId=${teacherId}&page=${page}&size=${size}&sort=${sort}`;
     const headers = authHeader();
     logApiCall('GET', url, headers);
     return axios.get(url, { headers });
@@ -67,16 +67,43 @@ class ClassService {
   
   // Get student count for a class
   getStudentCountForClass(classId) {
-    // API endpoint to get the count of students in a class
-    const url = `${API_URL}/${classId}/students/count`;
+    // API endpoint to get students in a class with minimal page size
+    // We only need the total count, not the actual students
+    const url = `${API_URL}/${classId}/students?page=0&size=1`;
     const headers = authHeader();
     logApiCall('GET', url, headers);
+    
     return axios.get(url, { 
-      headers
-    }).catch(error => {
+      headers,
+      timeout: 5000 // 5 second timeout
+    })
+    .then(response => {
+      console.log(`Successfully retrieved student count for class ${classId}`);
+      
+      // If it's a paginated response, return the total elements count
+      if (response.data && response.data.totalElements !== undefined) {
+        console.log(`Student count for class ${classId}: ${response.data.totalElements}`);
+        return { data: response.data.totalElements };
+      }
+      
+      // If it's just an array, return its length
+      if (Array.isArray(response.data)) {
+        console.log(`Student count for class ${classId}: ${response.data.length}`);
+        return { data: response.data.length };
+      }
+      
+      // Default fallback
+      console.warn(`Unexpected response format for student count, returning 0`);
+      return { data: 0 };
+    })
+    .catch(error => {
       console.error(`Error fetching student count for class ${classId}:`, error);
-      console.error(`Error details:`, error.response?.data || error.message);
-      // Return a default value if the endpoint doesn't exist yet
+      if (error.response) {
+        console.error(`Error status: ${error.response.status}, message: ${error.response.data || 'Unknown error'}`);
+      } else {
+        console.error(`Error message: ${error.message || 'Unknown error'}`);
+      }
+      // Return a default value if there's an error
       return { data: 0 };
     });
   }
@@ -126,6 +153,22 @@ class ClassService {
       .catch(error => {
         console.error(`Error fetching students for class ${classId}:`, error);
         console.error(`Error details:`, error.response?.data || error.message);
+        throw error;
+      });
+  }
+
+  // Get classes for a student
+  getStudentClasses(studentId, page = 0, size = 10) {
+    const url = `${API_URL}/by-student?studentId=${studentId}&page=${page}&size=${size}`;
+    const headers = authHeader();
+    logApiCall('GET', url, headers);
+    return axios.get(url, { headers })
+      .then(response => {
+        console.log('Student classes fetched successfully:', response.data);
+        return response;
+      })
+      .catch(error => {
+        console.error('Error fetching student classes:', error.response?.data || error.message);
         throw error;
       });
   }

@@ -497,37 +497,81 @@ function ClassPage() {
         // Admin can see all classes
         console.log('fetchClasses: User is admin, fetching all classes');
         response = await classService.getAllClasses();
-      } else {
+      } else if (user.role === 'ROLE_LECTURER') {
         // Lecturer can only see their own classes
         console.log('fetchClasses: User is lecturer, fetching classes for teacher ID:', user.id);
         response = await classService.getClassesByTeacher(user.id);
+      } else if (user.role === 'ROLE_STUDENT') {
+        // Student can only see enrolled classes
+        console.log('fetchClasses: User is student, fetching enrolled classes for student ID:', user.id);
+        response = await classService.getStudentClasses(user.id);
+      } else {
+        console.warn('fetchClasses: Unknown user role:', user.role);
+        setError("Access denied. Unknown user role.");
+        setLoading(false);
+        return;
       }
       
       console.log('fetchClasses: API Response:', response);
       
-      const classesData = response.data.content || response.data;
+      // Handle potential different response formats
+      let classesData = [];
+      if (response.data) {
+        if (response.data.content && Array.isArray(response.data.content)) {
+          classesData = response.data.content;
+        } else if (Array.isArray(response.data)) {
+          classesData = response.data;
+        } else {
+          console.warn('fetchClasses: Unexpected response format:', response.data);
+        }
+      }
+      
       console.log('fetchClasses: Classes data:', classesData);
       
-      // Fetch student counts for each class
-      const classesWithStudentCounts = await Promise.all(classesData.map(async (classItem) => {
-        try {
-          console.log(`fetchClasses: Fetching student count for class ${classItem.id}`);
-          const countResponse = await classService.getStudentCountForClass(classItem.id);
-          console.log(`fetchClasses: Student count for class ${classItem.id}:`, countResponse.data);
-          return {
-            ...classItem,
-            studentCount: countResponse.data
-          };
-        } catch (err) {
-          console.error(`Error fetching student count for class ${classItem.id}:`, err);
-          return {
-            ...classItem,
-            studentCount: 0
-          };
-        }
-      }));
+      if (classesData.length === 0) {
+        setClasses([]);
+        setLoading(false);
+        return;
+      }
       
-      setClasses(classesWithStudentCounts);
+      // Only fetch student counts for admin and lecturer roles
+      if (user.role === 'ROLE_ADMIN' || user.role === 'ROLE_LECTURER') {
+        // Fetch student counts for each class
+        const classesWithStudentCounts = await Promise.all(classesData.map(async (classItem) => {
+          try {
+            console.log(`fetchClasses: Fetching student count for class ID ${classItem.id}`);
+            const countResponse = await classService.getStudentCountForClass(classItem.id);
+            
+            // Log the response to help with debugging
+            console.log(`fetchClasses: Student count API response for class ${classItem.id}:`, countResponse);
+            
+            // Make sure we handle different formats and potential undefined values
+            let studentCount = 0;
+            if (countResponse && countResponse.data !== undefined) {
+              studentCount = typeof countResponse.data === 'number' ? countResponse.data : 0;
+            }
+            
+            console.log(`fetchClasses: Student count for class ${classItem.id}: ${studentCount}`);
+            
+            return {
+              ...classItem,
+              studentCount: studentCount
+            };
+          } catch (err) {
+            console.error(`Error fetching student count for class ${classItem.id}:`, err);
+            return {
+              ...classItem,
+              studentCount: 0
+            };
+          }
+        }));
+        
+        setClasses(classesWithStudentCounts);
+      } else {
+        // For students, we don't need student counts
+        setClasses(classesData);
+      }
+      
       setError(null);
     } catch (err) {
       console.error("Error fetching classes:", err);

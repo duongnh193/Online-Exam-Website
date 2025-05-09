@@ -8,7 +8,6 @@ import './styles/scroll.css';
 import { AuthProvider } from './hooks/useAuth';
 import { BrowserRouter } from 'react-router-dom';
 
-
 function App() {
   return (
     <BrowserRouter>
