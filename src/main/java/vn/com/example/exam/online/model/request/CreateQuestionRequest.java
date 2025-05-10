@@ -20,4 +20,5 @@ public class CreateQuestionRequest {
     QuestionType type;
     List<ChoiceDto> choices;
     String answer;
+    String image;
 }

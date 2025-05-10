@@ -53,4 +53,5 @@ public class Question {
     @OneToMany(mappedBy = "question")
     @JsonIgnore
     List<ExamSubmission> examSubmissions = new ArrayList<>();
+    String image;
 }

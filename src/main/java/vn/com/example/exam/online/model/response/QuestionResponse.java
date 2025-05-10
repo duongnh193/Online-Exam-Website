@@ -22,4 +22,5 @@ public class QuestionResponse {
     QuestionType type;
     List<ChoiceDto> choices;
     String answer;
+    String image;
 }

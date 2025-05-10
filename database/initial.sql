@@ -11,7 +11,7 @@ CREATE TABLE `user`
     email         VARCHAR(100) UNIQUE NOT NULL,
     first_name    VARCHAR(50)         NOT NULL,
     last_name     VARCHAR(50)         NOT NULL,
-    image         VARCHAR(255),
+    image         MEDIUMTEXT,
     create_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     two_factor   BOOLEAN DEFAULT FALSE,
@@ -34,7 +34,7 @@ CREATE TABLE class
     description VARCHAR(255),
     create_by     BIGINT       NOT NULL,
     create_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    image       VARCHAR(255),
+    image       MEDIUMTEXT,
     FOREIGN KEY (create_by) REFERENCES user (id) ON DELETE CASCADE
 );
 
@@ -92,6 +92,7 @@ CREATE TABLE question
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     update_by BIGINT,
+    image       MEDIUMTEXT,
     FOREIGN KEY (exam_id) REFERENCES exam (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
     FOREIGN KEY (update_by) REFERENCES user (id) ON DELETE SET NULL
