@@ -56,7 +56,7 @@ CREATE TABLE exam
     duration  INT          NOT NULL,
     start_at  DATETIME     NOT NULL,
     end_at    DATETIME     NOT NULL,
-    password  VARCHAR(10)
+    password  VARCHAR(10),
     status    ENUM('PENDING', 'ONGOING', 'COMPLETED', 'CANCELED') NOT NULL,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -87,7 +87,7 @@ CREATE TABLE question
     user_id   BIGINT          NOT NULL,
     title     VARCHAR(255) NOT NULL,
     type      ENUM('ESSAY', 'MULTIPLE_CHOICE', 'SINGLE_CHOICE') NOT NULL,
-    choice    TEXT,
+    choices    TEXT,
     answer    TEXT         NOT NULL,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

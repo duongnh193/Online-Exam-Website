@@ -26,5 +26,5 @@ public class ExamResponse {
     LocalDateTime endAt;
     String password;
     ExamStatus status;
-    List<Question> questions = new ArrayList<>();
+    long totalQuestions;
 }

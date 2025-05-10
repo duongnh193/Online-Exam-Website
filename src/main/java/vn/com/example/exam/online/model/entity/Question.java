@@ -1,8 +1,10 @@
 package vn.com.example.exam.online.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Convert;
-import jakarta.persistence.Converter;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,7 +24,6 @@ import vn.com.example.exam.online.util.ChoiceDtoConverter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -37,15 +38,19 @@ public class Question {
     Long id;
     @ManyToOne
     @JoinColumn(name = "exam_id")
+    @JsonIgnore
     Exam exam;
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     User creator;
     String title;
+    @Enumerated(EnumType.STRING)
     QuestionType type;
     @Convert(converter = ChoiceDtoConverter.class)
     List<ChoiceDto> choices;
     String answer;
     @OneToMany(mappedBy = "question")
+    @JsonIgnore
     List<ExamSubmission> examSubmissions = new ArrayList<>();
 }
