@@ -3,7 +3,6 @@ import { Button, Form, Modal, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import OTPModal from './OTPModal';
-import ResetPasswordModal from './ResetPasswordModal';
 import './AuthModal.css';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebook, FaApple } from 'react-icons/fa';
@@ -19,7 +18,6 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpData, setOtpData] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
 
   const handleCloseOtpModal = () => {
     setShowOtpModal(false);
@@ -144,7 +142,7 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
     try {
       // Call authService directly for OTP verification
       const verificationData = {
-        username: otpData.username,
+        usernameOrEmail: otpData.username,
         password: otpData.password,
         otp: otpValue
       };
@@ -195,25 +193,11 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
   };
 
   const handleForgotPassword = () => {
-    handleClose();
-    if (onSwitchToResetPassword) {
-      onSwitchToResetPassword();
-    }
-  };
-
-  const handleResetPasswordClick = () => {
-    setShowResetPasswordModal(true);
+    // Instead of trying to show our own modal, use the parent's callback
     handleClose(); // Close the login modal
-  };
-
-  const handleResetPasswordModalClose = () => {
-    setShowResetPasswordModal(false);
-  };
-
-  const handleSwitchToLogin = () => {
-    setShowResetPasswordModal(false);
-    setTimeout(() => handleClose(false), 100); // Close ResetPasswordModal
-    setTimeout(() => handleClose(true), 200); // Show LoginModal
+    if (onSwitchToResetPassword) {
+      onSwitchToResetPassword(); // This will open the parent's reset password modal
+    }
   };
 
   return (
@@ -317,14 +301,6 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
           otpData={otpData}
           onSuccess={handleOtpSuccess}
           onSubmit={handleOtpSubmit}
-        />
-      )}
-
-      {showResetPasswordModal && (
-        <ResetPasswordModal
-          show={showResetPasswordModal}
-          handleClose={handleResetPasswordModalClose}
-          onSwitchToLogin={handleSwitchToLogin}
         />
       )}
     </>

@@ -396,7 +396,8 @@ function CreateExamPage() {
     duration: 60, // default 60 minutes
     startAt: '',
     endAt: '',
-    status: 'SCHEDULED'
+    status: 'SCHEDULED',
+    password: '' // Add password field
   });
   
   const [createdExamId, setCreatedExamId] = useState(null);
@@ -425,6 +426,10 @@ function CreateExamPage() {
   // Add state for image upload
   const [questionImage, setQuestionImage] = useState(null);
   const imageInputRef = useRef(null);
+  
+  // Add a new state for showing/hiding password
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   
   // Fetch exam data if in edit mode
   useEffect(() => {
@@ -457,7 +462,8 @@ function CreateExamPage() {
             duration: exam.duration || 60,
             startAt: formatDateForInput(exam.startAt),
             endAt: formatDateForInput(exam.endAt),
-            status: exam.status || 'SCHEDULED'
+            status: exam.status || 'SCHEDULED',
+            password: exam.password || ''
           });
           
           setLoading(false);
@@ -505,6 +511,17 @@ function CreateExamPage() {
   
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Special validation for password
+    if (name === 'password') {
+      // Only validate if there's a value (password is optional)
+      if (value && value.length > 0 && value.length < 4) {
+        setPasswordError('Password must be at least 4 characters long');
+      } else {
+        setPasswordError('');
+      }
+    }
+    
     setExamData(prev => ({ ...prev, [name]: value }));
   };
   
@@ -551,12 +568,21 @@ function CreateExamPage() {
     setLoading(true);
     setError(null);
     
+    // Validate password if provided
+    if (examData.password && examData.password.length > 0 && examData.password.length < 4) {
+      setError('Exam password must be at least 4 characters long');
+      setLoading(false);
+      return;
+    }
+    
     try {
       // Convert string values to appropriate types
       const formattedData = {
         ...examData,
         classId: Number(examData.classId),
-        duration: Number(examData.duration)
+        duration: Number(examData.duration),
+        // Include password (empty string is fine if not set)
+        password: examData.password || ''
       };
       
       // Format dates to ISO strings if needed
@@ -1100,6 +1126,69 @@ function CreateExamPage() {
                 </Select>
               </FormGroup>
               
+              <FormGroup>
+                <Label htmlFor="password">Exam Password (Optional)</Label>
+                <div style={{ position: 'relative' }}>
+                  <Input 
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={examData.password}
+                    onChange={handleChange}
+                    placeholder="Leave blank for no password protection"
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      color: '#666'
+                    }}
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
+                {passwordError && (
+                  <div style={{ color: '#ff3e3e', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                    {passwordError}
+                  </div>
+                )}
+                {examData.password && !passwordError && (
+                  <div style={{
+                    marginTop: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{
+                      height: '4px',
+                      flex: 1,
+                      backgroundColor: 
+                        examData.password.length < 6 ? '#ffcccb' :
+                        examData.password.length < 8 ? '#ffe066' : '#90ee90',
+                      borderRadius: '2px'
+                    }}></div>
+                    <span style={{
+                      fontSize: '0.8rem',
+                      color: '#666'
+                    }}>
+                      {examData.password.length < 6 ? 'Weak' : 
+                       examData.password.length < 8 ? 'Good' : 'Strong'}
+                    </span>
+                  </div>
+                )}
+                <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
+                  If set, students will need to enter this password to access the exam.
+                </div>
+              </FormGroup>
+              
               {error && <ErrorMessage>{error}</ErrorMessage>}
               
               <ButtonGroup>
@@ -1116,6 +1205,40 @@ function CreateExamPage() {
           <>
             <Card style={{ marginBottom: '2rem' }}>
               <h2>Exam: {examData.title}</h2>
+              
+              {/* Add password info if a password is set */}
+              {examData.password && (
+                <div style={{ 
+                  backgroundColor: '#f8f9fa', 
+                  padding: '0.75rem', 
+                  borderRadius: '8px', 
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <span style={{ fontWeight: 500 }}>Password Protected:</span> 
+                    <span style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', backgroundColor: '#e3f2fd', borderRadius: '4px' }}>
+                      {showPassword ? examData.password : '••••••••'}
+                    </span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      color: '#666',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {showPassword ? 'Hide Password' : 'Show Password'}
+                  </button>
+                </div>
+              )}
+              
               <p>Add questions to your exam by creating them individually or importing from a CSV file.</p>
               
               <TabContainer>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import examService from '../services/examService';
 import classService from '../services/classService';
@@ -348,6 +348,7 @@ const DeleteIcon = () => (
 function ExamPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -695,6 +696,11 @@ function ExamPage() {
     return exam;
   };
 
+  // Function to check if a route is active
+  const isRouteActive = (path) => {
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <PageContainer>
       <Sidebar>
@@ -703,19 +709,15 @@ function ExamPage() {
           {isStudent ? (
             // Student navigation
             <>
-              <NavItem to="/student-dashboard">
+              <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
                 Dashboard
               </NavItem>
-              <NavItem to="/my-classes">
-                <NavIcon>{getMenuIcon('myClasses')}</NavIcon>
-                My Classes
-              </NavItem>
-              <NavItem to="/exams" className="active">
+              <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('exams')}</NavIcon>
                 Exams
               </NavItem>
-              <NavItem to="/results">
+              <NavItem to="/results" className={isRouteActive('/results') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('results')}</NavIcon>
                 Results
               </NavItem>
@@ -723,19 +725,19 @@ function ExamPage() {
           ) : isLecturer ? (
             // Lecturer navigation
             <>
-              <NavItem to="/lecturer-dashboard">
+              <NavItem to="/lecturer-dashboard" className={isRouteActive('/lecturer-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
                 Dashboard
               </NavItem>
-              <NavItem to="/exams" className="active">
+              <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('exams')}</NavIcon>
                 Exams
               </NavItem>
-              <NavItem to="/class">
+              <NavItem to="/class" className={isRouteActive('/class') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('class')}</NavIcon>
                 Class
               </NavItem>
-              <NavItem to="/reports">
+              <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
@@ -743,27 +745,27 @@ function ExamPage() {
           ) : (
             // Admin navigation
             <>
-              <NavItem to="/admin-dashboard">
+              <NavItem to="/admin-dashboard" className={isRouteActive('/admin-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
                 Dashboard
               </NavItem>
-              <NavItem to="/exams" className="active">
+              <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('exams')}</NavIcon>
                 Exams
               </NavItem>
-              <NavItem to="/class">
+              <NavItem to="/class" className={isRouteActive('/class') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('class')}</NavIcon>
                 Class
               </NavItem>
-              <NavItem to="/reports">
+              <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/payment">
+              <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('payment')}</NavIcon>
                 Payment
               </NavItem>
-              <NavItem to="/users">
+              <NavItem to="/users" className={isRouteActive('/users') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('users')}</NavIcon>
                 Users
               </NavItem>
@@ -771,7 +773,7 @@ function ExamPage() {
           )}
         </SidebarMenu>
         <BottomMenu>
-          <NavItem to="/settings">
+          <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
@@ -839,13 +841,6 @@ function ExamPage() {
           ) : exams.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center' }}>
               No exams available for this class.
-              {isLecturer || isAdmin ? (
-                <div style={{ marginTop: '1rem' }}>
-                  <CreateButton onClick={handleCreateExam}>
-                    + Create Exam
-                  </CreateButton>
-                </div>
-              ) : null}
             </div>
           ) : (
             <ExamTable>

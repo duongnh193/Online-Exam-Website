@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/userService';
 import authService from '../services/authService';
@@ -481,6 +481,7 @@ const DeleteIcon = () => (
 
 function SettingsPage() {
   const { user, logout, refreshUser } = useAuth();
+  const location = useLocation(); // Add location hook for routing
   const [activeTab, setActiveTab] = useState('profile');
   const [showDropdown, setShowDropdown] = useState(false);
   const [users, setUsers] = useState([]);
@@ -522,16 +523,43 @@ function SettingsPage() {
   const isFetchingRef = useRef(false);
   const usersLoadedRef = useRef(false);
 
+  // Add state for error message and success state in the password section
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+
+  // Add state for 2FA status messages
+  const [twoFactorError, setTwoFactorError] = useState('');
+  const [twoFactorSuccess, setTwoFactorSuccess] = useState('');
+
+  // Add a function to explicitly update the 2FA UI state from localStorage
+  const updateTwoFactorStateFromStorage = useCallback(() => {
+    const is2FAEnabled = authService.is2FAEnabled();
+    console.log('Updating 2FA UI state from storage, current status:', is2FAEnabled);
+    setTwoFactorEnabled(is2FAEnabled);
+  }, []);
+  
   // Memoize refreshUser to prevent it from changing on each render
-  const memoizedRefreshUser = useCallback(() => {
+  const memoizedRefreshUser = useCallback(async () => {
     console.log('Memoized refreshUser called');
-    return refreshUser();
-  }, [refreshUser]);
+    try {
+      await refreshUser();
+      // After refreshing user data, update the 2FA state from storage
+      updateTwoFactorStateFromStorage();
+      return true;
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      return false;
+    }
+  }, [refreshUser, updateTwoFactorStateFromStorage]);
   
   // Updated useEffect with proper dependency array
   useEffect(() => {
     // Refresh user data when component mounts
     memoizedRefreshUser();
+    
+    // Always update 2FA state directly from storage on mount
+    updateTwoFactorStateFromStorage();
     
     // Check for global cache reset flag
     if (window.__resetUserDataCache) {
@@ -565,7 +593,14 @@ function SettingsPage() {
       isFetchingRef.current = false;
       // Don't reset usersLoadedRef here to avoid refetching when component remounts
     };
-  }, [user, memoizedRefreshUser]); // Only depend on user and memoized refreshUser
+  }, [memoizedRefreshUser, updateTwoFactorStateFromStorage]);
+
+  // Also update the 2FA state whenever the tab changes to 'twofa'
+  useEffect(() => {
+    if (activeTab === 'twofa') {
+      updateTwoFactorStateFromStorage();
+    }
+  }, [activeTab, updateTwoFactorStateFromStorage]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -586,30 +621,6 @@ function SettingsPage() {
         firstName: user.firstName || '',
         lastName: user.lastName || ''
       });
-    }
-    
-    // Initialize 2FA state from user data when user is loaded
-    if (user) {
-      console.log('Initializing 2FA state. User data from context:', {
-        id: user.id,
-        username: user.username,
-        twoFactorEnabled: user.twoFactorEnabled,
-        twoFactor: user.twoFactor
-      });
-      
-      // Check localStorage directly 
-      const localStorageUser = JSON.parse(localStorage.getItem('user') || '{}');
-      console.log('User data in localStorage:', {
-        id: localStorageUser.id,
-        username: localStorageUser.username,
-        twoFactorEnabled: localStorageUser.twoFactorEnabled,
-        twoFactor: localStorageUser.twoFactor
-      });
-      
-      // Use authService to check 2FA status
-      const is2FAEnabled = authService.is2FAEnabled();
-      console.log('2FA status from authService:', is2FAEnabled);
-      setTwoFactorEnabled(is2FAEnabled);
     }
   }, [user, activeTab]);
   
@@ -1009,19 +1020,28 @@ function SettingsPage() {
     e.preventDefault();
     
     if (!user || !user.id) {
-      alert('User information not available');
+      setPasswordError('User information not available');
       return;
     }
     
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('New passwords do not match');
+      setPasswordError('New passwords do not match');
       return;
     }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long');
+      return;
+    }
+    
+    setPasswordError('');
+    setPasswordSuccess(false);
+    setIsPasswordLoading(true);
     
     try {
       console.log('Submitting password change request using auth service...');
       
-      // Use the new auth service method instead of user service
+      // Use the auth service method to update password
       await authService.updatePassword(
         passwordData.currentPassword,
         passwordData.newPassword
@@ -1034,30 +1054,49 @@ function SettingsPage() {
         confirmPassword: ''
       });
       
-      alert('Password updated successfully');
+      // Show success message
+      setPasswordSuccess(true);
+      setTimeout(() => setPasswordSuccess(false), 5000);
     } catch (error) {
       console.error('Error updating password:', error);
       
-      let errorMessage = 'Failed to update password';
+      // Display specific error message
+      let errorMessage = '';
       
-      // Handle specific error cases
-      if (error.message === 'Current password is incorrect') {
-        errorMessage = 'The current password you entered is incorrect';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      if (error.message) {
+        // Check for network connectivity issues
+        if (error.message.includes('Network Error')) {
+          errorMessage = 'Cannot connect to the server. Please check your internet connection.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Request timed out. Please try again later.';
+        } else if (error.message.includes('Internal Server Error') || 
+                  error.message.includes('500')) {
+          errorMessage = 'The server encountered an error. Please contact support.';
+        } else {
+          // Use the error message from the service
+          errorMessage = error.message;
+        }
+      } else {
+        errorMessage = 'Failed to update password';
       }
       
-      console.error('Server response:', errorMessage);
-      alert(`Error: ${errorMessage}`);
+      setPasswordError(errorMessage);
+      console.error('Server response:', error.message);
+    } finally {
+      setIsPasswordLoading(false);
     }
   };
 
   // Handle 2FA toggle
   const handle2FAToggle = async () => {
     if (!user || !user.id) {
-      alert('User information not available');
+      setTwoFactorError('User information not available');
       return;
     }
+    
+    // Reset status messages
+    setTwoFactorError('');
+    setTwoFactorSuccess('');
     
     try {
       setUpdating2FA(true);
@@ -1067,9 +1106,11 @@ function SettingsPage() {
       // Call the API to update 2FA using authService
       let response;
       if (newTwoFAState) {
+        console.log('Enabling 2FA for user:', user.username);
         response = await authService.enable2FA();
         console.log('Enabling 2FA response:', response);
       } else {
+        console.log('Disabling 2FA for user:', user.username);
         response = await authService.disable2FA();
         console.log('Disabling 2FA response:', response);
       }
@@ -1077,16 +1118,56 @@ function SettingsPage() {
       // Update the local state
       setTwoFactorEnabled(newTwoFAState);
       
-      // Refresh the user object to ensure it has the updated 2FA status
-      memoizedRefreshUser();
+      // Show success message
+      setTwoFactorSuccess(`Two-factor authentication has been ${newTwoFAState ? 'enabled' : 'disabled'}`);
       
-      alert(`Two-factor authentication has been ${newTwoFAState ? 'enabled' : 'disabled'}`);
+      // Clear success message after 5 seconds
+      setTimeout(() => setTwoFactorSuccess(''), 5000);
+      
+      // Refresh the user object to ensure it has the updated 2FA status
+      await memoizedRefreshUser();
+      
+      // Double check local storage was updated correctly
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      console.log('User data after 2FA update:', {
+        twoFactorEnabled: userData.twoFactorEnabled,
+        twoFactor: userData.twoFactor
+      });
     } catch (error) {
       console.error('Error updating 2FA:', error);
-      alert(`Error: ${error.response?.data?.message || 'Failed to update two-factor authentication'}`);
+      
+      // Set error message based on the type of error
+      let errorMessage = 'Failed to update two-factor authentication';
+      
+      if (error.message) {
+        if (error.message.includes('Network Error')) {
+          errorMessage = 'Cannot connect to the server. Please check your internet connection.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Request timed out. Please try again later.';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'The server encountered an error. Please try again later.';
+        } else {
+          // Use the error message from the service
+          errorMessage = error.message;
+        }
+      }
+      
+      setTwoFactorError(errorMessage);
+      
+      // Make sure UI state is refreshed to match actual state
+      const actualState = authService.is2FAEnabled();
+      if (twoFactorEnabled !== actualState) {
+        console.log('Correcting 2FA UI state to match actual state:', actualState);
+        setTwoFactorEnabled(actualState);
+      }
     } finally {
       setUpdating2FA(false);
     }
+  };
+
+  // Function to check if a route is active
+  const isRouteActive = (path) => {
+    return location.pathname.startsWith(path);
   };
 
   return (
@@ -1097,19 +1178,15 @@ function SettingsPage() {
           {isStudent ? (
             // Student navigation
             <>
-              <NavItem to="/student-dashboard">
+              <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
                 Dashboard
               </NavItem>
-              <NavItem to="/my-classes">
-                <NavIcon>{getMenuIcon('myClasses')}</NavIcon>
-                My Classes
-              </NavItem>
-              <NavItem to="/exams">
+              <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('exams')}</NavIcon>
                 Exams
               </NavItem>
-              <NavItem to="/results">
+              <NavItem to="/results" className={isRouteActive('/results') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('results')}</NavIcon>
                 Results
               </NavItem>
@@ -1117,19 +1194,19 @@ function SettingsPage() {
           ) : isLecturer ? (
             // Lecturer navigation
             <>
-              <NavItem to="/lecturer-dashboard">
+              <NavItem to="/lecturer-dashboard" className={isRouteActive('/lecturer-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
                 Dashboard
               </NavItem>
-              <NavItem to="/exams">
+              <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('exams')}</NavIcon>
                 Exams
               </NavItem>
-              <NavItem to="/class">
+              <NavItem to="/class" className={isRouteActive('/class') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('class')}</NavIcon>
                 Class
               </NavItem>
-              <NavItem to="/reports">
+              <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
@@ -1137,27 +1214,27 @@ function SettingsPage() {
           ) : (
             // Admin navigation
             <>
-              <NavItem to="/admin-dashboard">
+              <NavItem to="/admin-dashboard" className={isRouteActive('/admin-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
                 Dashboard
               </NavItem>
-              <NavItem to="/exams">
+              <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('exams')}</NavIcon>
                 Exams
               </NavItem>
-              <NavItem to="/class">
+              <NavItem to="/class" className={isRouteActive('/class') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('class')}</NavIcon>
                 Class
               </NavItem>
-              <NavItem to="/reports">
+              <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/payment">
+              <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('payment')}</NavIcon>
                 Payment
               </NavItem>
-              <NavItem to="/users">
+              <NavItem to="/users" className={isRouteActive('/users') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('users')}</NavIcon>
                 Users
               </NavItem>
@@ -1165,7 +1242,7 @@ function SettingsPage() {
           )}
         </SidebarMenu>
         <BottomMenu>
-          <NavItem to="/settings" className="active">
+          <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
@@ -1440,6 +1517,30 @@ function SettingsPage() {
           <Card>
             <CardTitle>Change Password</CardTitle>
             <form onSubmit={handlePasswordSubmit}>
+              {passwordError && (
+                <div style={{ 
+                  padding: '0.75rem', 
+                  backgroundColor: '#ffebee', 
+                  color: '#d32f2f',
+                  borderRadius: '8px',
+                  marginBottom: '1rem'
+                }}>
+                  {passwordError}
+                </div>
+              )}
+              
+              {passwordSuccess && (
+                <div style={{ 
+                  padding: '0.75rem', 
+                  backgroundColor: '#e8f5e9', 
+                  color: '#388e3c',
+                  borderRadius: '8px',
+                  marginBottom: '1rem'
+                }}>
+                  Password updated successfully!
+                </div>
+              )}
+
               <FormGroup>
                 <Label>Current Password</Label>
                 <Input 
@@ -1447,6 +1548,7 @@ function SettingsPage() {
                   name="currentPassword"
                   value={passwordData.currentPassword}
                   onChange={handlePasswordChange}
+                  required
                 />
               </FormGroup>
               <FormGroup>
@@ -1456,6 +1558,7 @@ function SettingsPage() {
                   name="newPassword"
                   value={passwordData.newPassword}
                   onChange={handlePasswordChange}
+                  required
                 />
               </FormGroup>
               <FormGroup>
@@ -1465,12 +1568,31 @@ function SettingsPage() {
                   name="confirmPassword"
                   value={passwordData.confirmPassword}
                   onChange={handlePasswordChange}
+                  required
                 />
               </FormGroup>
               
               <ButtonGroup>
-                <Button variant="outlined" type="button">Cancel</Button>
-                <Button type="submit">Update Password</Button>
+                <Button 
+                  variant="outlined" 
+                  type="button" 
+                  onClick={() => {
+                    setPasswordData({
+                      currentPassword: '',
+                      newPassword: '',
+                      confirmPassword: ''
+                    });
+                    setPasswordError('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isPasswordLoading}
+                >
+                  {isPasswordLoading ? 'Updating...' : 'Update Password'}
+                </Button>
               </ButtonGroup>
             </form>
 
@@ -1527,6 +1649,30 @@ function SettingsPage() {
               Two-factor authentication adds an extra layer of security to your account. 
               When enabled, you'll need to provide a verification code in addition to your password when signing in.
             </p>
+            
+            {twoFactorError && (
+              <div style={{ 
+                padding: '0.75rem', 
+                backgroundColor: '#ffebee', 
+                color: '#d32f2f',
+                borderRadius: '8px',
+                marginBottom: '1rem'
+              }}>
+                {twoFactorError}
+              </div>
+            )}
+            
+            {twoFactorSuccess && (
+              <div style={{ 
+                padding: '0.75rem', 
+                backgroundColor: '#e8f5e9', 
+                color: '#388e3c',
+                borderRadius: '8px',
+                marginBottom: '1rem'
+              }}>
+                {twoFactorSuccess}
+              </div>
+            )}
             
             <div style={{ 
               display: 'flex',

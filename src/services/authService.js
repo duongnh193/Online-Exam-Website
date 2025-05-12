@@ -182,21 +182,27 @@ const authService = {
         try {
           // Fetch complete user data to ensure we have twoFactor status
           console.log('Fetching complete user data...');
-          const userResponse = await axios.get(`/api/v1/users/${user.id}`, {
+          const userResponse = await axios.get(`http://localhost:8080/api/v1/users/${user.id}`, {
             headers: {
               'Authorization': `${response.data.tokenType || 'Bearer'} ${token}`
-            }
+            },
+            timeout: 10000 // 10 second timeout
           });
           
           console.log('User data response:', userResponse);
+          
+          // Normalize the 2FA status to ensure consistent boolean values
+          const twoFactorStatus = userResponse.data.twoFactor === true || 
+                                 userResponse.data.twoFactor === "true" || 
+                                 userResponse.data.twoFactor === 1;
           
           // Combine the fetched user data with our initial user object
           const completeUser = {
             ...user,
             ...userResponse.data,
-            // Ensure these are boolean values
-            twoFactorEnabled: !!userResponse.data.twoFactor,
-            twoFactor: !!userResponse.data.twoFactor
+            // Ensure these are always boolean values
+            twoFactorEnabled: twoFactorStatus,
+            twoFactor: twoFactorStatus
           };
           
           console.log('Complete user data with 2FA status:', completeUser);
@@ -295,81 +301,99 @@ const authService = {
   },
   
   // Verify OTP
-  verifyOtp: async (data) => {
-    console.log('Verifying OTP:', data);
+  verifyOtp: async (verifyData) => {
+    // Handle either 'username' or 'usernameOrEmail' to ensure backward compatibility
+    const usernameOrEmail = verifyData.usernameOrEmail || verifyData.username;
+    
+    if (!usernameOrEmail) {
+      console.error('Error: username or email is required for OTP verification');
+      throw new Error('Username or email is required');
+    }
+    
+    if (!verifyData.otp) {
+      console.error('Error: OTP code is required for verification');
+      throw new Error('OTP code is required');
+    }
+    
+    logRequest('POST', `${API_URL}/verify-otp`, { usernameOrEmail, otp: verifyData.otp });
+    console.log('Verifying OTP for:', usernameOrEmail);
     
     try {
-      const response = await axios.post(`${API_URL}/verify-otp?otp=${data.otp}`, {
-        usernameOrEmail: data.username,
-        password: data.password
-      });
-      
-      console.log('OTP verification response:', response);
-      console.log('OTP verification response data:', response.data);
-      
-      const token = response.data.accessToken;
-      localStorage.setItem('token', token);
-      localStorage.setItem('token_type', response.data.tokenType || 'Bearer');
-      
-      // Parse the JWT token to get user info including role
-      const decodedToken = parseJwt(token);
-      console.log('Decoded token after OTP:', decodedToken);
-      
-      // Create initial user object with role
-      const user = {
-        id: response.data.userId,
-        username: decodedToken?.sub, // subject is usually the username
-        role: decodedToken?.role || null
+      // Match the backend endpoint which expects 'otp' as a request param and loginRequest as body
+      const loginRequest = {
+        usernameOrEmail: usernameOrEmail,
+        password: verifyData.password || '' // Password might be required by the backend
       };
       
-      console.log('Created initial user object with role after OTP:', user);
+      const response = await axios.post(
+        `${API_URL}/verify-otp?otp=${encodeURIComponent(verifyData.otp)}`,
+        loginRequest
+      );
       
-      try {
-        // Fetch complete user data to ensure we have twoFactor status
-        console.log('Fetching complete user data after OTP...');
-        const userResponse = await axios.get(`/api/v1/users/${user.id}`, {
-          headers: {
-            'Authorization': `${response.data.tokenType || 'Bearer'} ${token}`
-          }
-        });
+      console.log('Verify OTP response:', response);
+      
+      // If response is successful, process it like a login
+      if (response.data && response.data.accessToken) {
+        const token = response.data.accessToken;
+        localStorage.setItem('token', token);
+        localStorage.setItem('token_type', response.data.tokenType || 'Bearer');
         
-        console.log('User data response after OTP:', userResponse);
+        // Parse the JWT token to get user info including role
+        const decodedToken = parseJwt(token);
+        console.log('Decoded token after OTP:', decodedToken);
         
-        // Combine the fetched user data with our initial user object
-        const completeUser = {
-          ...user,
-          ...userResponse.data,
-          // Ensure these are boolean values
-          twoFactorEnabled: !!userResponse.data.twoFactor, 
-          twoFactor: !!userResponse.data.twoFactor
+        // Create initial user object with role
+        const user = {
+          id: response.data.userId,
+          username: decodedToken?.sub, // subject is usually the username
+          role: decodedToken?.role || null
         };
         
-        console.log('Complete user data with 2FA status after OTP:', completeUser);
-        localStorage.setItem('user', JSON.stringify(completeUser));
+        // Try to get full user data
+        try {
+          const userResponse = await axios.get(`http://localhost:8080/api/v1/users/${user.id}`, {
+            headers: {
+              'Authorization': `${response.data.tokenType || 'Bearer'} ${token}`
+            },
+            timeout: 10000 // 10 second timeout
+          });
+          
+          // Normalize the 2FA status to ensure consistent boolean values
+          const twoFactorStatus = userResponse.data.twoFactor === true || 
+                                 userResponse.data.twoFactor === "true" || 
+                                 userResponse.data.twoFactor === 1;
+          
+          const completeUser = {
+            ...user,
+            ...userResponse.data,
+            twoFactorEnabled: twoFactorStatus,
+            twoFactor: twoFactorStatus
+          };
+          
+          localStorage.setItem('user', JSON.stringify(completeUser));
+          user.twoFactorEnabled = completeUser.twoFactorEnabled;
+          user.twoFactor = completeUser.twoFactor;
+        } catch (userFetchError) {
+          console.error('Error fetching user data after OTP:', userFetchError);
+          localStorage.setItem('user', JSON.stringify(user));
+        }
         
-        user.twoFactorEnabled = completeUser.twoFactorEnabled;
-        user.twoFactor = completeUser.twoFactor;
-      } catch (userFetchError) {
-        console.error('Error fetching complete user data after OTP:', userFetchError);
-        // Still save the initial user data if we couldn't fetch the complete data
-        localStorage.setItem('user', JSON.stringify(user));
+        // Get the dashboard URL based on user role
+        const redirectUrl = getDashboardByRole(user.role);
+        
+        return {
+          token: token,
+          tokenType: response.data.tokenType || 'Bearer',
+          ...response.data,
+          user: user,
+          success: true,
+          redirectUrl: redirectUrl
+        };
       }
       
-      console.log('Stored user with role in localStorage after OTP:', JSON.parse(localStorage.getItem('user')));
-      
-      // Get the dashboard URL based on user role
-      const redirectUrl = getDashboardByRole(user.role);
-      
-      return {
-        token: token,
-        tokenType: response.data.tokenType || 'Bearer',
-        ...response.data,
-        user: user,
-        success: true,
-        redirectUrl: redirectUrl
-      };
+      return response.data;
     } catch (error) {
-      console.error('OTP verification error:', error);
+      console.error('Error verifying OTP:', error);
       throw error;
     }
   },
@@ -445,52 +469,54 @@ const authService = {
     }
     
     try {
-      logRequest('POST', `${API_URL}/enable-2fa`);
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!userData || !userData.id) {
+        console.error('Cannot enable 2FA: User ID not found');
+        throw new Error('User information not available');
+      }
       
-      try {
-        // Try to use the auth endpoint first
-        const response = await axios.post(`${API_URL}/enable-2fa`, {}, {
+      logRequest('PUT', `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=true`);
+      console.log('Enabling 2FA for user ID:', userData.id);
+      
+      // Use the UserController endpoint directly, as it's more reliable
+      const response = await axios.put(
+        `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=true`, 
+        {},
+        {
           headers: {
             'Authorization': `${localStorage.getItem('token_type') || 'Bearer'} ${token}`
-          }
-        });
-        
-        console.log('Enable 2FA response:', response);
-        
-        // Update user data in localStorage to reflect 2FA status
-        const userData = JSON.parse(localStorage.getItem('user'));
-        if (userData) {
-          userData.twoFactorEnabled = true;
-          userData.twoFactor = true; // Set both properties for consistency
-          localStorage.setItem('user', JSON.stringify(userData));
+          },
+          timeout: 10000 // 10 second timeout
         }
-        
-        return response.data;
-      } catch (error) {
-        console.warn('Auth endpoint for 2FA not available, using UserController endpoint:', error.message);
-        
-        // If auth endpoint fails, try using the user controller endpoint
-        const userData = JSON.parse(localStorage.getItem('user'));
-        if (!userData || !userData.id) {
-          throw new Error('User information not available');
-        }
-        
-        // Import and use userService to update 2FA
-        const { userService } = await import('./userService');
-        const response = await userService.update2FA(userData.id, true);
-        console.log('Enable 2FA via UserController response:', response);
-        
-        // Update user data in localStorage
-        if (userData) {
-          userData.twoFactorEnabled = true;
-          userData.twoFactor = true;
-          localStorage.setItem('user', JSON.stringify(userData));
-        }
-        
-        return response.data;
+      );
+      
+      console.log('Enable 2FA response:', response);
+      
+      // Update user data in localStorage to reflect 2FA status
+      if (userData) {
+        userData.twoFactorEnabled = true;
+        userData.twoFactor = true;
+        localStorage.setItem('user', JSON.stringify(userData));
+        console.log('Updated user data in localStorage with 2FA enabled:', userData);
       }
+      
+      return response.data;
     } catch (error) {
       console.error('Error enabling 2FA:', error);
+      
+      // Handle specific error responses
+      if (error.response) {
+        if (error.response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        } else if (error.response.status === 403) {
+          throw new Error('You are not authorized to update 2FA settings.');
+        } else if (error.response.status === 404) {
+          throw new Error('User not found.');
+        } else if (error.response.status === 500) {
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      }
+      
       throw error;
     }
   },
@@ -505,52 +531,54 @@ const authService = {
     }
     
     try {
-      logRequest('POST', `${API_URL}/disable-2fa`);
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!userData || !userData.id) {
+        console.error('Cannot disable 2FA: User ID not found');
+        throw new Error('User information not available');
+      }
       
-      try {
-        // Try to use the auth endpoint first
-        const response = await axios.post(`${API_URL}/disable-2fa`, {}, {
+      logRequest('PUT', `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=false`);
+      console.log('Disabling 2FA for user ID:', userData.id);
+      
+      // Use the UserController endpoint directly, as it's more reliable
+      const response = await axios.put(
+        `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=false`, 
+        {},
+        {
           headers: {
             'Authorization': `${localStorage.getItem('token_type') || 'Bearer'} ${token}`
-          }
-        });
-        
-        console.log('Disable 2FA response:', response);
-        
-        // Update user data in localStorage to reflect 2FA status
-        const userData = JSON.parse(localStorage.getItem('user'));
-        if (userData) {
-          userData.twoFactorEnabled = false;
-          userData.twoFactor = false; // Set both properties for consistency
-          localStorage.setItem('user', JSON.stringify(userData));
+          },
+          timeout: 10000 // 10 second timeout
         }
-        
-        return response.data;
-      } catch (error) {
-        console.warn('Auth endpoint for 2FA not available, using UserController endpoint:', error.message);
-        
-        // If auth endpoint fails, try using the user controller endpoint
-        const userData = JSON.parse(localStorage.getItem('user'));
-        if (!userData || !userData.id) {
-          throw new Error('User information not available');
-        }
-        
-        // Import and use userService to update 2FA
-        const { userService } = await import('./userService');
-        const response = await userService.update2FA(userData.id, false);
-        console.log('Disable 2FA via UserController response:', response);
-        
-        // Update user data in localStorage
-        if (userData) {
-          userData.twoFactorEnabled = false;
-          userData.twoFactor = false;
-          localStorage.setItem('user', JSON.stringify(userData));
-        }
-        
-        return response.data;
+      );
+      
+      console.log('Disable 2FA response:', response);
+      
+      // Update user data in localStorage to reflect 2FA status
+      if (userData) {
+        userData.twoFactorEnabled = false;
+        userData.twoFactor = false;
+        localStorage.setItem('user', JSON.stringify(userData));
+        console.log('Updated user data in localStorage with 2FA disabled:', userData);
       }
+      
+      return response.data;
     } catch (error) {
       console.error('Error disabling 2FA:', error);
+      
+      // Handle specific error responses
+      if (error.response) {
+        if (error.response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        } else if (error.response.status === 403) {
+          throw new Error('You are not authorized to update 2FA settings.');
+        } else if (error.response.status === 404) {
+          throw new Error('User not found.');
+        } else if (error.response.status === 500) {
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      }
+      
       throw error;
     }
   },
@@ -564,17 +592,36 @@ const authService = {
         return false;
       }
       
-      const userData = JSON.parse(userStr);
+      let userData;
+      try {
+        userData = JSON.parse(userStr);
+      } catch (parseError) {
+        console.error('is2FAEnabled: Failed to parse user data from localStorage', parseError);
+        return false;
+      }
+      
       if (!userData) {
         console.log('is2FAEnabled: Invalid user data in localStorage');
         return false;
       }
       
-      // More robustly check both property names and handle different data types
-      // Convert explicitly to boolean, check string values "true"/"false" as well
-      const twoFactorEnabled = userData.twoFactorEnabled === true || userData.twoFactorEnabled === "true";
-      const twoFactor = userData.twoFactor === true || userData.twoFactor === "true";
-      const enabled = twoFactorEnabled || twoFactor;
+      // Check all possible property names and formats for 2FA status
+      const statusChecks = [
+        // Check boolean values
+        userData.twoFactorEnabled === true,
+        userData.twoFactor === true,
+        
+        // Check string values "true"
+        userData.twoFactorEnabled === "true",
+        userData.twoFactor === "true",
+        
+        // Check numeric values 1
+        userData.twoFactorEnabled === 1,
+        userData.twoFactor === 1,
+      ];
+      
+      // If any check is true, consider 2FA enabled
+      const enabled = statusChecks.some(check => check === true);
       
       console.log('is2FAEnabled: 2FA status =', enabled, 'User data:', {
         id: userData.id,
@@ -582,14 +629,137 @@ const authService = {
         twoFactorEnabled: userData.twoFactorEnabled,
         twoFactorEnabledType: typeof userData.twoFactorEnabled, 
         twoFactor: userData.twoFactor,
-        twoFactorType: typeof userData.twoFactor,
-        allUserDataKeys: Object.keys(userData)
+        twoFactorType: typeof userData.twoFactor
       });
       
       return enabled;
     } catch (error) {
       console.error('Error checking 2FA status:', error);
       return false;
+    }
+  },
+  
+  // Add or update the resendOtp method to match the backend API
+  resendOtp: async (usernameOrEmail) => {
+    if (!usernameOrEmail) {
+      console.error('Error: username or email is required for resending OTP');
+      throw new Error('Username or email is required');
+    }
+    
+    logRequest('POST', `${API_URL}/resend-otp`);
+    console.log('Resending OTP for:', usernameOrEmail);
+    
+    try {
+      // Match the backend endpoint which expects 'usernameOrEmail' as a request param
+      const response = await axios.post(`${API_URL}/resend-otp?usernameOrEmail=${encodeURIComponent(usernameOrEmail)}`);
+      console.log('Resend OTP response:', response);
+      return response.data;
+    } catch (error) {
+      console.error('Error resending OTP:', error);
+      throw error;
+    }
+  },
+  
+  // Update the resetPassword method to match the backend API
+  resetPassword: async (emailOrUsername) => {
+    // Handle both string parameter and object parameter for backward compatibility
+    const userIdentifier = typeof emailOrUsername === 'string' ? 
+      emailOrUsername : 
+      emailOrUsername?.emailOrUsername;
+      
+    if (!userIdentifier) {
+      console.error('Error: email or username is required for password reset');
+      throw new Error('Email or username is required');
+    }
+    
+    logRequest('POST', `${API_URL}/reset-password`);
+    console.log('Requesting password reset for:', userIdentifier);
+    
+    try {
+      // Match the backend endpoint which expects 'emailOrUsername' as a request param
+      const response = await axios.post(`${API_URL}/reset-password?emailOrUsername=${encodeURIComponent(userIdentifier)}`);
+      console.log('Password reset response:', response);
+      return response.data;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      throw error;
+    }
+  },
+  
+  // Update the user's password
+  updatePassword: async (currentPassword, newPassword) => {
+    const token = localStorage.getItem('token');
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    if (!token) {
+      console.error('Cannot update password: No authentication token found');
+      throw new Error('Authentication required');
+    }
+    
+    if (!userData || !userData.id) {
+      console.error('Cannot update password: User ID not found');
+      throw new Error('User information not available');
+    }
+    
+    if (!currentPassword || !newPassword) {
+      console.error('Cannot update password: Missing current or new password');
+      throw new Error('Current and new passwords are required');
+    }
+    
+    try {
+      // Use the full backend URL instead of relative path
+      const backendUrl = 'http://localhost:8080/api/v1/users';
+      const endpoint = `${backendUrl}/${userData.id}/password`;
+      
+      logRequest('PUT', endpoint);
+      console.log('Updating password for user ID:', userData.id);
+      
+      const updatePasswordRequest = {
+        currentPassword: currentPassword,
+        newPassword: newPassword
+      };
+      
+      const response = await axios.put(
+        endpoint, 
+        updatePasswordRequest,
+        {
+          headers: {
+            'Authorization': `${localStorage.getItem('token_type') || 'Bearer'} ${token}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // 10 second timeout
+        }
+      );
+      
+      console.log('Password update response status:', response.status);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating password:', error);
+      
+      // Handle specific error responses with detailed messages
+      if (error.response) {
+        if (error.response.status === 401) {
+          throw new Error('Current password is incorrect');
+        } else if (error.response.status === 403) {
+          throw new Error('You are not authorized to update this password');
+        } else if (error.response.status === 400) {
+          // Check if there's a specific message in the response
+          const errorMessage = error.response.data?.message || 'Invalid password format';
+          throw new Error(errorMessage);
+        } else if (error.response.status === 404) {
+          throw new Error('User not found');
+        } else if (error.response.status === 500) {
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      }
+      
+      // Network errors or other issues
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out. Please check your connection and try again.');
+      }
+      
+      // Fallback to generic error or the original error message
+      throw error;
     }
   }
 };

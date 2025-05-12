@@ -326,7 +326,7 @@ const Navbar = () => {
         show={showLoginModal} 
         handleClose={closeLoginModal} 
         onSwitchToRegister={openRegisterModal}
-        onSwitchToLogin={openLoginModal}
+        onSwitchToResetPassword={openResetPasswordModal}
       />
 
       {/* Register Modal */}

@@ -248,14 +248,63 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Add a function to refresh user data from localStorage
-  const refreshUser = () => {
+  const refreshUser = async () => {
     try {
       console.log('useAuth: Refreshing user data from localStorage');
       const storedUserData = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
       
-      if (storedUserData) {
+      if (storedUserData && token) {
         const userData = JSON.parse(storedUserData);
         console.log('useAuth: Refreshed user data:', userData);
+        
+        // Try to refresh from API if we have a userId
+        if (userData && userData.id) {
+          try {
+            console.log('useAuth: Attempting to refresh user data from API');
+            const userResponse = await fetch(`http://localhost:8080/api/v1/users/${userData.id}`, {
+              headers: {
+                'Authorization': `${localStorage.getItem('token_type') || 'Bearer'} ${token}`
+              }
+            });
+            
+            if (userResponse.ok) {
+              const apiUserData = await userResponse.json();
+              console.log('useAuth: Successfully refreshed user data from API:', apiUserData);
+              
+              // Normalize the 2FA status to ensure consistent boolean values
+              const twoFactorStatus = apiUserData.twoFactor === true || 
+                                     apiUserData.twoFactor === "true" || 
+                                     apiUserData.twoFactor === 1;
+              
+              // Update the user data with the API response and ensure 2FA status is boolean
+              const updatedUserData = {
+                ...userData,
+                ...apiUserData,
+                twoFactorEnabled: twoFactorStatus,
+                twoFactor: twoFactorStatus
+              };
+              
+              // Update localStorage with the refreshed data
+              localStorage.setItem('user', JSON.stringify(updatedUserData));
+              
+              // Only update if the data is different
+              if (JSON.stringify(updatedUserData) !== JSON.stringify(user)) {
+                console.log('useAuth: User data changed, updating state');
+                
+                // Reset any caching mechanisms in the app
+                window.__resetUserDataCache = true;
+                
+                setUser(updatedUserData);
+              }
+              
+              return updatedUserData;
+            }
+          } catch (apiError) {
+            console.error('useAuth: Error fetching user data from API:', apiError);
+            // Fall back to localStorage data
+          }
+        }
         
         // Only update if the data is different
         if (JSON.stringify(userData) !== JSON.stringify(user)) {
@@ -284,7 +333,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (location.pathname === '/settings' && isAuthenticated) {
       console.log('useAuth: On settings page, refreshing user data');
-      refreshUser();
+      // Handle the async refreshUser function properly
+      (async () => {
+        try {
+          await refreshUser();
+        } catch (error) {
+          console.error('Error refreshing user on navigation:', error);
+        }
+      })();
     }
   }, [location.pathname, isAuthenticated]);
 

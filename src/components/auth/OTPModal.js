@@ -92,8 +92,8 @@ const OTPModal = ({ show, handleClose, otpData, onSuccess, onSubmit, onSwitchToL
         // Fallback to direct service call
         console.log('OTPModal: Using direct service call for OTP verification');
         const response = await authService.verifyOtp({
+          usernameOrEmail: otpData?.username,
           otp: otpValue,
-          username: otpData?.username,
           password: otpData?.password
         });
         

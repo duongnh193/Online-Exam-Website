@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
@@ -274,6 +274,7 @@ function getRandomColor(index) {
 function StudentDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sortOption, setSortOption] = useState('recent');
   const [upcomingExams, setUpcomingExams] = useState([]);
   const [completedExams, setCompletedExams] = useState([]);
@@ -502,6 +503,7 @@ function StudentDashboardPage() {
   const getMenuIcon = (name) => {
     switch(name) {
       case 'dashboard': return '🏠';
+      case 'exams': return '📝';
       case 'results': return '📊';
       case 'settings': return '⚙️';
       case 'signout': return '🚪';
@@ -561,22 +563,31 @@ function StudentDashboardPage() {
     setNicknames(prev => ({ ...prev, [classId]: value }));
   };
 
+  // Function to check if a route is active
+  const isRouteActive = (path) => {
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <DashboardContainer>
       <Sidebar>
         <Logo>logo</Logo>
         <SidebarMenu>
-          <NavItem to="/student-dashboard" className="active">
+          <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
             Dashboard
           </NavItem>
-          <NavItem to="/results">
+          <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
+            <NavIcon>{getMenuIcon('exams')}</NavIcon>
+            Exams
+          </NavItem>
+          <NavItem to="/results" className={isRouteActive('/results') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('results')}</NavIcon>
             Results
           </NavItem>
         </SidebarMenu>
         <BottomMenu>
-          <NavItem to="/settings">
+          <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
