@@ -9,16 +9,19 @@ export default function authHeader() {
   console.log('authHeader() called - token exists:', !!token);
   
   if (token) {
-    // Return authorization header with JWT token
-    console.log('Token type:', tokenType);
-    console.log('Token (first 10 chars):', token.substring(0, 10) + '...');
+    // Log token details for debugging (safely)
+    const tokenPreview = token.length > 10 ? 
+      `${token.substring(0, 5)}...${token.substring(token.length - 5)}` : 
+      '[too short]';
+    console.log(`Token type: ${tokenType}, Token preview: ${tokenPreview}, Length: ${token.length}`);
     
+    // Return authorization header with JWT token
     return { 
       'Authorization': `${tokenType} ${token}`,
       'Content-Type': 'application/json'
     };
   } else {
-    console.warn('No token found in localStorage!');
+    console.warn('⚠️ No token found in localStorage! Authentication will fail.');
     
     // Return only content type header if no token available
     return {

@@ -218,6 +218,16 @@ const ErrorMessage = styled.div`
   margin-top: 0.5rem;
 `;
 
+const SuccessMessage = styled.div`
+  color: #10b981;
+  background-color: #d1fae5;
+  border: 1px solid #10b981;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+`;
+
 // For question management
 const TabContainer = styled.div`
   display: flex;
@@ -297,6 +307,68 @@ const FileUploadContainer = styled.div`
   }
 `;
 
+// Add a styled component for the image upload section
+const ImageUploadContainer = styled.div`
+  margin-bottom: 1.5rem;
+`;
+
+const ImagePreview = styled.div`
+  margin-top: 0.75rem;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  padding: 0.5rem;
+  text-align: center;
+  display: ${props => props.hasImage ? 'block' : 'none'};
+`;
+
+const ImagePreviewImg = styled.img`
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 4px;
+`;
+
+const ImageActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+`;
+
+const ImageIconButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f1f1f1;
+  color: #333;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #e0e0e0;
+  }
+`;
+
+const UploadIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M21 14V18C21 19.1046 20.1046 20 19 20H5C3.89543 20 3 19.1046 3 18V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M12 3L12 15M12 3L8 7M12 3L16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M10 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M14 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M9 7V4C9 3.44772 9.44772 3 10 3H14C14.5523 3 15 3.44772 15 4V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
 function CreateExamPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -311,8 +383,11 @@ function CreateExamPage() {
     }
   }, [user, navigate]);
   
+  // State management
   const [loading, setLoading] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [classes, setClasses] = useState([]);
   
   const [examData, setExamData] = useState({
@@ -328,7 +403,6 @@ function CreateExamPage() {
   const [showQuestionManager, setShowQuestionManager] = useState(false);
   const [activeTab, setActiveTab] = useState('add'); // 'add' or 'import'
   const [questions, setQuestions] = useState([]);
-  const [loadingQuestions, setLoadingQuestions] = useState(false);
   
   // For adding questions
   const [questionData, setQuestionData] = useState({
@@ -348,10 +422,23 @@ function CreateExamPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
   
+  // Add state for image upload
+  const [questionImage, setQuestionImage] = useState(null);
+  const imageInputRef = useRef(null);
+  
   // Fetch exam data if in edit mode
   useEffect(() => {
     if (isEditMode && examId) {
+      // Check if examId is valid (not 0 or null)
+      if (examId === '0' || examId === 0) {
+        console.log('Invalid exam ID (0). Skipping API call to prevent 409 error.');
+        setError('Invalid exam ID. Please create a new exam instead.');
+        return;
+      }
+      
       setLoading(true);
+      console.log(`Fetching exam data for ID: ${examId}`);
+      
       examService.getExamById(examId)
         .then(response => {
           const exam = response.data;
@@ -423,19 +510,37 @@ function CreateExamPage() {
   
   // Fetch questions if we have an exam ID
   useEffect(() => {
-    if (createdExamId || (isEditMode && examId)) {
+    if ((createdExamId && createdExamId !== 0) || (isEditMode && examId && examId !== '0' && examId !== 0)) {
       const targetExamId = createdExamId || examId;
       fetchQuestions(targetExamId);
     }
   }, [createdExamId, examId, isEditMode]);
   
   const fetchQuestions = async (targetExamId) => {
+    // Validate the target exam ID
+    if (!targetExamId || targetExamId === 0 || targetExamId === '0') {
+      console.warn('Invalid exam ID for fetching questions. Skipping API call.');
+      return;
+    }
+    
     try {
+      console.log(`Fetching questions for exam ID: ${targetExamId}`);
       setLoadingQuestions(true);
       const response = await questionService.getQuestionsByExam(targetExamId);
-      setQuestions(response.data.content || []);
+      
+      // Check if response is valid
+      if (response && response.data) {
+        const questionData = response.data.content || response.data || [];
+        console.log(`Successfully fetched ${questionData.length} questions`);
+        setQuestions(questionData);
+      } else {
+        console.warn('Empty or invalid response from questions API');
+        setQuestions([]);
+      }
     } catch (err) {
       console.error('Error fetching questions:', err);
+      // Don't set an error message for the user since this is supplementary data
+      setQuestions([]);
     } finally {
       setLoadingQuestions(false);
     }
@@ -463,12 +568,21 @@ function CreateExamPage() {
         formattedData.endAt = new Date(formattedData.endAt).toISOString();
       }
       
+      // Ensure status is one of the valid values
+      if (!['SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED'].includes(formattedData.status)) {
+        formattedData.status = 'SCHEDULED';
+      }
+      
+      // Log the data being sent to the API
+      console.log('Submitting exam data:', formattedData);
+      
       let response;
       
       if (isEditMode) {
         // Update existing exam
         response = await examService.updateExam(examId, formattedData);
-        console.log('Exam updated:', response.data);
+        console.log('Exam updated - Full response:', response);
+        console.log('Exam updated - Data:', response.data);
         
         // Continue showing questions for the edited exam
         setCreatedExamId(examId);
@@ -476,7 +590,16 @@ function CreateExamPage() {
       } else {
         // Create new exam
         response = await examService.createExam(formattedData);
-        console.log('Exam created:', response.data);
+        console.log('Exam created - Full response:', response);
+        console.log('Exam created - Data:', response.data);
+        
+        // Verify that we have a valid ID in the response
+        if (!response.data || !response.data.id) {
+          console.error('No valid exam ID returned from API');
+          setError('Failed to create exam: No valid ID returned from server');
+          setLoading(false);
+          return;
+        }
         
         // Save the created exam ID and show question manager
         setCreatedExamId(response.data.id);
@@ -501,18 +624,21 @@ function CreateExamPage() {
     setQuestionData(prev => ({ ...prev, choices: updatedChoices }));
   };
   
-  const handleAnswerChange = (e, optionValue) => {
-    // Store the actual answer text instead of just the option key
-    setQuestionData(prev => ({ ...prev, answer: optionValue }));
+  const handleAnswerChange = (e, optionValue, optionKey) => {
+    console.log('Single choice selected:', optionKey, optionValue);
+    // For single choice questions, we need to store just the optionValue as the answer
+    setQuestionData(prev => ({ 
+      ...prev, 
+      answer: optionValue,
+      answerKeys: optionKey  // This will update the UI to show the selected radio button
+    }));
   };
   
   const handleMultiAnswerChange = (option, optionValue) => {
-    // Split current answers by comma if there are any
-    let currentAnswers = questionData.answer ? questionData.answer.split(',') : [];
-    let currentAnswerValues = [];
+    console.log('Multiple choice toggled:', option, optionValue);
     
     // Track which option keys are currently selected
-    let selectedOptionKeys = currentAnswers;
+    let selectedOptionKeys = questionData.answerKeys ? questionData.answerKeys.split(',') : [];
     
     // Check if this option is already selected
     if (selectedOptionKeys.includes(option)) {
@@ -523,77 +649,166 @@ function CreateExamPage() {
       selectedOptionKeys.push(option);
     }
     
+    // Sort the keys for consistent display
+    selectedOptionKeys.sort();
+    
     // Now map the selected option keys to their values
-    currentAnswerValues = selectedOptionKeys.map(key => {
+    const currentAnswerValues = selectedOptionKeys.map(key => {
       const choice = questionData.choices.find(c => c.optionKey === key);
       return choice ? choice.optionValue : '';
     }).filter(val => val); // Filter out empty values
     
+    console.log('Updated selections:', selectedOptionKeys, currentAnswerValues);
+    
     // Update the answer with the actual text values
     setQuestionData(prev => ({ 
       ...prev, 
-      // We'll store both the option keys (for UI tracking) and the actual values
-      answerKeys: selectedOptionKeys.sort().join(','),
+      // Store both the option keys (for UI tracking) and the actual values
+      answerKeys: selectedOptionKeys.join(','),
       answer: currentAnswerValues.join(',')
     }));
   };
   
+  // Add image handling functions
+  const handleImageSelect = () => {
+    imageInputRef.current.click();
+  };
+  
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setQuestionImage({
+          file,
+          preview: reader.result
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleRemoveImage = () => {
+    setQuestionImage(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+  
   const handleAddQuestion = async () => {
     try {
+      // Basic validation
+      if (!questionData.title || questionData.title.trim() === '') {
+        setError('Please enter a question title.');
+        return;
+      }
+
       // Validate that an answer is selected for choice-based questions
-      if (questionData.type === 'SINGLE_CHOICE' && !questionData.answer) {
+      if (questionData.type === 'SINGLE_CHOICE' && !questionData.answerKeys) {
         setError('Please select a correct answer for your single choice question.');
         return;
       }
       
-      if (questionData.type === 'MULTIPLE_CHOICE' && (!questionData.answer || questionData.answer.trim() === '')) {
+      if (questionData.type === 'MULTIPLE_CHOICE' && (!questionData.answerKeys || questionData.answerKeys.trim() === '')) {
         setError('Please select at least one correct answer for your multiple choice question.');
         return;
       }
       
       const targetExamId = createdExamId || examId;
       console.log(`Adding question to exam ID: ${targetExamId}`);
-      console.log('Current exam data:', examData);
       
-      // Create a copy of the question data for submission
+      // Prepare data exactly as expected by the backend CreateQuestionRequest
       const data = {
-        ...questionData,
-        examId: targetExamId
+        examId: Number(targetExamId),
+        title: questionData.title.trim(),
+        type: questionData.type,
+        answer: "",
+        image: null // Will be updated if we have an image
       };
       
-      // For essay questions, no choices are needed
+      // Format choices based on question type
       if (data.type === 'ESSAY') {
         data.choices = [];
+        data.answer = questionData.answer || ""; // Model answer for essay
+      } else {
+        // Ensure choices are properly formatted and not empty
+        data.choices = questionData.choices
+          .filter(choice => choice.optionValue.trim() !== '')
+          .map(choice => ({
+            optionKey: choice.optionKey,
+            optionValue: choice.optionValue.trim()
+          }));
+          
+        // Validate that we have choices
+        if (data.choices.length < 2) {
+          setError('Please provide at least two answer choices for a choice question.');
+          return;
+        }
+        
+        // Format answer based on question type
+        if (data.type === 'SINGLE_CHOICE' && questionData.answerKeys) {
+          // For single choice, find the selected choice and use its value
+          const selectedChoice = questionData.choices.find(c => c.optionKey === questionData.answerKeys);
+          if (selectedChoice) {
+            data.answer = selectedChoice.optionValue;
+          }
+        } else if (data.type === 'MULTIPLE_CHOICE') {
+          // For multiple choice, use the answer string already prepared (comma-separated)
+          data.answer = questionData.answer || "";
+        }
+      }
+
+      // Process image if provided
+      if (questionImage && questionImage.file) {
+        // For base64 encoding of image
+        data.image = questionImage.preview;
       }
       
-      // Remove answerKeys property as it's only used for UI selection tracking
-      // The 'answer' property now contains the actual answer text
-      delete data.answerKeys;
+      // Debug logging
+      console.log(`Question submission - Type: ${data.type}, Answer Keys: ${questionData.answerKeys}`);
+      console.log('Formatted choices:', data.choices);
+      console.log('Final answer value:', data.answer);
       
-      console.log('Submitting question data:', data);
-      const response = await questionService.createQuestion(data);
-      console.log('Question created successfully:', response.data);
-      
-      // Reset form and fetch updated questions
-      setQuestionData({
-        title: '',
-        type: 'SINGLE_CHOICE',
-        choices: [
-          { optionKey: 'A', optionValue: '' },
-          { optionKey: 'B', optionValue: '' },
-          { optionKey: 'C', optionValue: '' },
-          { optionKey: 'D', optionValue: '' }
-        ],
-        answer: '',
-        answerKeys: ''
-      });
-      
-      fetchQuestions(targetExamId);
-      setError(null); // Clear any existing errors
+      try {
+        const response = await questionService.createQuestion(data);
+        console.log('Question created successfully:', response.data);
+        
+        // Show success message
+        setSuccess('Question added successfully!');
+        setError(null); // Clear any existing errors
+        
+        // Reset form and fetch updated questions
+        setQuestionData({
+          title: '',
+          type: 'SINGLE_CHOICE',
+          choices: [
+            { optionKey: 'A', optionValue: '' },
+            { optionKey: 'B', optionValue: '' },
+            { optionKey: 'C', optionValue: '' },
+            { optionKey: 'D', optionValue: '' }
+          ],
+          answer: '',
+          answerKeys: ''
+        });
+        setQuestionImage(null); // Clear image
+        
+        fetchQuestions(targetExamId);
+        
+        // Clear success message after delay
+        setTimeout(() => {
+          setSuccess(null);
+        }, 5000);
+      } catch (err) {
+        console.error('Error adding question:', err);
+        if (err.message) {
+          setError(err.message);
+        } else {
+          setError('Failed to add question. Please try again.');
+        }
+      }
     } catch (err) {
-      console.error('Error adding question:', err);
-      console.error('Error details:', err.response?.data || err.message);
-      setError('Failed to add question. Please try again.');
+      console.error('Error in question form processing:', err);
+      setError('An error occurred while processing the form. Please try again.');
     }
   };
   
@@ -606,11 +821,34 @@ function CreateExamPage() {
   };
   
   const handleImportQuestions = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      setError('Please select a file to import.');
+      return;
+    }
+    
+    // Validate the file extension
+    const fileExt = selectedFile.name.split('.').pop().toLowerCase();
+    if (fileExt !== 'csv') {
+      setError('Please upload a CSV file.');
+      return;
+    }
+    
+    const targetExamId = createdExamId || examId;
+    if (!targetExamId) {
+      setError('No exam selected. Please create or select an exam first.');
+      return;
+    }
     
     try {
       setLoading(true);
-      await questionService.importQuestionsFromCsv(selectedFile, createdExamId || examId);
+      setError(null);
+      
+      console.log(`Importing CSV file "${selectedFile.name}" (${selectedFile.size} bytes) for exam ID: ${targetExamId}`);
+      
+      await questionService.importQuestionsFromCsv(selectedFile, targetExamId);
+      
+      // Success message
+      setSuccess('Questions imported successfully!');
       
       // Reset file selection and fetch updated questions
       setSelectedFile(null);
@@ -618,12 +856,31 @@ function CreateExamPage() {
         fileInputRef.current.value = '';
       }
       
-      fetchQuestions(createdExamId || examId);
+      fetchQuestions(targetExamId);
     } catch (err) {
       console.error('Error importing questions:', err);
-      setError('Failed to import questions. Please check your file format and try again.');
+      
+      // Provide a user-friendly error message
+      if (err.message && typeof err.message === 'string') {
+        setError(err.message); // Use the error message from the service
+      } else if (err.response?.status === 401) {
+        setError('Authentication error. Please login again.');
+      } else if (err.response?.status === 403) {
+        setError('You do not have permission to import questions to this exam.');
+      } else if (err.response?.status === 500) {
+        setError('Server error while importing questions. Please try again later.');
+      } else {
+        setError('Failed to import questions. Please check your file format and try again.');
+      }
     } finally {
       setLoading(false);
+      
+      // Clear success message after a delay
+      if (!error) {
+        setTimeout(() => {
+          setSuccess(null);
+        }, 5000);
+      }
     }
   };
   
@@ -863,25 +1120,32 @@ function CreateExamPage() {
               
               <TabContainer>
                 <Tab 
-                  active={activeTab === 'add'} 
+                  active={activeTab === 'add' ? "true" : "false"} 
                   onClick={() => setActiveTab('add')}
                 >
                   Add Question
                 </Tab>
                 <Tab 
-                  active={activeTab === 'import'} 
+                  active={activeTab === 'import' ? "true" : "false"} 
                   onClick={() => setActiveTab('import')}
                 >
                   Import Questions
                 </Tab>
                 <Tab 
-                  active={activeTab === 'view'} 
+                  active={activeTab === 'view' ? "true" : "false"} 
                   onClick={() => setActiveTab('view')}
                 >
                   View Questions ({questions.length})
                 </Tab>
               </TabContainer>
               
+              {/* Display error message if there is one */}
+              {error && <ErrorMessage>{error}</ErrorMessage>}
+              
+              {/* Display success message if there is one */}
+              {success && <SuccessMessage>{success}</SuccessMessage>}
+              
+              {/* Add New Question Form */}
               {activeTab === 'add' && (
                 <>
                   <FormGroup>
@@ -895,6 +1159,43 @@ function CreateExamPage() {
                       required
                     />
                   </FormGroup>
+                  
+                  {/* Add the image upload section */}
+                  <ImageUploadContainer>
+                    <Label>Question Image (optional)</Label>
+                    <ButtonGroup style={{ marginTop: '0.5rem', justifyContent: 'flex-start' }}>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        onClick={handleImageSelect}
+                      >
+                        <UploadIcon /> Upload Image
+                      </Button>
+                    </ButtonGroup>
+                    
+                    <input 
+                      type="file" 
+                      ref={imageInputRef}
+                      style={{ display: 'none' }}
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                    
+                    {/* Image Preview */}
+                    <ImagePreview hasImage={!!questionImage}>
+                      {questionImage && (
+                        <>
+                          <ImagePreviewImg src={questionImage.preview} alt="Question" />
+                          <ImageActions>
+                            <ImageIconButton onClick={handleRemoveImage} title="Remove image">
+                              <TrashIcon />
+                            </ImageIconButton>
+                          </ImageActions>
+                        </>
+                      )}
+                    </ImagePreview>
+                  </ImageUploadContainer>
                   
                   <FormGroup>
                     <Label htmlFor="type">Question Type</Label>
@@ -935,12 +1236,12 @@ function CreateExamPage() {
                                   name="answer" 
                                   value={choice.optionKey}
                                   checked={questionData.answerKeys === choice.optionKey}
-                                  onChange={(e) => handleAnswerChange(e, choice.optionValue)}
+                                  onChange={() => handleAnswerChange(null, choice.optionValue, choice.optionKey)}
                                 />
                               ) : (
                                 <input 
                                   type="checkbox" 
-                                  checked={questionData.answerKeys && questionData.answerKeys.split(',').includes(choice.optionKey)}
+                                  checked={questionData.answerKeys?.split(',').includes(choice.optionKey) || false}
                                   onChange={() => handleMultiAnswerChange(choice.optionKey, choice.optionValue)}
                                 />
                               )}
@@ -965,7 +1266,6 @@ function CreateExamPage() {
                   )}
                   
                   <ButtonGroup>
-                    {error && <ErrorMessage>{error}</ErrorMessage>}
                     <Button type="button" onClick={handleAddQuestion}>
                       Add Question
                     </Button>

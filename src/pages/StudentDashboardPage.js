@@ -325,35 +325,85 @@ function StudentDashboardPage() {
         }
         
         // Fetch upcoming exams for all classes
-        const upcomingExamsPromises = classes.map(classItem => 
-          examService.getExamsByClass(classItem.id)
-        );
+        const upcomingExamsPromises = classes.map(classItem => {
+          console.log(`Fetching exams for class ID: ${classItem.id}, name: ${classItem.name || 'Unknown'}`);
+          return examService.getExamsByClass(classItem.id);
+        });
         
         const upcomingExamsResponses = await Promise.all(upcomingExamsPromises);
-        const allUpcomingExams = upcomingExamsResponses.flatMap(response => {
+        const allUpcomingExams = upcomingExamsResponses.flatMap((response, index) => {
+          // Get the class details for this response
+          const classItem = classes[index];
+          console.log(`Processing exams for class ${classItem.id} (${classItem.name || 'Unknown'})`);
+          
+          // Extract exams data with proper fallback handling
           const exams = Array.isArray(response.data) 
             ? response.data 
             : (response.data.content || []);
-          return exams.filter(exam => 
-            exam.status === 'SCHEDULED' || exam.status === 'ONGOING'
-          );
+          
+          // Map with class context and filter by status
+          return exams
+            .filter(exam => exam && typeof exam === 'object')
+            .map(exam => {
+              // Add classInfo to each exam object for display context
+              const enhancedExam = {
+                ...exam,
+                // Ensure exam has a proper title
+                title: exam.title || `Exam #${exam.id || 0}`,
+                // Add class information to the exam
+                classInfo: {
+                  id: classItem.id,
+                  name: classItem.name || `Class #${classItem.id}`
+                }
+              };
+              console.log(`Processed exam: ${enhancedExam.id}, title: "${enhancedExam.title}"`);
+              return enhancedExam;
+            })
+            .filter(exam => 
+              exam.status === 'SCHEDULED' || exam.status === 'ONGOING'
+            );
         });
         
         // Sort by start time
         allUpcomingExams.sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
+        console.log(`Total upcoming exams after processing: ${allUpcomingExams.length}`);
         setUpcomingExams(allUpcomingExams);
         
         // Fetch completed exams
-        const completedExamsPromises = classes.map(classItem =>
-          examService.getExamsByClass(classItem.id)
-        );
+        const completedExamsPromises = classes.map(classItem => {
+          console.log(`Fetching completed exams for class ID: ${classItem.id}`);
+          return examService.getExamsByClass(classItem.id);
+        });
         
         const completedExamsResponses = await Promise.all(completedExamsPromises);
-        const allCompletedExams = completedExamsResponses.flatMap(response => {
+        const allCompletedExams = completedExamsResponses.flatMap((response, index) => {
+          // Get the class details for this response
+          const classItem = classes[index];
+          console.log(`Processing completed exams for class ${classItem.id} (${classItem.name || 'Unknown'})`);
+          
+          // Extract exams data with proper fallback handling
           const exams = Array.isArray(response.data) 
             ? response.data 
             : (response.data.content || []);
-          return exams.filter(exam => exam.status === 'COMPLETED');
+          
+          // Map with class context and filter by status
+          return exams
+            .filter(exam => exam && typeof exam === 'object')
+            .map(exam => {
+              // Add classInfo to each exam object for display context
+              const enhancedExam = {
+                ...exam,
+                // Ensure exam has a proper title
+                title: exam.title || `Exam #${exam.id || 0}`,
+                // Add class information to the exam
+                classInfo: {
+                  id: classItem.id,
+                  name: classItem.name || `Class #${classItem.id}`
+                }
+              };
+              return enhancedExam;
+            })
+            .filter(exam => exam.status === 'COMPLETED');
         });
         
         // Sort by completion time

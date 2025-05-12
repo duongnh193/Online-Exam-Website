@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import examService from '../services/examService';
 import classService from '../services/classService';
+import questionService from '../services/questionService';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -347,7 +348,6 @@ const DeleteIcon = () => (
 function ExamPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -372,8 +372,10 @@ function ExamPage() {
         // Admins can see all classes
         fetchClassesPromise = classService.getAllClasses();
       } else if (user.role === 'ROLE_STUDENT') {
-        // For students, fetch classes they're enrolled in
+        // For students, we'd fetch classes they're enrolled in
+        // This would require a different endpoint
         fetchClassesPromise = classService.getStudentClasses(user.id);
+        // You might need to add a getStudentClasses method to classService
       }
       
       if (fetchClassesPromise) {
@@ -403,11 +405,6 @@ function ExamPage() {
   // Fetch exams when selectedClassId changes
   useEffect(() => {
     if (selectedClassId) {
-      // Skip if we're currently handling a direct exam fetch from navigation state
-      if (location.state?.createdExamId && location.state?.classId === selectedClassId) {
-        console.log('Skipping automatic fetch because we\'re handling a direct exam fetch');
-        return;
-      }
       fetchExams(selectedClassId);
     } else {
       // Clear exams if no class is selected
@@ -416,221 +413,140 @@ function ExamPage() {
     }
   }, [selectedClassId, currentPage, pageSize]);
   
-  // Extract classId from URL query parameters - only run once or when URL changes
-  useEffect(() => {
-    if (location.search) {
-      const params = new URLSearchParams(location.search);
-      const classIdParam = params.get('classId');
-      if (classIdParam && !isNaN(parseInt(classIdParam))) {
-        setSelectedClassId(parseInt(classIdParam));
-      }
-    }
-  }, [location.search]);
-  
-  // Handle navigation state from CreateExamPage
-  useEffect(() => {
-    // Check if we have state from navigation (after creating/editing an exam)
-    if (location.state && location.state.classId && (location.state.createdExamId || location.state.action)) {
-      console.log('Received navigation state:', location.state);
-      
-      // Set the selected class to show the exam that was just created/edited
-      const classId = parseInt(location.state.classId);
-      if (classId && !isNaN(classId)) {
-        setSelectedClassId(classId);
-        
-        // If we have a specific exam ID that was just created/edited,
-        // we can directly fetch that exam to ensure it's shown regardless of status
-        if (location.state.createdExamId) {
-          const examId = location.state.createdExamId;
-          console.log(`Directly fetching exam with ID: ${examId} that was just ${location.state.action}`);
-          
-          // Make direct API call to get the exam
-          examService.getExamById(examId)
-            .then(response => {
-              console.log('Successfully fetched created/edited exam:', response.data);
-              
-              // Format the exam as needed and add it to the list
-              if (response.data) {
-                const exam = response.data;
-                let timeRemains = '00:00:00';
-                let expired = false;
-                
-                if (exam.endAt) {
-                  const endTime = new Date(exam.endAt);
-                  const now = new Date();
-                  const diff = endTime - now;
-                  
-                  if (diff > 0) {
-                    const hours = Math.floor(diff / (1000 * 60 * 60));
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                    
-                    timeRemains = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                  } else {
-                    expired = true;
-                  }
-                }
-                
-                const formattedExam = {
-                  id: exam.id,
-                  name: exam.title,
-                  value: exam.totalScore || 100,
-                  questions: exam.questionCount || (exam.questions ? exam.questions.length : 0),
-                  timeRemains: timeRemains,
-                  expired: expired,
-                  status: exam.status,
-                  startAt: exam.startAt,
-                  endAt: exam.endAt,
-                  duration: exam.duration
-                };
-                
-                // Add the exam to the current list or replace it if it exists
-                setExams(prevExams => {
-                  const examExists = prevExams.some(e => e.id === formattedExam.id);
-                  
-                  if (examExists) {
-                    return prevExams.map(e => e.id === formattedExam.id ? formattedExam : e);
-                  } else {
-                    return [...prevExams, formattedExam];
-                  }
-                });
-              }
-            })
-            .catch(err => {
-              console.error('Error fetching specific exam:', err);
-              // Still proceed with normal class fetch as fallback
-              fetchExams(classId);
-            });
-        } else {
-          // If no specific exam ID, fetch all exams for the class
-          fetchExams(classId);
-        }
-      }
-      
-      // Clear the state to prevent it from persisting on refresh
-      // This must be done after we've used the data
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
-  
   const fetchExams = async (classId) => {
     setLoading(true);
     setError(null);
     
+    if (!classId) {
+      console.error('fetchExams: No classId provided');
+      setError('No class selected. Please select a class to view exams.');
+      setExams([]);
+      setLoading(false);
+      return;
+    }
+    
     try {
       console.log(`Fetching exams for class ID: ${classId}, page: ${currentPage}, size: ${pageSize}`);
+      const response = await examService.getExamsByClass(classId, currentPage, pageSize);
       
-      // First attempt to fetch all exams without filtering by status
-      let response = await examService.getExamsByClass(classId, currentPage, pageSize);
+      // Log the entire response for debugging
+      console.log('Raw exam response:', response);
+      console.log('Exam response data:', response.data);
       
-      // If no exams are found or there's an issue, try with specific status values
-      if (!response.data || 
-          (response.data.content && response.data.content.length === 0) ||
-          (Array.isArray(response.data) && response.data.length === 0)) {
-        
-        console.log("No exams found with default query, trying with specific statuses...");
-        
-        // Try with all possible status values that match the backend enum
-        // SCHEDULED, ONGOING, COMPLETED, CANCELLED are the only valid statuses
-        const statusValues = ['SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED'];
-        
-        for (const status of statusValues) {
-          try {
-            console.log(`Trying with status: ${status}`);
-            const statusResponse = await examService.getExamsByClass(classId, currentPage, pageSize, status);
-            
-            if (statusResponse.data && 
-                ((statusResponse.data.content && statusResponse.data.content.length > 0) ||
-                 (Array.isArray(statusResponse.data) && statusResponse.data.length > 0))) {
-              response = statusResponse;
-              console.log(`Found exams with status: ${status}`);
-              break;
-            }
-          } catch (statusErr) {
-            console.warn(`Error fetching exams with status ${status}:`, statusErr.message);
-            // Continue to next status - don't break the loop
-          }
-        }
-      }
-      
-      console.log('Fetched exams response:', response);
-      
-      // Process exam data
+      // Process exam data with better handling for different response formats
       let fetchedExams = [];
-      if (response.data) {
-        if (response.data.content && Array.isArray(response.data.content)) {
-          fetchedExams = response.data.content;
-        } else if (Array.isArray(response.data)) {
-          fetchedExams = response.data;
-        } else {
-          console.warn('Unexpected response format:', response.data);
-          fetchedExams = [];
-        }
+      
+      if (response.data && response.data.content) {
+        // Paginated response
+        fetchedExams = response.data.content;
+        console.log(`Processing ${fetchedExams.length} exams from paginated response`);
+      } else if (Array.isArray(response.data)) {
+        // Array response
+        fetchedExams = response.data;
+        console.log(`Processing ${fetchedExams.length} exams from array response`);
+      } else if (response.data) {
+        // Unknown format but has data
+        console.warn('Unexpected response format, attempting to process anyway');
+        fetchedExams = Array.isArray(response.data) ? response.data : [response.data];
       }
       
-      console.log(`Processed ${fetchedExams.length} exams from response`);
-      
-      if (fetchedExams.length === 0) {
+      if (!fetchedExams || fetchedExams.length === 0) {
+        console.log('No exams found for this class');
         setExams([]);
+        setLoading(false);
         return;
       }
       
-      // Format exams to match the UI requirements
-      const formattedExams = fetchedExams.map(exam => {
+      // Log the first exam for debugging
+      if (fetchedExams.length > 0) {
+        console.log('First exam in processed data:', fetchedExams[0]);
+      }
+      
+      // Get question counts for all exams
+      const examsWithQuestionPromises = fetchedExams.map(async (exam) => {
+        // Debug the raw exam object
+        console.log('Raw exam object:', JSON.stringify(exam));
+        
         // Calculate time remaining until exam end time
         let timeRemains = '00:00:00';
-        let expired = false;
+        
+        // Ensure exam exists and has expected properties
+        if (!exam) {
+          console.warn('Null or undefined exam object in response');
+          return null;
+        }
         
         if (exam.endAt) {
-          const endTime = new Date(exam.endAt);
-          const now = new Date();
-          const diff = endTime - now;
-          
-          if (diff > 0) {
-            // Format as hh:mm:ss
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          try {
+            const endTime = new Date(exam.endAt);
+            const now = new Date();
+            const diff = endTime - now;
             
-            timeRemains = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-          } else {
-            expired = true;
+            if (!isNaN(diff) && diff > 0) {
+              // Format as hh:mm:ss
+              const hours = Math.floor(diff / (1000 * 60 * 60));
+              const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+              const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+              
+              timeRemains = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+          } catch (error) {
+            console.error('Error calculating time remaining:', error);
           }
         }
         
-        // Check for questions count - ensure we have a valid value
-        const questionsCount = exam.questionCount || 
-                               (exam.questions ? exam.questions.length : 0);
+        // Log all available properties in the exam object
+        console.log('Exam object properties:', Object.keys(exam));
         
+        // Log specific title values
+        console.log('Exam title from API:', exam.title);
+        
+        // Fetch question count for this exam
+        const questionCount = await examService.getQuestionCount(exam.id);
+        
+        // Create formatted exam with both title and name properties
         return {
-          id: exam.id,
-          name: exam.title,
-          value: exam.totalScore || 100,
-          questions: questionsCount,
+          id: typeof exam.id === 'number' ? exam.id : 0,
+          title: exam.title || `Exam ${exam.id || 0}`,
+          name: exam.title || `Exam ${exam.id || 0}`, // Keep name for backwards compatibility
+          value: typeof exam.value === 'number' ? exam.value : 100,
+          questions: questionCount, // Use the actual question count from API
           timeRemains: timeRemains,
-          expired: expired,
-          status: exam.status,
-          startAt: exam.startAt,
-          endAt: exam.endAt,
-          duration: exam.duration
+          status: (exam.status && typeof exam.status === 'string') ? exam.status : 'SCHEDULED'
         };
       });
       
+      // Wait for all question count requests to complete
+      const formattedExams = (await Promise.all(examsWithQuestionPromises)).filter(Boolean); // Remove any null entries
+      
+      console.log(`Processed ${formattedExams.length} formatted exams for display`);
       setExams(formattedExams);
     } catch (err) {
       console.error('Error fetching exams:', err);
+      
+      // More detailed error handling
       if (err.response) {
-        if (err.response.status === 403) {
-          setError('You do not have permission to view exams for this class.');
-        } else if (err.response.status === 401) {
-          setError('Your session has expired. Please log in again.');
-          setTimeout(() => logout(), 2000);
+        // Server responded with an error status
+        console.error('Server error status:', err.response.status);
+        console.error('Server error data:', err.response.data);
+        
+        if (err.response.status === 401) {
+          setError('Authentication error. Please log in again.');
+        } else if (err.response.status === 403) {
+          setError('You do not have permission to view these exams.');
         } else {
-          setError(`Failed to load exams: ${err.response.data || 'Unknown error'}`);
+          setError(`Failed to load exams (${err.response.status}). Please try again later.`);
         }
+      } else if (err.request) {
+        // Request was made but no response received (network error)
+        console.error('Network error - no response received');
+        setError('Network error. Please check your connection and try again.');
       } else {
-        setError('Failed to load exams. Please check your internet connection and try again.');
+        // Error in setting up the request
+        console.error('Error setting up request:', err.message);
+        setError('Failed to load exams. Please try again later.');
       }
+      
       setExams([]);
     } finally {
       setLoading(false);
@@ -714,14 +630,44 @@ function ExamPage() {
   };
   
   const handleDeleteExam = async (examId) => {
+    if (!examId || examId === 0) {
+      console.error("Cannot delete exam with invalid ID:", examId);
+      alert("Cannot delete exam with invalid ID");
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to delete this exam?')) {
       try {
-        await examService.deleteExam(examId);
+        console.log(`Attempting to delete exam with ID: ${examId}`);
+        setLoading(true);
+        const response = await examService.deleteExam(examId);
+        console.log('Delete response:', response);
+        alert('Exam deleted successfully');
+        
         // Refresh the exam list
-        fetchExams(selectedClassId);
+        if (selectedClassId) {
+          fetchExams(selectedClassId);
+        }
       } catch (err) {
         console.error('Error deleting exam:', err);
-        alert('Failed to delete exam. Please try again.');
+        let errorMessage = 'Failed to delete exam. Please try again.';
+        
+        if (err.response) {
+          console.error('Status:', err.response.status);
+          console.error('Error data:', err.response.data);
+          
+          if (err.response.status === 401) {
+            errorMessage = 'Authentication error. Please log in again.';
+          } else if (err.response.status === 403) {
+            errorMessage = 'You do not have permission to delete this exam.';
+          } else if (err.response.data && err.response.data.message) {
+            errorMessage = `Error: ${err.response.data.message}`;
+          }
+        }
+        
+        alert(errorMessage);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -730,11 +676,23 @@ function ExamPage() {
   const formatStatus = (status) => {
     if (!status) return 'Unknown';
     
+    // Validate that status is a string before processing
+    if (typeof status !== 'string') {
+      console.warn('Invalid status format:', status);
+      return 'Unknown';
+    }
+    
     // Convert from SCREAMING_SNAKE_CASE to Title Case
     return status.toLowerCase()
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  };
+
+  // Add this debug function to the component
+  const debugExamData = (exam) => {
+    console.log('Rendering exam row with data:', exam);
+    return exam;
   };
 
   return (
@@ -748,6 +706,10 @@ function ExamPage() {
               <NavItem to="/student-dashboard">
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
                 Dashboard
+              </NavItem>
+              <NavItem to="/my-classes">
+                <NavIcon>{getMenuIcon('myClasses')}</NavIcon>
+                My Classes
               </NavItem>
               <NavItem to="/exams" className="active">
                 <NavIcon>{getMenuIcon('exams')}</NavIcon>
@@ -822,7 +784,7 @@ function ExamPage() {
       
       <MainContent>
         <Header>
-          <PageTitle>{isStudent ? 'My Exams' : 'Exams'}</PageTitle>
+          <PageTitle>Exam</PageTitle>
           
           <HeaderRight>
             {(isLecturer || isAdmin) && (
@@ -854,7 +816,7 @@ function ExamPage() {
           </div>
         ) : (
           <div style={{ marginBottom: '1rem', color: '#666' }}>
-            {error ? error : (isStudent ? 'You are not enrolled in any classes yet.' : 'No classes available.')}
+            {error ? error : 'No classes available.'}
             {isLecturer && !error && (
               <span> Please create a class first to manage exams.</span>
             )}
@@ -870,9 +832,13 @@ function ExamPage() {
             </div>
           ) : loading ? (
             <div style={{ padding: '2rem', textAlign: 'center' }}>Loading exams...</div>
+          ) : error ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
+              {error}
+            </div>
           ) : exams.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center' }}>
-              {isStudent ? 'No exams available for this class.' : 'No exams available for this class.'}
+              No exams available for this class.
               {isLecturer || isAdmin ? (
                 <div style={{ marginTop: '1rem' }}>
                   <CreateButton onClick={handleCreateExam}>
@@ -895,34 +861,41 @@ function ExamPage() {
                 </tr>
               </thead>
               <tbody>
-                {exams.map(exam => (
-                  <TableRow key={exam.id}>
-                    <IndexCell>#{exam.id}</IndexCell>
-                    <TableCell>{exam.name}</TableCell>
-                    <TableCell>{exam.value}</TableCell>
-                    <TableCell>{exam.questions}</TableCell>
-                    <TableCell>
-                      <ExpiryTime expired={isExpired(exam.timeRemains)}>
-                        {exam.timeRemains}
-                      </ExpiryTime>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={exam.status}>
-                        {formatStatus(exam.status)}
-                      </StatusBadge>
-                    </TableCell>
-                    {(isLecturer || isAdmin) && (
-                      <ActionCell>
-                        <EditButton title="Edit" onClick={() => handleEditExam(exam.id)}>
-                          <EditIcon />
-                        </EditButton>
-                        <DeleteButton title="Delete" onClick={() => handleDeleteExam(exam.id)}>
-                          <DeleteIcon />
-                        </DeleteButton>
-                      </ActionCell>
-                    )}
-                  </TableRow>
-                ))}
+                {exams.map(exam => {
+                  const currentExam = debugExamData(exam);
+                  return (
+                    <TableRow key={currentExam.id || `exam-${Math.random()}`}>
+                      <IndexCell>#{currentExam.id || 0}</IndexCell>
+                      <TableCell>{currentExam.title || currentExam.name || `Exam ${currentExam.id || 0}`}</TableCell>
+                      <TableCell>{currentExam.value || 100}</TableCell>
+                      <TableCell>{typeof currentExam.questions === 'number' ? currentExam.questions : (Array.isArray(currentExam.questions) ? currentExam.questions.length : 0)}</TableCell>
+                      <TableCell>
+                        <ExpiryTime expired={isExpired(currentExam.timeRemains || '00:00:00') ? "true" : "false"}>
+                          {currentExam.timeRemains || '00:00:00'}
+                        </ExpiryTime>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={currentExam.status || 'SCHEDULED'}>
+                          {formatStatus(currentExam.status || 'SCHEDULED')}
+                        </StatusBadge>
+                      </TableCell>
+                      {(isLecturer || isAdmin) && (
+                        <ActionCell>
+                          <EditButton title="Edit" onClick={() => handleEditExam(currentExam.id)}>
+                            <EditIcon />
+                          </EditButton>
+                          <DeleteButton 
+                            title="Delete" 
+                            onClick={() => handleDeleteExam(currentExam.id)}
+                            disabled={loading}
+                          >
+                            <DeleteIcon />
+                          </DeleteButton>
+                        </ActionCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </tbody>
             </ExamTable>
           )}

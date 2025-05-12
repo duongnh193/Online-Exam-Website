@@ -159,18 +159,72 @@ class ClassService {
 
   // Get classes for a student
   getStudentClasses(studentId, page = 0, size = 10) {
+    if (!studentId) {
+      console.error('getStudentClasses: No studentId provided');
+      return Promise.reject(new Error('No studentId provided'));
+    }
+    
     const url = `${API_URL}/by-student?studentId=${studentId}&page=${page}&size=${size}`;
     const headers = authHeader();
+    
+    console.log(`Fetching classes for student ${studentId} with URL: ${url}`);
+    console.log('Auth header present:', !!headers.Authorization);
     logApiCall('GET', url, headers);
-    return axios.get(url, { headers })
-      .then(response => {
-        console.log('Student classes fetched successfully:', response.data);
-        return response;
-      })
-      .catch(error => {
-        console.error('Error fetching student classes:', error.response?.data || error.message);
-        throw error;
-      });
+    
+    return axios.get(url, { 
+      headers,
+      timeout: 10000 // 10 second timeout
+    })
+    .then(response => {
+      console.log('Student classes raw API response:', response);
+      console.log('Student classes fetched successfully:', response.data);
+      
+      // Add detailed logging to debug the response
+      if (response.data && response.data.content) {
+        console.log(`Received ${response.data.content.length} classes (paginated)`);
+        if (response.data.content.length > 0) {
+          console.log('First class in response:', response.data.content[0]);
+        }
+      } else if (Array.isArray(response.data)) {
+        console.log(`Received ${response.data.length} classes (array)`);
+        if (response.data.length > 0) {
+          console.log('First class in response:', response.data[0]);
+        }
+      } else {
+        console.warn('Unexpected response format for student classes:', response.data);
+      }
+      
+      return response;
+    })
+    .catch(error => {
+      console.error('Error fetching student classes:', error);
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error status:', error.response.status);
+        console.error('Error data:', error.response.data);
+        
+        // Specific error handling based on status codes
+        if (error.response.status === 404) {
+          console.log('No classes found for this student (404)');
+          // Return an empty response instead of throwing
+          return { data: { content: [] } };
+        } else if (error.response.status === 401) {
+          console.error('Authentication error when fetching student classes');
+        } else if (error.response.status === 403) {
+          console.error('Permission denied when fetching student classes');
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error message:', error.message);
+      }
+      
+      throw error;
+    });
   }
 }
 
