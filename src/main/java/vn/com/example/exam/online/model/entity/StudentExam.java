@@ -1,5 +1,6 @@
 package vn.com.example.exam.online.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -29,9 +30,11 @@ public class StudentExam {
     String id;
     @ManyToOne
     @JoinColumn(name = "exam_id")
+    @JsonIgnore
     Exam exam;
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     User student;
     Double score;
     OffsetDateTime startAt;
