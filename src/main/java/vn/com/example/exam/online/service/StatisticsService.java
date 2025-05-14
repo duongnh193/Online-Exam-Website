@@ -70,17 +70,25 @@ public class StatisticsService {
         Page<StudentExam> studentExamsPage = studentExamRepository.findByClassId(classId, pageRequest);
 
         List<StudentExamScoreResponse> responses = studentExamsPage.getContent().stream()
-                .collect(Collectors.groupingBy(se -> se.getStudent().getId()))
+                .collect(Collectors.groupingBy(se -> se.getStudent().getId())) // Nhóm theo studentId
                 .entrySet().stream()
                 .map(entry -> {
                     Long studentId = entry.getKey();
                     List<StudentExam> exams = entry.getValue();
-                    double avgScore = exams.stream().mapToDouble(StudentExam::getScore).average().orElse(0.0);
+
+                    double totalWeightedScore = exams.stream()
+                            .mapToDouble(se -> se.getScore() * se.getExam().getCoefficient())
+                            .sum();
+
+                    double totalCoefficient = exams.stream()
+                            .mapToDouble(se -> se.getExam().getCoefficient())
+                            .sum();
+
+                    double avgScore = totalCoefficient == 0 ? 0.0 : totalWeightedScore / totalCoefficient;
                     Double avgScoreIn10 = avgScore;
 
                     Double avgScoreIn4 = calculateScoreIn4(avgScore);
 
-                    // Tạo đối tượng trả về
                     String studentName = exams.get(0).getStudent().getFirstName() + " " + exams.get(0).getStudent().getLastName();
                     return new StudentExamScoreResponse(studentId, studentName, avgScore, avgScoreIn10, avgScoreIn4);
                 })
