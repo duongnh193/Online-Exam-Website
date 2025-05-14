@@ -3,6 +3,8 @@ package vn.com.example.exam.online.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.com.example.exam.online.model.ExamResult;
 import vn.com.example.exam.online.model.request.SubmitAnswerRequest;
 import vn.com.example.exam.online.model.response.StudentExamResponse;
+import vn.com.example.exam.online.model.response.StudentExamResultResponse;
 import vn.com.example.exam.online.service.StudentExamService;
 
 @RequestMapping("/api/v1/student-exams")
@@ -18,6 +21,12 @@ import vn.com.example.exam.online.service.StudentExamService;
 @RequiredArgsConstructor
 public class StudentExamController {
     private final StudentExamService studentExamService;
+
+    @GetMapping("/{studentExamId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentExamResultResponse> getStudentExam(@PathVariable String studentExamId) {
+        return ResponseEntity.ok(studentExamService.getResult(studentExamId));
+    }
 
     @PostMapping("/start")
     @PreAuthorize("hasRole('STUDENT')")

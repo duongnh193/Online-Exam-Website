@@ -21,4 +21,5 @@ public class CreateExamRequest {
     LocalDateTime endAt;
     String password;
     ExamStatus status;
+    double coefficient;
 }

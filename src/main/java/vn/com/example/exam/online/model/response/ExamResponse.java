@@ -26,5 +26,6 @@ public class ExamResponse {
     LocalDateTime endAt;
     String password;
     ExamStatus status;
+    double coefficient;
     long totalQuestions;
 }

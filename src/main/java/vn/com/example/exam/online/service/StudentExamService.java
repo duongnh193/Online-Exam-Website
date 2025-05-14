@@ -3,6 +3,7 @@ package vn.com.example.exam.online.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import vn.com.example.exam.online.mapper.StudentExam2StudentExamResultResponseMapper;
 import vn.com.example.exam.online.model.ExamResult;
 import vn.com.example.exam.online.model.QuestionType;
 import vn.com.example.exam.online.model.StudentExamStatus;
@@ -13,6 +14,7 @@ import vn.com.example.exam.online.model.entity.StudentExam;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.response.QuestionExamResponse;
 import vn.com.example.exam.online.model.response.StudentExamResponse;
+import vn.com.example.exam.online.model.response.StudentExamResultResponse;
 import vn.com.example.exam.online.repository.ExamRepository;
 import vn.com.example.exam.online.repository.ExamSubmissionRepository;
 import vn.com.example.exam.online.repository.QuestionRepository;
@@ -35,6 +37,12 @@ public class StudentExamService {
     private final ExamSubmissionRepository examSubmissionRepository;
     private final QuestionRepository questionRepository;
     private final StudentClassRepository studentClassRepository;
+
+    public StudentExamResultResponse getResult(String id) {
+        var studentExam = studentExamRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student exam not found with id: %s".formatted(id)));
+        return StudentExam2StudentExamResultResponseMapper.INSTANCE.map(studentExam);
+    }
 
     public StudentExamResponse startExam(Long examId, String password) {
         User student = getAuthenticatedStudent();

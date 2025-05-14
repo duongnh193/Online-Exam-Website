@@ -1,12 +1,19 @@
 package vn.com.example.exam.online.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vn.com.example.exam.online.model.RoleEnum;
 import vn.com.example.exam.online.model.response.ExamScoreStatisticsResponse;
+import vn.com.example.exam.online.model.response.StudentExamScoreResponse;
 import vn.com.example.exam.online.service.StatisticsService;
+import vn.com.example.exam.online.util.Constants;
 
 @RestController
 @RequestMapping("/api/v1/statistics")
@@ -25,8 +32,37 @@ public class StatisticsController {
         return statisticsService.getTotalExamsInClass(classId);
     }
 
+    @GetMapping("/total-lecturers")
+    public Long getTotalLecturers() {
+        return statisticsService.countByRole(RoleEnum.ROLE_LECTURER);
+    }
+
+    @GetMapping("/total-students")
+    public Long getTotalStudents() {
+        return statisticsService.countByRole(RoleEnum.ROLE_STUDENT);
+    }
+
     @GetMapping("/exam-score/{examId}")
     public ExamScoreStatisticsResponse getExamScoreStatistics(@PathVariable Long examId) {
         return statisticsService.getExamScoreStatistics(examId);
+    }
+
+    //GET /api/v1/statistics/student-scores/{classId}?page=0&size=10&sortBy=studentName&direction=asc
+    @GetMapping("/student-scores/{classId}")
+    public Page<StudentExamScoreResponse> getStudentScores(
+            @PathVariable Long classId,
+            @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
+            @RequestParam(defaultValue = "studentName") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        Sort sort = Sort.by(Sort.Order.by(sortBy));
+        if ("desc".equals(direction)) {
+            sort = sort.descending();
+        }
+
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+
+        return statisticsService.getStudentScoresInClass(classId, pageRequest);
     }
 }

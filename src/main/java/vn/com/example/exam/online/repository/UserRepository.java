@@ -30,4 +30,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailAndNotId(@Param("email") String email, @Param("id") Long id);
 
     Page<User> findAllByRole(RoleEnum role, Pageable pageable);
+
+    Long countByRole(RoleEnum role);
 }

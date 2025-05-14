@@ -61,6 +61,7 @@ CREATE TABLE exam
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     update_by BIGINT,
+    coefficient DOUBLE CHECK (coefficient >= 0 AND coefficient <= 1),
     FOREIGN KEY (class_id) REFERENCES class (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
     FOREIGN KEY (update_by) REFERENCES user (id) ON DELETE SET NULL
