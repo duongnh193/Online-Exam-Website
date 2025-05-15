@@ -126,7 +126,7 @@ public class StudentExamService {
                 .filter(ExamSubmission::getIsCorrect)
                 .count();
         int totalQuestions = submissions.size();
-        double score = totalQuestions > 0 ? (correctAnswersCount * 100.0) / totalQuestions : 0.0;
+        double score = totalQuestions > 0 ? (correctAnswersCount * 10.0) / totalQuestions : 0.0;
 
         studentExam.setScore(score);
         studentExam.setStatus(StudentExamStatus.COMPLETED);
