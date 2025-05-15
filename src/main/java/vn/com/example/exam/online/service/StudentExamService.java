@@ -56,6 +56,10 @@ public class StudentExamService {
         }
         String studentExamId = student.getId() + "-" + examId;
 
+        if (studentExamRepository.existsById(studentExamId)) {
+            throw new RuntimeException("Exam already started");
+        }
+
         // Tạo đối tượng StudentExam và lưu vào DB
         StudentExam studentExam = new StudentExam()
                 .setId(studentExamId)  // Sử dụng id ghép
