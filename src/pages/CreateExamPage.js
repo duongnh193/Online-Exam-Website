@@ -1124,6 +1124,14 @@ function CreateExamPage() {
                   <option value="COMPLETED">Completed</option>
                   <option value="CANCELLED">Cancelled</option>
                 </Select>
+                <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
+                  Note: Statuses will automatically update based on time:
+                  <ul style={{ margin: '0.3rem 0 0 1.2rem', padding: 0 }}>
+                    <li>Before start time: Scheduled</li>
+                    <li>Between start and end time: Ongoing</li>
+                    <li>After end time: Completed</li>
+                  </ul>
+                </div>
               </FormGroup>
               
               <FormGroup>

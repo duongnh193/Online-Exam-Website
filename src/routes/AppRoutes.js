@@ -8,6 +8,8 @@ import ExamPage from '../pages/ExamPage';
 import CreateExamPage from '../pages/CreateExamPage';
 import SettingsPage from '../pages/SettingsPage';
 import ClassPage from '../pages/ClassPage';
+import StartExamPage from '../pages/StartExamPage';
+import TakeExamPage from '../pages/TakeExamPage';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '../hooks/useAuth';
@@ -266,6 +268,30 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN', 'ROLE_STUDENT']}>
               <SettingsPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Start Exam route - only for students */}
+      <Route 
+        path="/start-exam/:examId" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_STUDENT']}>
+              <StartExamPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Take Exam route - only for students */}
+      <Route 
+        path="/take-exam/:examId/questions" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_STUDENT']}>
+              <TakeExamPage />
             </RoleRoute>
           </ProtectedRoute>
         } 

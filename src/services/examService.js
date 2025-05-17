@@ -25,6 +25,32 @@ const logAuthState = () => {
   }
 };
 
+// Utility function to calculate exam status based on time
+const calculateExamStatus = (exam) => {
+  if (!exam || !exam.startAt || !exam.endAt) {
+    return exam?.status || 'SCHEDULED';
+  }
+
+  const now = new Date();
+  const startTime = new Date(exam.startAt);
+  const endTime = new Date(exam.endAt);
+  
+  // If any timestamps are invalid, return the existing status
+  if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+    console.warn('Invalid timestamp detected for exam:', exam.id);
+    return exam?.status || 'SCHEDULED';
+  }
+
+  // Calculate status based on time
+  if (now < startTime) {
+    return 'SCHEDULED';
+  } else if (now <= endTime) {
+    return 'ONGOING';
+  } else {
+    return 'COMPLETED';
+  }
+};
+
 class ExamService {
   // Create a new exam
   createExam(examData) {
@@ -125,14 +151,20 @@ class ExamService {
       // Validate and ensure response has required properties
       if (response.data) {
         // Make sure the exam object has all required properties
+        const exam = response.data;
+        
+        // Calculate the correct status based on time
+        const calculatedStatus = calculateExamStatus(exam);
+        
         const processedExam = {
-          ...response.data,
-          id: response.data.id || 0,
-          title: response.data.title || 'Untitled Exam',
-          classId: response.data.classId || null,
-          duration: response.data.duration || 60,
-          status: response.data.status || 'SCHEDULED',
-          questions: response.data.questions || []
+          ...exam,
+          id: exam.id || 0,
+          title: exam.title || 'Untitled Exam',
+          classId: exam.classId || null,
+          duration: exam.duration || 60,
+          // Use the calculated status
+          status: calculatedStatus,
+          questions: exam.questions || []
         };
         
         return {
@@ -220,13 +252,19 @@ class ExamService {
         
         // Process each exam
         if (examCount > 0) {
-          const processedContent = responseData.content.map(exam => ({
-            ...exam,
-            id: exam.id || 0,
-            title: exam.title || `Exam #${exam.id || 0}`,
-            status: exam.status || 'SCHEDULED',
-            questions: Array.isArray(exam.questions) ? exam.questions : []
-          }));
+          const processedContent = responseData.content.map(exam => {
+            // Calculate the correct status based on time
+            const calculatedStatus = calculateExamStatus(exam);
+            
+            return {
+              ...exam,
+              id: exam.id || 0,
+              title: exam.title || `Exam #${exam.id || 0}`,
+              // Use the calculated status instead of existing one
+              status: calculatedStatus,
+              questions: Array.isArray(exam.questions) ? exam.questions : []
+            };
+          });
           
           processedResponse.data = {
             ...responseData,
@@ -240,13 +278,19 @@ class ExamService {
         console.log(`Received ${examCount} exams (array)`);
         
         if (examCount > 0) {
-          const processedArray = responseData.map(exam => ({
-            ...exam,
-            id: exam.id || 0,
-            title: exam.title || `Exam #${exam.id || 0}`,
-            status: exam.status || 'SCHEDULED',
-            questions: Array.isArray(exam.questions) ? exam.questions : []
-          }));
+          const processedArray = responseData.map(exam => {
+            // Calculate the correct status based on time
+            const calculatedStatus = calculateExamStatus(exam);
+            
+            return {
+              ...exam,
+              id: exam.id || 0,
+              title: exam.title || `Exam #${exam.id || 0}`,
+              // Use the calculated status
+              status: calculatedStatus,
+              questions: Array.isArray(exam.questions) ? exam.questions : []
+            };
+          });
           
           processedResponse.data = processedArray;
         }
@@ -255,11 +299,14 @@ class ExamService {
       else if (responseData && typeof responseData === 'object') {
         console.log('Received single exam object');
         
+        // Calculate the correct status based on time
+        const calculatedStatus = calculateExamStatus(responseData);
+        
         const processedExam = {
           ...responseData,
           id: responseData.id || 0,
           title: responseData.title || `Exam #${responseData.id || 0}`,
-          status: responseData.status || 'SCHEDULED',
+          status: calculatedStatus,
           questions: Array.isArray(responseData.questions) ? responseData.questions : []
         };
         

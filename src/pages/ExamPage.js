@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import examService from '../services/examService';
 import classService from '../services/classService';
 import questionService from '../services/questionService';
+import studentExamService from '../services/studentExamService';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -359,8 +360,37 @@ function ExamPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const dropdownRef = useRef(null);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const refreshIntervalRef = useRef(null);
+  const [lastRefreshTime, setLastRefreshTime] = useState(new Date());
   
-  // Fetch classes when component mounts
+  // Add a useEffect to handle URL query parameters
+  useEffect(() => {
+    // Parse query parameters
+    const params = new URLSearchParams(location.search);
+    const classIdParam = params.get('classId');
+    
+    if (classIdParam) {
+      console.log(`Found classId in URL: ${classIdParam}`);
+      // Convert to number since IDs from the server are numeric
+      const classId = parseInt(classIdParam, 10);
+      
+      // Set the selected class ID if it's a valid number
+      if (!isNaN(classId) && classId > 0) {
+        setSelectedClassId(classId);
+        // Update the page title to include the class name
+        if (classes.length > 0) {
+          const selectedClass = classes.find(cls => cls.id === classId);
+          if (selectedClass) {
+            document.title = `Exams - ${selectedClass.name}`;
+          }
+        }
+      }
+    }
+  }, [location.search, classes]);
+  
+  // Update the useEffect that fetches classes to avoid overriding the URL parameter
   useEffect(() => {
     if (user) {
       setClassesLoading(true);
@@ -374,9 +404,7 @@ function ExamPage() {
         fetchClassesPromise = classService.getAllClasses();
       } else if (user.role === 'ROLE_STUDENT') {
         // For students, we'd fetch classes they're enrolled in
-        // This would require a different endpoint
         fetchClassesPromise = classService.getStudentClasses(user.id);
-        // You might need to add a getStudentClasses method to classService
       }
       
       if (fetchClassesPromise) {
@@ -386,8 +414,13 @@ function ExamPage() {
             console.log('Fetched classes:', fetchedClasses);
             setClasses(fetchedClasses);
             
-            if (fetchedClasses.length > 0) {
+            // Only set default selection if there's no classId in the URL and no selected ID yet
+            const params = new URLSearchParams(location.search);
+            const classIdParam = params.get('classId');
+            
+            if (!classIdParam && fetchedClasses.length > 0 && !selectedClassId) {
               // Set the first class as selected by default
+              console.log('Setting default selected class:', fetchedClasses[0].id);
               setSelectedClassId(fetchedClasses[0].id);
             }
           })
@@ -401,7 +434,7 @@ function ExamPage() {
           });
       }
     }
-  }, [user]);
+  }, [user, location.search]);
   
   // Fetch exams when selectedClassId changes
   useEffect(() => {
@@ -417,6 +450,7 @@ function ExamPage() {
   const fetchExams = async (classId) => {
     setLoading(true);
     setError(null);
+    setLastRefreshTime(new Date());
     
     if (!classId) {
       console.error('fetchExams: No classId provided');
@@ -426,9 +460,20 @@ function ExamPage() {
       return;
     }
     
+    // Convert to number if it's not already
+    const numericClassId = typeof classId === 'number' ? classId : parseInt(classId, 10);
+    
+    if (isNaN(numericClassId) || numericClassId <= 0) {
+      console.error('fetchExams: Invalid classId format:', classId);
+      setError('Invalid class ID. Please select a valid class.');
+      setExams([]);
+      setLoading(false);
+      return;
+    }
+    
     try {
-      console.log(`Fetching exams for class ID: ${classId}, page: ${currentPage}, size: ${pageSize}`);
-      const response = await examService.getExamsByClass(classId, currentPage, pageSize);
+      console.log(`Fetching exams for class ID: ${numericClassId}, page: ${currentPage}, size: ${pageSize}`);
+      const response = await examService.getExamsByClass(numericClassId, currentPage, pageSize);
       
       // Log the entire response for debugging
       console.log('Raw exam response:', response);
@@ -452,7 +497,7 @@ function ExamPage() {
       }
       
       if (!fetchedExams || fetchedExams.length === 0) {
-        console.log('No exams found for this class');
+        console.log(`No exams found for class ID: ${numericClassId}`);
         setExams([]);
         setLoading(false);
         return;
@@ -701,6 +746,46 @@ function ExamPage() {
     return location.pathname.startsWith(path);
   };
 
+  // Add a function to refresh exams without changing the selected class
+  const refreshExams = () => {
+    if (selectedClassId) {
+      console.log('Auto-refreshing exam statuses...');
+      fetchExams(selectedClassId);
+      setLastRefresh(new Date());
+    }
+  };
+
+  // Add a toggle function for the auto-refresh feature
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(prev => !prev);
+  };
+
+  // Set up and clean up the refresh interval
+  useEffect(() => {
+    // Clear any existing interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+    
+    // If auto-refresh is enabled, set up the new interval
+    if (autoRefresh) {
+      refreshIntervalRef.current = setInterval(() => {
+        refreshExams();
+      }, 60000); // Refresh every minute
+      
+      console.log('Auto-refresh interval set up');
+    }
+    
+    // Clean up on component unmount or when autoRefresh changes
+    return () => {
+      if (refreshIntervalRef.current) {
+        console.log('Cleaning up auto-refresh interval');
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [autoRefresh, selectedClassId]);
+
   return (
     <PageContainer>
       <Sidebar>
@@ -789,6 +874,38 @@ function ExamPage() {
           <PageTitle>Exam</PageTitle>
           
           <HeaderRight>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginRight: '1rem', 
+              fontSize: '0.8rem',
+              color: '#666'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                marginRight: '0.5rem', 
+                fontSize: '0.8rem',
+                color: '#666'
+              }}>
+                <span>Last updated: {lastRefreshTime.toLocaleTimeString()}</span>
+                <button 
+                  onClick={() => selectedClassId ? fetchExams(selectedClassId) : null}
+                  style={{
+                    marginLeft: '8px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#1976d2',
+                    padding: '4px',
+                    borderRadius: '4px',
+                  }}
+                  title="Refresh exams"
+                >
+                  <span style={{ fontSize: '16px' }}>↻</span>
+                </button>
+              </div>
+            </div>
             {(isLecturer || isAdmin) && (
               <CreateButton onClick={handleCreateExam}>
                 + Create Exam
@@ -806,7 +923,11 @@ function ExamPage() {
             <SortDropdown 
               id="classSelect"
               value={selectedClassId || ''}
-              onChange={(e) => setSelectedClassId(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => {
+                const newClassId = e.target.value ? parseInt(e.target.value, 10) : null;
+                console.log(`Class changed from ${selectedClassId} to ${newClassId}`);
+                setSelectedClassId(newClassId);
+              }}
             >
               <option value="">Select a class</option>
               {classes.map(c => (
@@ -839,8 +960,13 @@ function ExamPage() {
               {error}
             </div>
           ) : exams.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
               No exams available for this class.
+              {isStudent && (
+                <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
+                  If you believe this is an error, please contact your instructor.
+                </p>
+              )}
             </div>
           ) : (
             <ExamTable>
@@ -859,7 +985,21 @@ function ExamPage() {
                 {exams.map(exam => {
                   const currentExam = debugExamData(exam);
                   return (
-                    <TableRow key={currentExam.id || `exam-${Math.random()}`}>
+                    <TableRow 
+                      key={currentExam.id || `exam-${Math.random()}`}
+                      style={{
+                        // For student view, highlight ongoing exams
+                        backgroundColor: isStudent && currentExam.status === 'ONGOING' ? '#f8f9ff' : 'inherit',
+                        cursor: isStudent && currentExam.status === 'ONGOING' ? 'pointer' : 'default',
+                      }}
+                      onClick={() => {
+                        // For students, clicking on an ongoing exam row would take them to the exam
+                        if (isStudent && currentExam.status === 'ONGOING') {
+                          // Remove the completion check and directly navigate to start-exam page
+                          navigate(`/start-exam/${currentExam.id}`);
+                        }
+                      }}
+                    >
                       <IndexCell>#{currentExam.id || 0}</IndexCell>
                       <TableCell>{currentExam.title || currentExam.name || `Exam ${currentExam.id || 0}`}</TableCell>
                       <TableCell>{currentExam.value || 100}</TableCell>
@@ -873,6 +1013,11 @@ function ExamPage() {
                         <StatusBadge status={currentExam.status || 'SCHEDULED'}>
                           {formatStatus(currentExam.status || 'SCHEDULED')}
                         </StatusBadge>
+                        {isStudent && currentExam.status === 'ONGOING' && (
+                          <div style={{ fontSize: '0.7rem', color: '#1976d2', marginTop: '0.2rem' }}>
+                            Click to take exam
+                          </div>
+                        )}
                       </TableCell>
                       {(isLecturer || isAdmin) && (
                         <ActionCell>

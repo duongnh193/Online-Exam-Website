@@ -716,15 +716,18 @@ function StudentDashboardPage() {
                           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                           background: 'white',
                           overflow: 'hidden',
-                          cursor: openMenuIdx === idx ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           minHeight: '200px',
                           display: 'flex',
                           flexDirection: 'column',
                           transition: 'transform 0.1s',
                         }}
                         onClick={e => {
-                          // Prevent card click if menu is open or menu button is clicked
-                          if (openMenuIdx === idx) return;
+                          // Only prevent navigation if clicking on the menu button or menu is open
+                          if (e.target === menuRefs.current[idx] || 
+                              (menuRefs.current[idx] && menuRefs.current[idx].contains(e.target))) {
+                            return;
+                          }
                           navigate(`/exams?classId=${classItem.id}`);
                         }}
                       >
@@ -813,6 +816,35 @@ function StudentDashboardPage() {
                           <div style={{ fontSize: '0.95rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {classItem.description || 'No description available'}
                           </div>
+                        </div>
+                        {/* Add "View Exams" button */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          marginTop: 'auto',
+                          padding: '0.75rem 1rem',
+                        }}>
+                          <button
+                            style={{
+                              background: '#6a00ff',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '20px',
+                              padding: '0.4rem 0.75rem',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/exams?classId=${classItem.id}`);
+                            }}
+                          >
+                            <span>View Exams</span>
+                            <span>→</span>
+                          </button>
                         </div>
                       </div>
                     );

@@ -571,7 +571,7 @@ function SettingsPage() {
     // Only fetch users if the user is an admin and we haven't loaded users yet
     if (user && (user.role === 'ROLE_ADMIN' || user.role === 'ROLE_LECTURER') && !usersLoadedRef.current) {
       console.log('Initial fetch of users triggered');
-      fetchUsers();
+    fetchUsers();
     }
     
     // Test API connection on component mount
@@ -601,7 +601,7 @@ function SettingsPage() {
       updateTwoFactorStateFromStorage();
     }
   }, [activeTab, updateTwoFactorStateFromStorage]);
-
+  
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -817,7 +817,7 @@ function SettingsPage() {
       setActiveTab('profile');
     }
   }, [isStudent, activeTab]);
-
+  
   const openCreateModal = () => {
     setFormData({
       username: '',
@@ -1179,17 +1179,17 @@ function SettingsPage() {
             // Student navigation
             <>
               <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
-                Dashboard
-              </NavItem>
+            <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+            Dashboard
+          </NavItem>
               <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('exams')}</NavIcon>
-                Exams
-              </NavItem>
+            <NavIcon>{getMenuIcon('exams')}</NavIcon>
+            Exams
+          </NavItem>
               <NavItem to="/results" className={isRouteActive('/results') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('results')}</NavIcon>
                 Results
-              </NavItem>
+          </NavItem>
             </>
           ) : isLecturer ? (
             // Lecturer navigation
@@ -1207,9 +1207,9 @@ function SettingsPage() {
                 Class
               </NavItem>
               <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('reports')}</NavIcon>
-                Reports
-              </NavItem>
+            <NavIcon>{getMenuIcon('reports')}</NavIcon>
+            Reports
+          </NavItem>
             </>
           ) : (
             // Admin navigation
@@ -1231,9 +1231,9 @@ function SettingsPage() {
                 Reports
               </NavItem>
               <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('payment')}</NavIcon>
-                Payment
-              </NavItem>
+            <NavIcon>{getMenuIcon('payment')}</NavIcon>
+            Payment
+          </NavItem>
               <NavItem to="/users" className={isRouteActive('/users') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('users')}</NavIcon>
                 Users
@@ -1279,13 +1279,13 @@ function SettingsPage() {
         
         <TabContainer>
           {isAdmin && (
-            <Tab 
+          <Tab 
               data-active={activeTab === 'users'} 
-              active={activeTab === 'users'} 
-              onClick={() => setActiveTab('users')}
-            >
-              User Management
-            </Tab>
+            active={activeTab === 'users'} 
+            onClick={() => setActiveTab('users')}
+          >
+            User Management
+          </Tab>
           )}
           <Tab 
             data-active={activeTab === 'profile'} 
