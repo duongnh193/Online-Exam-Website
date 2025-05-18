@@ -39,7 +39,9 @@ public class StudentExam {
     Double score;
     OffsetDateTime startAt;
     OffsetDateTime finishAt;
+    OffsetDateTime finishAtEstimate;
     Integer time;
     @Enumerated(EnumType.STRING)
     StudentExamStatus status;
+    Integer currentQuestion;
 }

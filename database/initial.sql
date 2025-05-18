@@ -75,7 +75,9 @@ CREATE TABLE student_exam
     score     DECIMAL(5, 2) DEFAULT NULL,
     start_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     finish_at TIMESTAMP DEFAULT NULL,
+    finish_at_estimate TIMESTAMP DEFAULT NULL,
     time      INT           DEFAULT NULL,
+    current_question INT DEFAULT NULL,
     status    ENUM('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED') NOT NULL,
     FOREIGN KEY (exam_id) REFERENCES exam (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE

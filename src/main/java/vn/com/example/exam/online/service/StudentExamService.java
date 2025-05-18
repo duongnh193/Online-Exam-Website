@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -48,34 +49,93 @@ public class StudentExamService {
         User student = getAuthenticatedStudent();
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found"));
-        if(!isCurrentUserInClass(student.getId(), exam.getClassEntity().getId())) {
+        if (!isCurrentUserInClass(student.getId(), exam.getClassEntity().getId())) {
             throw new RuntimeException("Student is not in class");
         }
-        if(!password.equals(exam.getPassword())) {
+        if (!password.equals(exam.getPassword())) {
             throw new RuntimeException("Wrong password");
         }
         String studentExamId = student.getId() + "-" + examId;
 
-        if (studentExamRepository.existsById(studentExamId)) {
-            throw new RuntimeException("Exam already started");
-        }
+        // Kiểm tra xem bài thi đã được bắt đầu chưa
+        Optional<StudentExam> existingExam = studentExamRepository.findById(studentExamId);
 
-        // Tạo đối tượng StudentExam và lưu vào DB
+        if (existingExam.isPresent()) {
+            StudentExam studentExam = existingExam.get();
+            if (studentExam.getStatus() == StudentExamStatus.IN_PROGRESS) {
+                var now = OffsetDateTime.now();
+                var remainingTime = Duration.between(now, studentExam.getFinishAtEstimate()).toMinutes();
+
+                // Nếu thời gian làm bài đã hết, đánh dấu là hoàn thành
+                if (remainingTime <= 0) {
+                    studentExam.setStatus(StudentExamStatus.COMPLETED);
+                    studentExamRepository.save(studentExam);
+                    throw new RuntimeException("Time's up! Exam already completed");
+                }
+
+                // Lấy câu hỏi hiện tại
+                List<Question> orderedQuestions = getOrderedQuestions(exam);
+                int currentQuestionIndex = Optional.ofNullable(studentExam.getCurrentQuestion()).orElse(0);
+                Question currentQuestion = orderedQuestions.get(currentQuestionIndex);
+
+                return new StudentExamResponse(studentExam, mapToQuestionResponse(currentQuestion), false, remainingTime);
+            } else if (studentExam.getStatus() == StudentExamStatus.COMPLETED) {
+                throw new RuntimeException("Exam already completed");
+            }
+        }
+        var now = OffsetDateTime.now();
+        // Tạo đối tượng StudentExam mới nếu chưa có
         StudentExam studentExam = new StudentExam()
-                .setId(studentExamId)  // Sử dụng id ghép
+                .setId(studentExamId)  // Sử dụng ID ghép
                 .setExam(exam)
                 .setStudent(student)
                 .setScore(0.0)
                 .setStatus(StudentExamStatus.IN_PROGRESS)
-                .setStartAt(OffsetDateTime.now())
-                .setTime(exam.getDuration());
+                .setStartAt(now)
+                .setFinishAtEstimate(now.plusMinutes(exam.getDuration()))
+                .setTime(exam.getDuration())
+                .setCurrentQuestion(0);
 
         studentExam = studentExamRepository.save(studentExam);
 
+        // Lấy câu hỏi đầu tiên
         Question firstQuestion = getOrderedQuestions(exam).get(0);
-
-        return new StudentExamResponse(studentExam, mapToQuestionResponse(firstQuestion), false);
+        return new StudentExamResponse(studentExam, mapToQuestionResponse(firstQuestion), false, null);
     }
+
+
+//    public StudentExamResponse startExam(Long examId, String password) {
+//        User student = getAuthenticatedStudent();
+//        Exam exam = examRepository.findById(examId)
+//                .orElseThrow(() -> new RuntimeException("Exam not found"));
+//        if(!isCurrentUserInClass(student.getId(), exam.getClassEntity().getId())) {
+//            throw new RuntimeException("Student is not in class");
+//        }
+//        if(!password.equals(exam.getPassword())) {
+//            throw new RuntimeException("Wrong password");
+//        }
+//        String studentExamId = student.getId() + "-" + examId;
+//
+//        if (studentExamRepository.existsById(studentExamId)) {
+//            throw new RuntimeException("Exam already started");
+//        }
+//
+//        // Tạo đối tượng StudentExam và lưu vào DB
+//        StudentExam studentExam = new StudentExam()
+//                .setId(studentExamId)  // Sử dụng id ghép
+//                .setExam(exam)
+//                .setStudent(student)
+//                .setScore(0.0)
+//                .setStatus(StudentExamStatus.IN_PROGRESS)
+//                .setStartAt(OffsetDateTime.now())
+//                .setTime(exam.getDuration());
+//
+//        studentExam = studentExamRepository.save(studentExam);
+//
+//        Question firstQuestion = getOrderedQuestions(exam).get(0);
+//
+//        return new StudentExamResponse(studentExam, mapToQuestionResponse(firstQuestion), false);
+//    }
 
     private List<Question> getOrderedQuestions(Exam exam) {
         return exam.getQuestions().stream()
@@ -97,19 +157,18 @@ public class StudentExamService {
                 .setAnswer(answer)
                 .setIsCorrect(isCorrect);
         examSubmissionRepository.save(submission);
-
-        double score = calculateScore(studentExam);
-        studentExam.setScore(score);
-        studentExamRepository.save(studentExam);
-
         List<Question> orderedQuestions = getOrderedQuestions(studentExam.getExam());
         int currentIndex = findIndexById(orderedQuestions, questionId);
+        double score = calculateScore(studentExam);
+        studentExam.setScore(score)
+                .setCurrentQuestion(currentIndex);
+        studentExamRepository.save(studentExam);
 
         if (currentIndex + 1 < orderedQuestions.size()) {
             Question nextQuestion = orderedQuestions.get(currentIndex + 1);
-            return new StudentExamResponse(studentExam, mapToQuestionResponse(nextQuestion), false);
+            return new StudentExamResponse(studentExam, mapToQuestionResponse(nextQuestion), false, null);
         } else {
-            return new StudentExamResponse(studentExam, null, true); // nextQuestion = null, isLast = true
+            return new StudentExamResponse(studentExam, null, true, null); // nextQuestion = null, isLast = true
         }
 
     }
