@@ -143,10 +143,11 @@ public class StudentExamService {
 
     private boolean checkAnswer(Question question, String answer) {
         if (question.getAnswer() == null || answer == null) return false;
-        if (question.getType() == QuestionType.ESSAY) {
-            return question.getAnswer().trim().equalsIgnoreCase(answer.trim());
-        }
-        return question.getAnswer().equalsIgnoreCase(answer);
+
+        String correctAnswer = question.getAnswer().trim();
+        String userAnswer = answer.trim();
+
+        return correctAnswer.equalsIgnoreCase(userAnswer);
     }
 
     private double calculateScore(StudentExam studentExam) {
@@ -159,7 +160,7 @@ public class StudentExamService {
 
         if (totalQuestions == 0) return 0.0;
 
-        return (correctAnswers * 100.0) / totalQuestions;
+        return (correctAnswers * 10.0) / totalQuestions;
     }
 
 

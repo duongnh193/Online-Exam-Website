@@ -18,20 +18,13 @@ public class ExamResult {
     long wrongAnswers;
     long totalQuestions;
     double score;
-    String duration;
+    long duration;
 
     public ExamResult(long correctAnswers, long wrongAnswers, long totalQuestions, double score, Duration duration) {
         this.correctAnswers = correctAnswers;
         this.wrongAnswers = wrongAnswers;
         this.totalQuestions = totalQuestions;
         this.score = score;
-        this.duration = formatDuration(duration);
-    }
-
-    private String formatDuration(Duration duration) {
-        long hours = duration.toHours();
-        long minutes = duration.toMinutesPart();
-        long seconds = duration.toSecondsPart();
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        this.duration = duration.toMinutes();
     }
 }
