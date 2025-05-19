@@ -14,6 +14,7 @@ import vn.com.example.exam.online.model.entity.Exam;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.request.CreateExamRequest;
 import vn.com.example.exam.online.model.response.ExamResponse;
+import vn.com.example.exam.online.model.response.PasswordExamResponse;
 import vn.com.example.exam.online.repository.ExamRepository;
 import vn.com.example.exam.online.util.Constants;
 
@@ -57,5 +58,10 @@ public class ExamService {
     public void delete(Long examId) {
         Exam exam = getById(examId);
         examRepository.delete(exam);
+    }
+
+    public PasswordExamResponse getPasswordExam(Long examId) {
+        var exam = getById(examId);
+        return new PasswordExamResponse(examId, exam.getPassword());
     }
 }

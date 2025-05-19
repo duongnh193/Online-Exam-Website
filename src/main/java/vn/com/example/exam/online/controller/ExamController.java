@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.example.exam.online.model.request.CreateExamRequest;
 import vn.com.example.exam.online.model.response.ExamResponse;
+import vn.com.example.exam.online.model.response.PasswordExamResponse;
 import vn.com.example.exam.online.service.ExamService;
 import vn.com.example.exam.online.util.Constants;
 
@@ -93,5 +94,16 @@ public class ExamController {
     ) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(examService.getExamsByClass(classId, pageable));
+    }
+
+    @Operation(
+            summary = "Get class REST API",
+            description = "Get password exam by examId")
+    @ApiResponse(
+            responseCode = "200",
+            description = "HTTP Status 200 OK")
+    @GetMapping("/password/{examId}")
+    public ResponseEntity<PasswordExamResponse> getPass(@PathVariable Long examId) {
+        return ResponseEntity.ok(examService.getPasswordExam(examId));
     }
 }
