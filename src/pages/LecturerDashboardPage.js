@@ -1,21 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
 import authService from '../services/authService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+
+// Theme variables
+const ThemeStyles = createGlobalStyle`
+  .light-theme {
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #6a00ff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: #eeeeee;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --highlight-color: #6a00ff;
+  }
+  
+  .dark-theme {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --bg-sidebar: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: #444444;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    --highlight-color: #8d47ff;
+  }
+`;
 
 // Styled Components
 const DashboardContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -24,6 +52,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -99,6 +128,8 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -148,9 +179,9 @@ const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   width: 180px;
   z-index: 100;
   overflow: hidden;
@@ -161,13 +192,13 @@ const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--bg-primary);
   }
 `;
 
@@ -176,12 +207,12 @@ const PageTitle = styled.div`
     font-size: 1.5rem;
     font-weight: bold;
     margin: 0;
-    color: #333;
+    color: var(--text-primary);
   }
   
   p {
     margin: 0;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
   }
 `;
@@ -195,34 +226,6 @@ const SortDropdown = styled.select`
   color: #666;
   cursor: pointer;
   outline: none;
-`;
-
-const CardsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-`;
-
-const Card = styled.div`
-  background-color: white;
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  flex: 1;
-  min-width: 280px;
-  position: relative;
-`;
-
-const CardHeader = styled.div`
-  font-size: 1rem;
-  color: #888;
-  margin-bottom: 0.5rem;
-`;
-
-const CardValue = styled.div`
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
 `;
 
 const ChartContainer = styled.div`
@@ -250,9 +253,40 @@ const ExpandButton = styled.div`
   }
 `;
 
+const CardsContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+`;
+
+const Card = styled.div`
+  background-color: var(--bg-secondary);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+  flex: 1;
+  min-width: 280px;
+  position: relative;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+`;
+
+const CardHeader = styled.div`
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+`;
+
+const CardValue = styled.div`
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+`;
+
 function LecturerDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [sortOption, setSortOption] = useState('recent');
   const [examCount, setExamCount] = useState(0);
   const [classCount, setClassCount] = useState(0);
@@ -412,126 +446,122 @@ function LecturerDashboardPage() {
   };
 
   return (
-    <DashboardContainer>
-      <Sidebar>
-        <Logo>logo</Logo>
-        <SidebarMenu>
-          <NavItem to="/lecturer-dashboard" className="active">
-            <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
-            Dashboard
-          </NavItem>
-          <NavItem to="/exams">
-            <NavIcon>{getMenuIcon('exams')}</NavIcon>
-            Exams
-          </NavItem>
-          <NavItem to="/class">
-            <NavIcon>{getMenuIcon('class')}</NavIcon>
-            Class
-          </NavItem>
-          <NavItem to="/reports">
-            <NavIcon>{getMenuIcon('reports')}</NavIcon>
-            Reports
-          </NavItem>
-        </SidebarMenu>
-        <BottomMenu>
-          <NavItem to="/settings">
-            <NavIcon>{getMenuIcon('settings')}</NavIcon>
-            Settings
-          </NavItem>
-          <NavItem to="/" onClick={handleLogout}>
-            <NavIcon>{getMenuIcon('signout')}</NavIcon>
-            Sign out
-          </NavItem>
-        </BottomMenu>
-      </Sidebar>
-      
-      <MainContent>
-        <Header>
-          <PageTitle>
-            <h1>Lecturer Dashboard</h1>
-            <p>Welcome back, {getFullName()}</p>
-          </PageTitle>
-          
-          <HeaderRight>
-            <SortDropdown 
-              value={sortOption} 
-              onChange={(e) => setSortOption(e.target.value)}
-            >
-              <option value="recent">Last Week</option>
-              <option value="month">Last Month</option>
-              <option value="year">Last Year</option>
-            </SortDropdown>
-            <NotificationIcon />
-            <DropdownContainer ref={dropdownRef}>
-              <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
-              {showDropdown && (
-                <Dropdown>
-                  <DropdownItem onClick={goToSettings}>
-                    <span>👤</span> Profile
-                  </DropdownItem>
-                  <DropdownItem onClick={goToSettings}>
-                    <span>⚙️</span> Settings
-                  </DropdownItem>
-                  <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
-                    <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
-                    {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
-                  </DropdownItem>
-                  <DropdownItem onClick={handleLogout}>
-                    <span>🚪</span> Sign out
-                  </DropdownItem>
-                </Dropdown>
-              )}
-            </DropdownContainer>
-          </HeaderRight>
-        </Header>
+    <>
+      <ThemeStyles />
+      <DashboardContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        <Sidebar theme={theme}>
+          <Logo>logo</Logo>
+          <SidebarMenu>
+            <NavItem to="/lecturer-dashboard" className="active">
+              <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+              Dashboard
+            </NavItem>
+            <NavItem to="/exams">
+              <NavIcon>{getMenuIcon('exams')}</NavIcon>
+              Exams
+            </NavItem>
+            <NavItem to="/class">
+              <NavIcon>{getMenuIcon('class')}</NavIcon>
+              Class
+            </NavItem>
+            <NavItem to="/reports">
+              <NavIcon>{getMenuIcon('reports')}</NavIcon>
+              Reports
+            </NavItem>
+          </SidebarMenu>
+          <BottomMenu>
+            <NavItem to="/settings">
+              <NavIcon>{getMenuIcon('settings')}</NavIcon>
+              Settings
+            </NavItem>
+            <NavItem to="/" onClick={handleLogout}>
+              <NavIcon>{getMenuIcon('signout')}</NavIcon>
+              Sign out
+            </NavItem>
+          </BottomMenu>
+        </Sidebar>
         
-        <CardsContainer>
-          <Card>
-            <CardHeader>My Exams</CardHeader>
-            <CardValue>{examCount || 4}</CardValue>
-            <ExpandButton />
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#6a00ff" stopOpacity={0.2} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Tooltip cursor={false} />
-                  <Bar dataKey="count" fill="url(#colorExams)" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </Card>
+        <MainContent>
+          <Header>
+            <PageTitle>
+              <h1>Lecturer Dashboard</h1>
+              <p>Welcome back, {getFullName()}</p>
+            </PageTitle>
+            
+            <HeaderRight>
+              <ThemeToggle />
+              <NotificationIcon />
+              <DropdownContainer ref={dropdownRef}>
+                <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+                {showDropdown && (
+                  <Dropdown>
+                    <DropdownItem onClick={goToSettings}>
+                      <span>👤</span> Profile
+                    </DropdownItem>
+                    <DropdownItem onClick={goToSettings}>
+                      <span>⚙️</span> Settings
+                    </DropdownItem>
+                    <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
+                      <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
+                      {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
+                    </DropdownItem>
+                    <DropdownItem onClick={handleLogout}>
+                      <span>🚪</span> Sign out
+                    </DropdownItem>
+                  </Dropdown>
+                )}
+              </DropdownContainer>
+            </HeaderRight>
+          </Header>
           
-          <Card>
-            <CardHeader>My Classes</CardHeader>
-            <CardValue>{classCount || 5}</CardValue>
-            <ExpandButton />
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={classData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorClasses" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ff2e8e" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#ff2e8e" stopOpacity={0.2} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Tooltip cursor={false} />
-                  <Bar dataKey="count" fill="url(#colorClasses)" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </Card>
-        </CardsContainer>
-      </MainContent>
-    </DashboardContainer>
+          <CardsContainer>
+            <Card>
+              <CardHeader>My Exams</CardHeader>
+              <CardValue>{examCount || 4}</CardValue>
+              <ExpandButton />
+              <ChartContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#6a00ff" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Tooltip cursor={false} />
+                    <Bar dataKey="count" fill="url(#colorExams)" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </Card>
+            
+            <Card>
+              <CardHeader>My Classes</CardHeader>
+              <CardValue>{classCount || 5}</CardValue>
+              <ExpandButton />
+              <ChartContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={classData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorClasses" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ff2e8e" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#ff2e8e" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Tooltip cursor={false} />
+                    <Bar dataKey="count" fill="url(#colorClasses)" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </Card>
+          </CardsContainer>
+        </MainContent>
+      </DashboardContainer>
+    </>
   );
 }
 

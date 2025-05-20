@@ -6,17 +6,20 @@ import examService from '../services/examService';
 import classService from '../services/classService';
 import questionService from '../services/questionService';
 import studentExamService from '../services/studentExamService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Styled Components
 const PageContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -25,6 +28,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -100,6 +104,8 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem 3rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -112,7 +118,7 @@ const Header = styled.header`
 const PageTitle = styled.div`
   font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
 `;
 
 const HeaderRight = styled.div`
@@ -154,9 +160,9 @@ const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   width: 180px;
   z-index: 100;
   overflow: hidden;
@@ -167,23 +173,23 @@ const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--bg-primary);
   }
 `;
 
 const SortDropdown = styled.select`
   padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--bg-secondary);
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   outline: none;
 `;
@@ -208,11 +214,12 @@ const CreateButton = styled.button`
 `;
 
 const TableCard = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 1.5rem;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   overflow: hidden;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const ExamTable = styled.table`
@@ -224,8 +231,8 @@ const ExamTable = styled.table`
 const TableHeader = styled.th`
   text-align: left;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #eee;
-  color: #666;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 0.9rem;
   
@@ -239,21 +246,25 @@ const TableRow = styled.tr`
   &:last-child td {
     border-bottom: none;
   }
+  
+  &:hover {
+    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'var(--hover-bg)'};
+  }
 `;
 
 const TableCell = styled.td`
   padding: 1rem 1.5rem;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 `;
 
 const IndexCell = styled.td`
   padding: 1rem 0.5rem 1rem 1.5rem;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   width: 40px;
   vertical-align: middle;
 `;
@@ -263,7 +274,7 @@ const ActionCell = styled.td`
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 `;
 
@@ -348,6 +359,7 @@ const DeleteIcon = () => (
 
 function ExamPage() {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -787,8 +799,8 @@ function ExamPage() {
   }, [autoRefresh, selectedClassId]);
 
   return (
-    <PageContainer>
-      <Sidebar>
+    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+      <Sidebar theme={theme}>
         <Logo>logo</Logo>
         <SidebarMenu>
           {isStudent ? (
@@ -874,10 +886,13 @@ function ExamPage() {
           <PageTitle>Exam</PageTitle>
           
           <HeaderRight>
+            <ThemeToggle />
+            
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
               marginRight: '1rem', 
+              marginLeft: '1rem',
               fontSize: '0.8rem',
               color: '#666'
             }}>

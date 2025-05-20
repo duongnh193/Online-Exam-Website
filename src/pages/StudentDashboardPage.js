@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
@@ -8,17 +8,45 @@ import authService from '../services/authService';
 import classService from '../services/classService';
 import examService from '../services/examService';
 import { FaEllipsisV } from 'react-icons/fa';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+
+// Theme variables
+const ThemeStyles = createGlobalStyle`
+  .light-theme {
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #6a00ff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: #eeeeee;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --highlight-color: #6a00ff;
+  }
+  
+  .dark-theme {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --bg-sidebar: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: #444444;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    --highlight-color: #8d47ff;
+  }
+`;
 
 // Styled Components
 const DashboardContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -27,6 +55,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -102,6 +131,8 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -151,9 +182,9 @@ const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   width: 180px;
   z-index: 100;
   overflow: hidden;
@@ -164,13 +195,13 @@ const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--bg-primary);
   }
 `;
 
@@ -179,12 +210,12 @@ const PageTitle = styled.div`
     font-size: 1.5rem;
     font-weight: bold;
     margin: 0;
-    color: #333;
+    color: var(--text-primary);
   }
   
   p {
     margin: 0;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
   }
 `;
@@ -207,18 +238,19 @@ const CardsContainer = styled.div`
 `;
 
 const Card = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 1.5rem;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   flex: 1;
   min-width: 280px;
   position: relative;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const CardHeader = styled.div`
   font-size: 1rem;
-  color: #888;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 `;
 
@@ -226,6 +258,7 @@ const CardValue = styled.div`
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 1rem;
+  color: var(--text-primary);
 `;
 
 const ExpandButton = styled.div`
@@ -275,6 +308,7 @@ function StudentDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme } = useTheme();
   const [sortOption, setSortOption] = useState('recent');
   const [upcomingExams, setUpcomingExams] = useState([]);
   const [completedExams, setCompletedExams] = useState([]);
@@ -284,6 +318,7 @@ function StudentDashboardPage() {
   const [updating2FA, setUpdating2FA] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
   const dropdownRef = useRef(null);
   const [openMenuIdx, setOpenMenuIdx] = useState(null);
   const menuRefs = useRef([]);
@@ -569,293 +604,289 @@ function StudentDashboardPage() {
   };
 
   return (
-    <DashboardContainer>
-      <Sidebar>
-        <Logo>logo</Logo>
-        <SidebarMenu>
-          <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
-            <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
-            Dashboard
-          </NavItem>
-          <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
-            <NavIcon>{getMenuIcon('exams')}</NavIcon>
-            Exams
-          </NavItem>
-          <NavItem to="/results" className={isRouteActive('/results') ? 'active' : ''}>
-            <NavIcon>{getMenuIcon('results')}</NavIcon>
-            Results
-          </NavItem>
-        </SidebarMenu>
-        <BottomMenu>
-          <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>
-            <NavIcon>{getMenuIcon('settings')}</NavIcon>
-            Settings
-          </NavItem>
-          <NavItem to="/" onClick={handleLogout}>
-            <NavIcon>{getMenuIcon('signout')}</NavIcon>
-            Sign out
-          </NavItem>
-        </BottomMenu>
-      </Sidebar>
-      
-      <MainContent>
-        <Header>
-          <PageTitle>
-            <h1>Student Dashboard</h1>
-            <p>Welcome back, {getFullName()}</p>
-          </PageTitle>
+    <>
+      <ThemeStyles />
+      <DashboardContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        <Sidebar theme={theme}>
+          <Logo>logo</Logo>
+          <SidebarMenu>
+            <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
+              <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+              Dashboard
+            </NavItem>
+            <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
+              <NavIcon>{getMenuIcon('exams')}</NavIcon>
+              Exams
+            </NavItem>
+            <NavItem to="/results" className={isRouteActive('/results') ? 'active' : ''}>
+              <NavIcon>{getMenuIcon('results')}</NavIcon>
+              Results
+            </NavItem>
+          </SidebarMenu>
+          <BottomMenu>
+            <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>
+              <NavIcon>{getMenuIcon('settings')}</NavIcon>
+              Settings
+            </NavItem>
+            <NavItem to="/" onClick={handleLogout}>
+              <NavIcon>{getMenuIcon('signout')}</NavIcon>
+              Sign out
+            </NavItem>
+          </BottomMenu>
+        </Sidebar>
+        
+        <MainContent>
+          <Header>
+            <PageTitle>
+              <h1>Student Dashboard</h1>
+              <p>Welcome back, {getFullName()}</p>
+            </PageTitle>
+            
+            <HeaderRight>
+              <ThemeToggle />
+              <NotificationIcon />
+              <DropdownContainer ref={dropdownRef}>
+                <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+                {showDropdown && (
+                  <Dropdown>
+                    <DropdownItem onClick={goToSettings}>
+                      <span>👤</span> Profile
+                    </DropdownItem>
+                    <DropdownItem onClick={goToSettings}>
+                      <span>⚙️</span> Settings
+                    </DropdownItem>
+                    <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
+                      <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
+                      {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
+                    </DropdownItem>
+                    <DropdownItem onClick={handleLogout}>
+                      <span>🚪</span> Sign out
+                    </DropdownItem>
+                  </Dropdown>
+                )}
+              </DropdownContainer>
+            </HeaderRight>
+          </Header>
           
-          <HeaderRight>
-            <SortDropdown 
-              value={sortOption} 
-              onChange={(e) => setSortOption(e.target.value)}
-            >
-              <option value="recent">Last Week</option>
-              <option value="month">Last Month</option>
-              <option value="year">Last Year</option>
-            </SortDropdown>
-            <NotificationIcon />
-            <DropdownContainer ref={dropdownRef}>
-              <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
-              {showDropdown && (
-                <Dropdown>
-                  <DropdownItem onClick={goToSettings}>
-                    <span>👤</span> Profile
-                  </DropdownItem>
-                  <DropdownItem onClick={goToSettings}>
-                    <span>⚙️</span> Settings
-                  </DropdownItem>
-                  <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
-                    <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
-                    {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
-                  </DropdownItem>
-                  <DropdownItem onClick={handleLogout}>
-                    <span>🚪</span> Sign out
-                  </DropdownItem>
-                </Dropdown>
-              )}
-            </DropdownContainer>
-          </HeaderRight>
-        </Header>
-        
-        {error && (
-          <div style={{ color: 'red', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
-        
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            Loading dashboard data...
-          </div>
-        ) : (
-          <>
-            {/* Stats Cards with Charts */}
-            <CardsContainer>
-              <Card>
-                <CardHeader>Completed Exams</CardHeader>
-                <CardValue>{completedExams.length}</CardValue>
-                <ExpandButton onClick={() => navigate('/results')} />
-                <ChartContainer>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={completedExamsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorCompletedExams" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
-                          <stop offset="100%" stopColor="#9c27b0" stopOpacity={0.6} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" hide={true} />
-                      <YAxis hide={true} />
-                      <Tooltip cursor={false} />
-                      <Bar dataKey="count" fill="url(#colorCompletedExams)" radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </Card>
-
-              <Card>
-                <CardHeader>Upcoming Exams</CardHeader>
-                <CardValue>{upcomingExams.length}</CardValue>
-                <ExpandButton onClick={() => navigate(`/student-exams`)} />
-                <ChartContainer>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={upcomingExamsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorUpcomingExams" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#ff4081" stopOpacity={1} />
-                          <stop offset="100%" stopColor="#f06292" stopOpacity={0.6} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" hide={true} />
-                      <YAxis hide={true} />
-                      <Tooltip cursor={false} />
-                      <Bar dataKey="count" fill="url(#colorUpcomingExams)" radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </Card>
-            </CardsContainer>
-
-            {/* My Classes Section (cards) */}
-            <div style={{ marginTop: '2rem' }}>
-              <h2 style={{ marginBottom: '1rem' }}>My Classes</h2>
-              {myClasses.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', background: 'white', borderRadius: '1rem' }}>
-                  You are not enrolled in any classes yet.
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                  {myClasses.map((classItem, idx) => {
-                    const color = customColors[classItem.id] || getRandomColor(idx);
-                    return (
-                      <div
-                        key={classItem.id}
-                        style={{
-                          borderRadius: '1rem',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                          background: 'white',
-                          overflow: 'hidden',
-                          cursor: 'pointer',
-                          minHeight: '200px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          transition: 'transform 0.1s',
-                        }}
-                        onClick={e => {
-                          // Only prevent navigation if clicking on the menu button or menu is open
-                          if (e.target === menuRefs.current[idx] || 
-                              (menuRefs.current[idx] && menuRefs.current[idx].contains(e.target))) {
-                            return;
-                          }
-                          navigate(`/exams?classId=${classItem.id}`);
-                        }}
-                      >
-                        {/* Top colored section with 3-dot menu */}
-                        <div style={{
-                          background: color,
-                          height: '50%',
-                          minHeight: '70px',
-                          position: 'relative',
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          justifyContent: 'flex-end',
-                          padding: '0.5rem 0.5rem 0 0',
-                        }}>
-                          <div
-                            style={{ cursor: 'pointer', zIndex: 2 }}
-                            onClick={e => { e.stopPropagation(); handleMenuOpen(idx); }}
-                          >
-                            <FaEllipsisV color="#fff" size={20} />
-                          </div>
-                          {/* Popover menu */}
-                          {openMenuIdx === idx && (
-                            <div
-                              ref={el => (menuRefs.current[idx] = el)}
-                              style={{
-                                position: 'absolute',
-                                top: '2.2rem',
-                                right: '0.5rem',
-                                background: '#fff',
-                                borderRadius: '8px',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-                                padding: '1rem',
-                                minWidth: '180px',
-                                zIndex: 10,
-                              }}
-                              onClick={e => e.stopPropagation()}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <span style={{ fontWeight: 600, fontSize: '1rem' }}>Color</span>
-                                <span style={{ cursor: 'pointer', fontSize: 18, color: '#888' }} onClick={handleMenuClose}>×</span>
-                              </div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-                                {COLOR_PICKER.map(c => (
-                                  <div
-                                    key={c}
-                                    style={{
-                                      width: 22, height: 22, borderRadius: 4, background: c,
-                                      border: color === c ? '2px solid #333' : '1px solid #eee',
-                                      cursor: 'pointer',
-                                    }}
-                                    onClick={() => handleColorChange(classItem.id, c)}
-                                  />
-                                ))}
-                              </div>
-                              <div style={{ marginBottom: 8 }}>
-                                <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: 4 }}>Nickname</div>
-                                <input
-                                  type="text"
-                                  value={nicknames[classItem.id] || ''}
-                                  onChange={e => handleNicknameChange(classItem.id, e.target.value)}
-                                  style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #ccc' }}
-                                  placeholder="Enter nickname"
-                                />
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                                <button type="button" style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid #ccc', background: '#f5f5f5', cursor: 'pointer' }} onClick={handleMenuClose}>Cancel</button>
-                                <button type="button" style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer' }} onClick={handleMenuClose}>Apply</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        {/* Bottom white section with left-aligned text */}
-                        <div style={{
-                          flex: 1,
-                          background: 'white',
-                          padding: '1rem 1.2rem 1.2rem 1.2rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'center',
-                          alignItems: 'flex-start',
-                          textAlign: 'left',
-                        }}>
-                          <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem', color: color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {nicknames[classItem.id] || classItem.name || classItem.title}
-                          </div>
-                          <div style={{ fontSize: '0.95rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {classItem.description || 'No description available'}
-                          </div>
-                        </div>
-                        {/* Add "View Exams" button */}
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          marginTop: 'auto',
-                          padding: '0.75rem 1rem',
-                        }}>
-                          <button
-                            style={{
-                              background: '#6a00ff',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '20px',
-                              padding: '0.4rem 0.75rem',
-                              fontSize: '0.8rem',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/exams?classId=${classItem.id}`);
-                            }}
-                          >
-                            <span>View Exams</span>
-                            <span>→</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+          {error && (
+            <div style={{ color: 'red', marginBottom: '1rem' }}>
+              {error}
             </div>
-          </>
-        )}
-      </MainContent>
-    </DashboardContainer>
+          )}
+          
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              Loading dashboard data...
+            </div>
+          ) : (
+            <>
+              {/* Stats Cards with Charts */}
+              <CardsContainer>
+                <Card>
+                  <CardHeader>Completed Exams</CardHeader>
+                  <CardValue>{completedExams.length}</CardValue>
+                  <ExpandButton onClick={() => navigate('/results')} />
+                  <ChartContainer>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={completedExamsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorCompletedExams" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
+                            <stop offset="100%" stopColor="#9c27b0" stopOpacity={0.6} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="name" hide={true} />
+                        <YAxis hide={true} />
+                        <Tooltip cursor={false} />
+                        <Bar dataKey="count" fill="url(#colorCompletedExams)" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </Card>
+
+                <Card>
+                  <CardHeader>Upcoming Exams</CardHeader>
+                  <CardValue>{upcomingExams.length}</CardValue>
+                  <ExpandButton onClick={() => navigate(`/student-exams`)} />
+                  <ChartContainer>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={upcomingExamsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorUpcomingExams" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ff4081" stopOpacity={1} />
+                            <stop offset="100%" stopColor="#f06292" stopOpacity={0.6} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="name" hide={true} />
+                        <YAxis hide={true} />
+                        <Tooltip cursor={false} />
+                        <Bar dataKey="count" fill="url(#colorUpcomingExams)" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </Card>
+              </CardsContainer>
+
+              {/* My Classes Section (cards) */}
+              <div style={{ marginTop: '2rem' }}>
+                <h2 style={{ marginBottom: '1rem' }}>My Classes</h2>
+                {myClasses.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', background: 'white', borderRadius: '1rem' }}>
+                    You are not enrolled in any classes yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                    {myClasses.map((classItem, idx) => {
+                      const color = customColors[classItem.id] || getRandomColor(idx);
+                      return (
+                        <div
+                          key={classItem.id}
+                          style={{
+                            borderRadius: '1rem',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                            background: 'white',
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            minHeight: '200px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            transition: 'transform 0.1s',
+                          }}
+                          onClick={e => {
+                            // Only prevent navigation if clicking on the menu button or menu is open
+                            if (e.target === menuRefs.current[idx] || 
+                                (menuRefs.current[idx] && menuRefs.current[idx].contains(e.target))) {
+                              return;
+                            }
+                            navigate(`/exams?classId=${classItem.id}`);
+                          }}
+                        >
+                          {/* Top colored section with 3-dot menu */}
+                          <div style={{
+                            background: color,
+                            height: '50%',
+                            minHeight: '70px',
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'flex-end',
+                            padding: '0.5rem 0.5rem 0 0',
+                          }}>
+                            <div
+                              style={{ cursor: 'pointer', zIndex: 2 }}
+                              onClick={e => { e.stopPropagation(); handleMenuOpen(idx); }}
+                            >
+                              <FaEllipsisV color="#fff" size={20} />
+                            </div>
+                            {/* Popover menu */}
+                            {openMenuIdx === idx && (
+                              <div
+                                ref={el => (menuRefs.current[idx] = el)}
+                                style={{
+                                  position: 'absolute',
+                                  top: '2.2rem',
+                                  right: '0.5rem',
+                                  background: '#fff',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                                  padding: '1rem',
+                                  minWidth: '180px',
+                                  zIndex: 10,
+                                }}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                  <span style={{ fontWeight: 600, fontSize: '1rem' }}>Color</span>
+                                  <span style={{ cursor: 'pointer', fontSize: 18, color: '#888' }} onClick={handleMenuClose}>×</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                                  {COLOR_PICKER.map(c => (
+                                    <div
+                                      key={c}
+                                      style={{
+                                        width: 22, height: 22, borderRadius: 4, background: c,
+                                        border: color === c ? '2px solid #333' : '1px solid #eee',
+                                        cursor: 'pointer',
+                                      }}
+                                      onClick={() => handleColorChange(classItem.id, c)}
+                                    />
+                                  ))}
+                                </div>
+                                <div style={{ marginBottom: 8 }}>
+                                  <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: 4 }}>Nickname</div>
+                                  <input
+                                    type="text"
+                                    value={nicknames[classItem.id] || ''}
+                                    onChange={e => handleNicknameChange(classItem.id, e.target.value)}
+                                    style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #ccc' }}
+                                    placeholder="Enter nickname"
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                                  <button type="button" style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid #ccc', background: '#f5f5f5', cursor: 'pointer' }} onClick={handleMenuClose}>Cancel</button>
+                                  <button type="button" style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer' }} onClick={handleMenuClose}>Apply</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Bottom white section with left-aligned text */}
+                          <div style={{
+                            flex: 1,
+                            background: 'white',
+                            padding: '1rem 1.2rem 1.2rem 1.2rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'flex-start',
+                            textAlign: 'left',
+                          }}>
+                            <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem', color: color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {nicknames[classItem.id] || classItem.name || classItem.title}
+                            </div>
+                            <div style={{ fontSize: '0.95rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {classItem.description || 'No description available'}
+                            </div>
+                          </div>
+                          {/* Add "View Exams" button */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            marginTop: 'auto',
+                            padding: '0.75rem 1rem',
+                          }}>
+                            <button
+                              style={{
+                                background: '#6a00ff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '20px',
+                                padding: '0.4rem 0.75rem',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/exams?classId=${classItem.id}`);
+                              }}
+                            >
+                              <span>View Exams</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </MainContent>
+      </DashboardContainer>
+    </>
   );
 }
 

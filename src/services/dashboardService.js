@@ -214,6 +214,51 @@ const dashboardService = {
       console.error('Error marking notification as read:', error);
       return Promise.reject(error);
     }
+  },
+  
+  // Lấy danh sách tất cả bài thi
+  getAllExams: async (page = 0, size = 10) => {
+    try {
+      // Vì chưa có API cụ thể, chúng ta có thể sử dụng API lấy danh sách bài thi của tất cả lớp học
+      // hoặc mock data tạm thời
+      console.log('Fetching all exams with page:', page, 'size:', size);
+      
+      // Mock data tạm thời
+      const mockExams = [
+        { id: 1, title: 'Midterm Database', classId: 1, className: 'Database Systems', duration: 90, status: 'COMPLETED' },
+        { id: 2, title: 'Final Data Structures', classId: 2, className: 'Data Structures', duration: 120, status: 'SCHEDULED' },
+        { id: 3, title: 'Midterm Algorithms', classId: 3, className: 'Algorithms', duration: 90, status: 'ONGOING' },
+        { id: 4, title: 'Quiz Machine Learning', classId: 4, className: 'Machine Learning', duration: 45, status: 'COMPLETED' },
+        { id: 5, title: 'Project AI Ethics', classId: 5, className: 'AI Ethics', duration: 60, status: 'SCHEDULED' },
+        { id: 6, title: 'Final Web Development', classId: 6, className: 'Web Development', duration: 120, status: 'SCHEDULED' },
+        { id: 7, title: 'Midterm Mobile App', classId: 7, className: 'Mobile App Development', duration: 90, status: 'ONGOING' },
+        { id: 8, title: 'Quiz Network Security', classId: 8, className: 'Network Security', duration: 45, status: 'COMPLETED' },
+        { id: 9, title: 'Project Cloud Computing', classId: 9, className: 'Cloud Computing', duration: 60, status: 'SCHEDULED' },
+        { id: 10, title: 'Final DevOps', classId: 10, className: 'DevOps', duration: 120, status: 'SCHEDULED' },
+        { id: 11, title: 'Midterm Software Engineering', classId: 11, className: 'Software Engineering', duration: 90, status: 'COMPLETED' },
+        { id: 12, title: 'Quiz Design Patterns', classId: 12, className: 'Design Patterns', duration: 45, status: 'ONGOING' }
+      ];
+      
+      // Tính phân trang
+      const startIndex = page * size;
+      const endIndex = startIndex + size;
+      const paginatedExams = mockExams.slice(startIndex, endIndex);
+      
+      // Tạo response với định dạng phân trang tương tự API thực
+      const response = {
+        content: paginatedExams,
+        totalElements: mockExams.length,
+        totalPages: Math.ceil(mockExams.length / size),
+        size: size,
+        number: page,
+        numberOfElements: paginatedExams.length
+      };
+      
+      return Promise.resolve({ data: response });
+    } catch (error) {
+      console.error('Error fetching all exams:', error);
+      return Promise.reject(error);
+    }
   }
 };
 

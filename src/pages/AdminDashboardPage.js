@@ -1,20 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
+import { userService } from '../services/userService';
+import classService from '../services/classService';
+import examService from '../services/examService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+
+// Theme variables
+const ThemeStyles = createGlobalStyle`
+  .light-theme {
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #6a00ff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: #eeeeee;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --highlight-color: #6a00ff;
+  }
+  
+  .dark-theme {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --bg-sidebar: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: #444444;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    --highlight-color: #8d47ff;
+  }
+`;
 
 // Styled Components
 const DashboardContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -23,6 +54,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -98,6 +130,8 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -147,9 +181,9 @@ const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   width: 180px;
   z-index: 100;
   overflow: hidden;
@@ -160,13 +194,13 @@ const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--bg-primary);
   }
 `;
 
@@ -175,12 +209,12 @@ const PageTitle = styled.div`
     font-size: 1.5rem;
     font-weight: bold;
     margin: 0;
-    color: #333;
+    color: var(--text-primary);
   }
   
   p {
     margin: 0;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
   }
 `;
@@ -209,18 +243,19 @@ const CardRow = styled.div`
 `;
 
 const Card = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 1.5rem;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   flex: 1;
   min-width: 250px;
   position: relative;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const CardHeader = styled.div`
   font-size: 1rem;
-  color: #888;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 `;
 
@@ -228,7 +263,7 @@ const CardValue = styled.div`
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 1rem;
-  color: ${props => props.color || '#333'};
+  color: ${props => props.color || 'var(--text-primary)'};
 `;
 
 const ChartContainer = styled.div`
@@ -236,7 +271,7 @@ const ChartContainer = styled.div`
   margin-top: 1rem;
 `;
 
-const ExpandButton = styled.div`
+const StatButton = styled.div`
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
@@ -248,16 +283,422 @@ const ExpandButton = styled.div`
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.1);
+  }
   
   &::before {
-    content: '🔍';
+    content: '📊';
     font-size: 14px;
-    opacity: 0.6;
+    opacity: 0.8;
+  }
+`;
+
+// Thêm Modal và các components liên quan
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
+const ModalContainer = styled.div`
+  background-color: var(--bg-secondary);
+  border-radius: 1.25rem;
+  width: 85%;
+  max-width: 1000px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--card-shadow);
+  padding: 1.75rem;
+  transform: translateY(20px);
+  animation: slideUp 0.3s forwards;
+  transition: background-color 0.3s ease;
+  
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0.8; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #b8b8b8;
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--highlight-color);
+  }
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin: 0;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  
+  &:hover {
+    color: #333;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1rem;
+`;
+
+const TableHeader = styled.th`
+  text-align: left;
+  padding: 1rem;
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border-color);
+  
+  &:first-child {
+    border-top-left-radius: 0.5rem;
+  }
+  
+  &:last-child {
+    border-top-right-radius: 0.5rem;
+  }
+`;
+
+const TableRow = styled.tr`
+  &:hover {
+    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'var(--bg-primary)'};
+  }
+  
+  &:last-child td {
+    border-bottom: none;
+  }
+`;
+
+const TableCell = styled.td`
+  padding: 1rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border-color);
+`;
+
+const Pagination = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+`;
+
+const PageInfo = styled.div`
+  font-size: 0.9rem;
+  color: #666;
+`;
+
+const PageButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const PageButton = styled.button`
+  background-color: ${props => props.active ? '#6a00ff' : 'white'};
+  color: ${props => props.active ? 'white' : '#666'};
+  border: 1px solid ${props => props.active ? '#6a00ff' : '#ddd'};
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  opacity: ${props => props.disabled ? 0.5 : 1};
+  
+  &:hover {
+    background-color: ${props => props.active ? '#6a00ff' : '#f5f5f5'};
+  }
+`;
+
+const LoadingSpinner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  
+  &::after {
+    content: '';
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #6a00ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  color: #ff3e3e;
+`;
+
+// Card and list view component styles
+const CardGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const DataCard = styled.div`
+  background-color: var(--bg-secondary);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  border-top: 4px solid 
+    ${props => {
+      switch(props.type) {
+        case 'student': return '#ff2e8e'; 
+        case 'lecturer': return '#f5a623';
+        case 'exam': return '#6a00ff';
+        case 'class': return '#00c16e';
+        default: return 'var(--highlight-color)';
+      }
+    }};
+  transition: transform 0.3s, box-shadow 0.3s;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const CardInfo = styled.div`
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  
+  strong {
+    color: var(--text-primary);
+    margin-right: 0.5rem;
+  }
+`;
+
+const CardActions = styled.div`
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const ActionButton = styled.button`
+  background-color: ${props => props.primary ? 'var(--highlight-color)' : 'var(--bg-secondary)'};
+  color: ${props => props.primary ? 'white' : 'var(--highlight-color)'};
+  border: 1px solid var(--highlight-color);
+  border-radius: 4px;
+  padding: ${props => props.size === 'small' ? '0.25rem 0.5rem' : '0.5rem 1rem'};
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.primary ? '#5000cc' : 'rgba(106, 0, 255, 0.1)'};
+  }
+`;
+
+const StatusBadge = styled.span`
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: ${props => {
+    switch(props.status?.toLowerCase()) {
+      case 'ongoing': return '#fff2cc';
+      case 'completed': return '#d4f7e7';
+      case 'scheduled': return '#e8e5ff';
+      default: return '#f1f1f1';
+    }
+  }};
+  color: ${props => {
+    switch(props.status?.toLowerCase()) {
+      case 'ongoing': return '#f5a623';
+      case 'completed': return '#00c16e';
+      case 'scheduled': return '#6a00ff';
+      default: return '#888';
+    }
+  }};
+`;
+
+// Skeleton loading components
+const SkeletonCard = styled.div`
+  background-color: white;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  animation: pulse 1.5s infinite ease-in-out;
+  
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+`;
+
+const SkeletonLine = styled.div`
+  height: 12px;
+  width: ${props => props.width || '100%'};
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+`;
+
+// Tab components for filtering
+const TabsContainer = styled.div`
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+  overflow-x: auto;
+  
+  &::-webkit-scrollbar {
+    height: 0;
+    display: none;
+  }
+`;
+
+const TabButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: ${props => props.active ? 'var(--highlight-color)' : 'var(--text-secondary)'};
+  font-weight: ${props => props.active ? 'bold' : 'normal'};
+  cursor: pointer;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: ${props => props.active ? 'var(--highlight-color)' : 'transparent'};
+  }
+  
+  &:hover {
+    color: var(--highlight-color);
+  }
+`;
+
+// View toggle components
+const ViewToggle = styled.div`
+  display: flex;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+const ViewToggleButton = styled.button`
+  background-color: ${props => props.active ? 'var(--highlight-color)' : 'var(--bg-secondary)'};
+  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
+  border: none;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  
+  span {
+    margin-right: 0.25rem;
+  }
+  
+  &:hover {
+    background-color: ${props => props.active ? 'var(--highlight-color)' : 'var(--bg-primary)'};
+  }
+`;
+
+// Search components
+const SearchContainer = styled.div`
+  position: relative;
+  width: 300px;
+`;
+
+const SearchIcon = styled.div`
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 0 3px rgba(106, 0, 255, 0.1);
+  }
+  
+  &::placeholder {
+    color: var(--text-secondary);
   }
 `;
 
 function AdminDashboardPage() {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
   const [sortOption, setSortOption] = useState('recent');
   const [examCount, setExamCount] = useState(0);
   const [studentCount, setStudentCount] = useState(0);
@@ -265,6 +706,23 @@ function AdminDashboardPage() {
   const [lecturerCount, setLecturerCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  
+  // State cho modal và dữ liệu
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalType, setModalType] = useState('');
+  const [modalData, setModalData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10;
+  
+  // Thêm state cho view mode và search
+  const [viewMode, setViewMode] = useState('card'); // 'card' or 'table'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'active', 'completed', etc
   
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -375,9 +833,545 @@ function AdminDashboardPage() {
     }
   };
 
+  // Hàm xử lý mở modal và load dữ liệu
+  const handleOpenModal = async (type) => {
+    setModalType(type);
+    setCurrentPage(0);
+    setModalData([]);
+    setError(null);
+    setLoading(true);
+    setModalOpen(true);
+    setSearchQuery('');
+    setViewMode('card');
+    setActiveTab('all');
+    
+    try {
+      let response;
+      switch(type) {
+        case 'students':
+          setModalTitle('Student List');
+          response = await userService.getAllStudents(currentPage, pageSize);
+          break;
+        case 'lecturers':
+          setModalTitle('Lecturer List');
+          response = await userService.getAllLecturers(currentPage, pageSize);
+          break;
+        case 'exams':
+          setModalTitle('Exam List');
+          // Sử dụng các API có sẵn để lấy danh sách exam
+          response = await dashboardService.getAllExams(currentPage, pageSize);
+          break;
+        case 'classes':
+          setModalTitle('Class List');
+          response = await classService.getAllClasses(currentPage, pageSize);
+          break;
+        default:
+          setError('Invalid data type');
+          setLoading(false);
+          return;
+      }
+      
+      // Xử lý dữ liệu phản hồi, trích xuất nội dung và thông tin phân trang
+      if (response && response.data) {
+        const responseData = response.data;
+        
+        // Kiểm tra nếu là dữ liệu phân trang
+        if (responseData.content) {
+          setModalData(responseData.content);
+          setTotalPages(responseData.totalPages || 1);
+          setTotalElements(responseData.totalElements || responseData.content.length);
+        } else if (Array.isArray(responseData)) {
+          // Nếu là một mảng đơn giản
+          setModalData(responseData);
+          setTotalPages(1);
+          setTotalElements(responseData.length);
+        } else {
+          // Trường hợp khác
+          console.error('Unexpected response format:', responseData);
+          setModalData([]);
+          setError('Unexpected data format received');
+        }
+      } else {
+        setModalData([]);
+        setError('No data available');
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(`Failed to load data: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Hàm xử lý chuyển trang
+  const handlePageChange = async (newPage) => {
+    if (newPage < 0 || newPage >= totalPages) return;
+    
+    setCurrentPage(newPage);
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let response;
+      switch(modalType) {
+        case 'students':
+          response = await userService.getAllStudents(newPage, pageSize);
+          break;
+        case 'lecturers':
+          response = await userService.getAllLecturers(newPage, pageSize);
+          break;
+        case 'exams':
+          response = await dashboardService.getAllExams(newPage, pageSize);
+          break;
+        case 'classes':
+          response = await classService.getAllClasses(newPage, pageSize);
+          break;
+        default:
+          setError('Invalid data type');
+          setLoading(false);
+          return;
+      }
+      
+      if (response && response.data) {
+        const responseData = response.data;
+        
+        if (responseData.content) {
+          setModalData(responseData.content);
+          setTotalPages(responseData.totalPages || 1);
+          setTotalElements(responseData.totalElements || responseData.content.length);
+        } else if (Array.isArray(responseData)) {
+          setModalData(responseData);
+        } else {
+          console.error('Unexpected response format:', responseData);
+          setError('Unexpected data format received');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching data for page change:', error);
+      setError(`Failed to load page data: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Hàm render nội dung bảng dựa vào loại
+  const renderTableContent = () => {
+    if (loading) {
+      return (
+        <tr>
+          <td colSpan="5">
+            <LoadingSpinner />
+          </td>
+        </tr>
+      );
+    }
+    
+    if (error) {
+      return (
+        <tr>
+          <td colSpan="5">
+            <ErrorMessage>{error}</ErrorMessage>
+          </td>
+        </tr>
+      );
+    }
+    
+    if (modalData.length === 0) {
+      return (
+        <tr>
+          <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>
+            No data available
+          </td>
+        </tr>
+      );
+    }
+    
+    switch(modalType) {
+      case 'students':
+        return modalData.map(student => (
+          <TableRow key={student.id} theme={theme === 'dark' ? 'dark' : 'light'}>
+            <TableCell>{student.id}</TableCell>
+            <TableCell>{student.username}</TableCell>
+            <TableCell>{student.email}</TableCell>
+            <TableCell>{`${student.firstName || ''} ${student.lastName || ''}`.trim() || '-'}</TableCell>
+            <TableCell>STUDENT</TableCell>
+          </TableRow>
+        ));
+        
+      case 'lecturers':
+        return modalData.map(lecturer => (
+          <TableRow key={lecturer.id} theme={theme === 'dark' ? 'dark' : 'light'}>
+            <TableCell>{lecturer.id}</TableCell>
+            <TableCell>{lecturer.username}</TableCell>
+            <TableCell>{lecturer.email}</TableCell>
+            <TableCell>{`${lecturer.firstName || ''} ${lecturer.lastName || ''}`.trim() || '-'}</TableCell>
+            <TableCell>LECTURER</TableCell>
+          </TableRow>
+        ));
+        
+      case 'exams':
+        return modalData.map(exam => (
+          <TableRow key={exam.id} theme={theme === 'dark' ? 'dark' : 'light'}>
+            <TableCell>{exam.id}</TableCell>
+            <TableCell>{exam.title}</TableCell>
+            <TableCell>{exam.className || `Class ${exam.classId}` || '-'}</TableCell>
+            <TableCell>{exam.duration} minutes</TableCell>
+            <TableCell>{exam.status || 'SCHEDULED'}</TableCell>
+          </TableRow>
+        ));
+        
+      case 'classes':
+        return modalData.map(cls => (
+          <TableRow key={cls.id} theme={theme === 'dark' ? 'dark' : 'light'}>
+            <TableCell>{cls.id}</TableCell>
+            <TableCell>{cls.name}</TableCell>
+            <TableCell>{cls.description || '-'}</TableCell>
+            <TableCell>{cls.teacherName || '-'}</TableCell>
+            <TableCell>{cls.studentCount || 0}</TableCell>
+          </TableRow>
+        ));
+        
+      default:
+        return (
+          <tr>
+            <td colSpan="5" style={{ textAlign: 'center' }}>
+              Invalid data type
+            </td>
+          </tr>
+        );
+    }
+  };
+  
+  // Hàm render header bảng dựa vào loại
+  const renderTableHeader = () => {
+    switch(modalType) {
+      case 'students':
+        return (
+          <tr>
+            <TableHeader>ID</TableHeader>
+            <TableHeader>Username</TableHeader>
+            <TableHeader>Email</TableHeader>
+            <TableHeader>Name</TableHeader>
+            <TableHeader>Role</TableHeader>
+          </tr>
+        );
+        
+      case 'lecturers':
+        return (
+          <tr>
+            <TableHeader>ID</TableHeader>
+            <TableHeader>Username</TableHeader>
+            <TableHeader>Email</TableHeader>
+            <TableHeader>Name</TableHeader>
+            <TableHeader>Role</TableHeader>
+          </tr>
+        );
+        
+      case 'exams':
+        return (
+          <tr>
+            <TableHeader>ID</TableHeader>
+            <TableHeader>Title</TableHeader>
+            <TableHeader>Class</TableHeader>
+            <TableHeader>Duration</TableHeader>
+            <TableHeader>Status</TableHeader>
+          </tr>
+        );
+        
+      case 'classes':
+        return (
+          <tr>
+            <TableHeader>ID</TableHeader>
+            <TableHeader>Name</TableHeader>
+            <TableHeader>Description</TableHeader>
+            <TableHeader>Teacher</TableHeader>
+            <TableHeader>Students</TableHeader>
+          </tr>
+        );
+        
+      default:
+        return (
+          <tr>
+            <TableHeader>No data available</TableHeader>
+          </tr>
+        );
+    }
+  };
+
+  // Hàm lọc dữ liệu dựa trên search query
+  const getFilteredData = () => {
+    if (!searchQuery.trim()) return modalData;
+    
+    return modalData.filter(item => {
+      switch(modalType) {
+        case 'students':
+        case 'lecturers':
+          return (
+            (item.username && item.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (item.email && item.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (`${item.firstName || ''} ${item.lastName || ''}`.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        case 'exams':
+          return (
+            (item.title && item.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (item.className && item.className.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        case 'classes':
+          return (
+            (item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (item.teacherName && item.teacherName.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        default:
+          return false;
+      }
+    });
+  };
+  
+  // Hàm lọc theo tab
+  const getFilteredByTab = (data) => {
+    if (activeTab === 'all') return data;
+    
+    return data.filter(item => {
+      switch(modalType) {
+        case 'exams':
+          return item.status && item.status.toLowerCase() === activeTab.toLowerCase();
+        default:
+          return true;
+      }
+    });
+  };
+  
+  // Hàm render card hiển thị dữ liệu
+  const renderDataCards = () => {
+    const filteredData = getFilteredByTab(getFilteredData());
+    
+    if (loading) {
+      return Array(6).fill(0).map((_, i) => (
+        <SkeletonCard key={i}>
+          <SkeletonLine width="60%" />
+          <SkeletonLine width="100%" />
+          <SkeletonLine width="70%" />
+          <SkeletonLine width="40%" />
+        </SkeletonCard>
+      ));
+    }
+    
+    if (error) {
+      return (
+        <div style={{ gridColumn: '1 / -1' }}>
+          <ErrorMessage>{error}</ErrorMessage>
+        </div>
+      );
+    }
+    
+    if (filteredData.length === 0) {
+      return (
+        <div style={{ 
+          gridColumn: '1 / -1', 
+          textAlign: 'center', 
+          padding: '3rem',
+          color: '#666',
+          backgroundColor: '#f9f9f9',
+          borderRadius: '1rem'
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>No data found</div>
+          <div>Try adjusting your search or filters</div>
+        </div>
+      );
+    }
+    
+    switch(modalType) {
+      case 'students':
+        return filteredData.map(student => (
+          <DataCard key={student.id} type="student">
+            <CardHeader>{`${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student'}</CardHeader>
+            <CardInfo><strong>Username:</strong> {student.username}</CardInfo>
+            <CardInfo><strong>Email:</strong> {student.email}</CardInfo>
+            <CardInfo><strong>ID:</strong> {student.id}</CardInfo>
+            <CardActions>
+              <ActionButton size="small">View Profile</ActionButton>
+            </CardActions>
+          </DataCard>
+        ));
+        
+      case 'lecturers':
+        return filteredData.map(lecturer => (
+          <DataCard key={lecturer.id} type="lecturer">
+            <CardHeader>{`${lecturer.firstName || ''} ${lecturer.lastName || ''}`.trim() || 'Lecturer'}</CardHeader>
+            <CardInfo><strong>Username:</strong> {lecturer.username}</CardInfo>
+            <CardInfo><strong>Email:</strong> {lecturer.email}</CardInfo>
+            <CardInfo><strong>ID:</strong> {lecturer.id}</CardInfo>
+            <CardActions>
+              <ActionButton size="small">View Profile</ActionButton>
+            </CardActions>
+          </DataCard>
+        ));
+        
+      case 'exams':
+        return filteredData.map(exam => (
+          <DataCard key={exam.id} type="exam">
+            <CardHeader>{exam.title}</CardHeader>
+            <CardInfo><strong>Class:</strong> {exam.className || `Class ${exam.classId}` || '-'}</CardInfo>
+            <CardInfo><strong>Duration:</strong> {exam.duration} minutes</CardInfo>
+            <CardInfo>
+              <strong>Status:</strong> 
+              <StatusBadge status={exam.status}>{exam.status || 'SCHEDULED'}</StatusBadge>
+            </CardInfo>
+            <CardActions>
+              <ActionButton size="small">View Details</ActionButton>
+            </CardActions>
+          </DataCard>
+        ));
+        
+      case 'classes':
+        return filteredData.map(cls => (
+          <DataCard key={cls.id} type="class">
+            <CardHeader>{cls.name}</CardHeader>
+            <CardInfo><strong>Description:</strong> {cls.description || '-'}</CardInfo>
+            <CardInfo><strong>Teacher:</strong> {cls.teacherName || '-'}</CardInfo>
+            <CardInfo><strong>Students:</strong> {cls.studentCount || 0}</CardInfo>
+            <CardActions>
+              <ActionButton size="small">View Class</ActionButton>
+            </CardActions>
+          </DataCard>
+        ));
+        
+      default:
+        return (
+          <div style={{ gridColumn: '1 / -1' }}>Invalid data type</div>
+        );
+    }
+  };
+  
+  // Cập nhật phần render modal
+  const modalContent = (
+    <ModalContainer>
+      <ModalHeader>
+        <ModalTitle>{modalTitle}</ModalTitle>
+        <CloseButton onClick={() => setModalOpen(false)}>×</CloseButton>
+      </ModalHeader>
+      
+      {/* Tabs for filtering - only show for exams which have status */}
+      {modalType === 'exams' && (
+        <TabsContainer>
+          <TabButton 
+            active={activeTab === 'all'} 
+            onClick={() => setActiveTab('all')}
+          >
+            All
+          </TabButton>
+          <TabButton 
+            active={activeTab === 'scheduled'} 
+            onClick={() => setActiveTab('scheduled')}
+          >
+            Scheduled
+          </TabButton>
+          <TabButton 
+            active={activeTab === 'ongoing'} 
+            onClick={() => setActiveTab('ongoing')}
+          >
+            Ongoing
+          </TabButton>
+          <TabButton 
+            active={activeTab === 'completed'} 
+            onClick={() => setActiveTab('completed')}
+          >
+            Completed
+          </TabButton>
+        </TabsContainer>
+      )}
+      
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <ViewToggle>
+          <ViewToggleButton 
+            active={viewMode === 'card'} 
+            onClick={() => setViewMode('card')}
+          >
+            <span>📇</span> Cards
+          </ViewToggleButton>
+          <ViewToggleButton 
+            active={viewMode === 'table'} 
+            onClick={() => setViewMode('table')}
+          >
+            <span>📋</span> Table
+          </ViewToggleButton>
+        </ViewToggle>
+        
+        <SearchContainer>
+          <SearchIcon>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </SearchIcon>
+          <SearchInput 
+            type="text" 
+            placeholder={`Search ${modalType || 'items'}...`} 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </SearchContainer>
+      </div>
+      
+      {viewMode === 'card' ? (
+        <CardGrid>
+          {renderDataCards()}
+        </CardGrid>
+      ) : (
+        <Table>
+          <thead>
+            {renderTableHeader()}
+          </thead>
+          <tbody>
+            {renderTableContent()}
+          </tbody>
+        </Table>
+      )}
+      
+      <Pagination>
+        <PageInfo>
+          Showing {modalData.length > 0 ? currentPage * pageSize + 1 : 0} 
+          to {modalData.length > 0 ? Math.min((currentPage + 1) * pageSize, totalElements) : 0} 
+          of {totalElements} entries
+        </PageInfo>
+        <PageButtons>
+          <PageButton 
+            onClick={() => handlePageChange(0)} 
+            disabled={currentPage === 0}
+          >
+            First
+          </PageButton>
+          <PageButton 
+            onClick={() => handlePageChange(currentPage - 1)} 
+            disabled={currentPage === 0}
+          >
+            Previous
+          </PageButton>
+          <PageButton active>
+            {currentPage + 1}
+          </PageButton>
+          <PageButton 
+            onClick={() => handlePageChange(currentPage + 1)} 
+            disabled={currentPage >= totalPages - 1}
+          >
+            Next
+          </PageButton>
+          <PageButton 
+            onClick={() => handlePageChange(totalPages - 1)} 
+            disabled={currentPage >= totalPages - 1}
+          >
+            Last
+          </PageButton>
+        </PageButtons>
+      </Pagination>
+    </ModalContainer>
+  );
+  
   return (
     <DashboardContainer>
-      <Sidebar>
+      <Sidebar theme={theme}>
         <Logo>logo</Logo>
         <SidebarMenu>
           <NavItem to="/admin-dashboard" className="active">
@@ -425,14 +1419,7 @@ function AdminDashboardPage() {
           </PageTitle>
           
           <HeaderRight>
-            <SortDropdown 
-              value={sortOption} 
-              onChange={(e) => setSortOption(e.target.value)}
-            >
-              <option value="recent">Last Week</option>
-              <option value="month">Last Month</option>
-              <option value="year">Last Year</option>
-            </SortDropdown>
+            <ThemeToggle />
             <NotificationIcon />
             <DropdownContainer ref={dropdownRef}>
               <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
@@ -460,7 +1447,7 @@ function AdminDashboardPage() {
             <Card>
               <CardHeader>Total Students</CardHeader>
               <CardValue color="#ff2e8e">{studentCount || 0}</CardValue>
-              <ExpandButton />
+              <StatButton onClick={() => handleOpenModal('students')} />
               <ChartContainer>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={studentData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -482,7 +1469,7 @@ function AdminDashboardPage() {
             <Card>
               <CardHeader>Total Lecturers</CardHeader>
               <CardValue color="#f5a623">{lecturerCount || 0}</CardValue>
-              <ExpandButton />
+              <StatButton onClick={() => handleOpenModal('lecturers')} />
               <ChartContainer>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -507,7 +1494,7 @@ function AdminDashboardPage() {
             <Card>
               <CardHeader>Total Exams</CardHeader>
               <CardValue color="#6a00ff">{examCount || 0}</CardValue>
-              <ExpandButton />
+              <StatButton onClick={() => handleOpenModal('exams')} />
               <ChartContainer>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -529,7 +1516,7 @@ function AdminDashboardPage() {
             <Card>
               <CardHeader>Total Classes</CardHeader>
               <CardValue color="#00c16e">{classCount || 0}</CardValue>
-              <ExpandButton />
+              <StatButton onClick={() => handleOpenModal('classes')} />
               <ChartContainer>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -550,7 +1537,12 @@ function AdminDashboardPage() {
           </CardRow>
         </CardsContainer>
         
-        {/* Đã di chuyển các biểu đồ thống kê sang ReportPage.js */}
+        {/* Modal hiển thị chi tiết */}
+        {modalOpen && (
+          <ModalOverlay>
+            {modalContent}
+          </ModalOverlay>
+        )}
       </MainContent>
     </DashboardContainer>
   );

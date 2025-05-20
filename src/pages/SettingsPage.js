@@ -4,17 +4,20 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/userService';
 import authService from '../services/authService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Styled Components
 const PageContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -23,6 +26,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -98,6 +102,8 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem 3rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -110,7 +116,7 @@ const Header = styled.header`
 const PageTitle = styled.div`
   font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
 `;
 
 const HeaderRight = styled.div`
@@ -140,9 +146,9 @@ const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   width: 180px;
   z-index: 100;
   overflow: hidden;
@@ -153,27 +159,27 @@ const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--bg-primary);
   }
 `;
 
 const TabContainer = styled.div`
   margin-bottom: 1.5rem;
   display: flex;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 `;
 
 const Tab = styled.div`
   padding: 1rem 1.5rem;
   font-size: 1rem;
   font-weight: ${props => props.active ? 600 : 400};
-  color: ${props => props.active ? '#6a00ff' : '#666'};
+  color: ${props => props.active ? 'var(--highlight-color)' : 'var(--text-secondary)'};
   cursor: pointer;
   position: relative;
   
@@ -184,21 +190,22 @@ const Tab = styled.div`
     left: 0;
     right: 0;
     height: 2px;
-    background-color: ${props => props.active ? '#6a00ff' : 'transparent'};
+    background-color: ${props => props.active ? 'var(--highlight-color)' : 'transparent'};
   }
   
   &:hover {
-    color: ${props => props.active ? '#6a00ff' : '#333'};
+    color: ${props => props.active ? 'var(--highlight-color)' : 'var(--text-primary)'};
   }
 `;
 
 const Card = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 1.5rem;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   overflow: hidden;
   margin-bottom: 1.5rem;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const CardTitle = styled.h2`
@@ -806,7 +813,8 @@ const DeleteIcon = () => (
 
 function SettingsPage() {
   const { user, logout, refreshUser } = useAuth();
-  const location = useLocation(); // Add location hook for routing
+  const location = useLocation();
+  const { theme } = useTheme(); // Use the theme context
   const [activeTab, setActiveTab] = useState('profile');
   const [showDropdown, setShowDropdown] = useState(false);
   const [users, setUsers] = useState([]);
@@ -1499,8 +1507,8 @@ function SettingsPage() {
   };
 
   return (
-    <PageContainer>
-      <Sidebar>
+    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+      <Sidebar theme={theme}>
         <Logo>logo</Logo>
         <SidebarMenu>
           {isStudent ? (
@@ -1586,6 +1594,9 @@ function SettingsPage() {
           <PageTitle>Settings</PageTitle>
           
           <HeaderRight>
+            {/* Add ThemeToggle component */}
+            <ThemeToggle />
+            
             <DropdownContainer ref={dropdownRef}>
               <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
               {showDropdown && (

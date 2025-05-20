@@ -1,5 +1,5 @@
 import React from 'react';
-import { ThemeProvider } from '@mui/material/styles';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import AppRoutes from './routes/AppRoutes';
 import theme from './theme/theme';
@@ -7,18 +7,21 @@ import './App.css';
 import './styles/scroll.css';
 import { AuthProvider } from './hooks/useAuth';
 import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
   return (
     <BrowserRouter>
-      <ThemeProvider theme={theme}>
+      <MuiThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
-          <div className="App">
-            <AppRoutes />
-          </div>
+          <ThemeProvider>
+            <div className="App">
+              <AppRoutes />
+            </div>
+          </ThemeProvider>
         </AuthProvider>
-      </ThemeProvider>
+      </MuiThemeProvider>
     </BrowserRouter>
   );
 }
