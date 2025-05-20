@@ -2,10 +2,13 @@ import axios from 'axios';
 import authHeader from './authHeader';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const STATS_API_URL = 'http://localhost:8080/api/v1/statistics';
 
 // Mock data for development until backend is implemented
 const mockExamCount = 23;
 const mockStudentCount = 487;
+const mockClassCount = 15;
+const mockLecturerCount = 32;
 
 const mockActivity = [
   {
@@ -69,14 +72,11 @@ const mockNotifications = [
 
 // Service methods
 const dashboardService = {
-  // Get the count of exams
+  // Lấy tổng số bài thi
   getExamCount: async () => {
     try {
-      // Uncomment when API is ready
-      // const response = await axios.get(`${API_URL}/dashboard/exam-count`, { headers: authHeader() });
-      // return response.data;
-      
-      // Using mock data for now
+      // Vì không có API lấy tổng số bài thi, chúng ta sẽ tiếp tục sử dụng mock data
+      // hoặc có thể lấy tổng số bài thi của một lớp cụ thể
       return Promise.resolve(mockExamCount);
     } catch (error) {
       console.error('Error fetching exam count:', error);
@@ -84,18 +84,87 @@ const dashboardService = {
     }
   },
   
-  // Get the count of students
+  // Lấy tổng số sinh viên từ API thống kê
   getStudentCount: async () => {
     try {
-      // Uncomment when API is ready
-      // const response = await axios.get(`${API_URL}/dashboard/student-count`, { headers: authHeader() });
-      // return response.data;
-      
-      // Using mock data for now
-      return Promise.resolve(mockStudentCount);
+      // Sử dụng API thống kê
+      const response = await axios.get(`${STATS_API_URL}/total-students`, { headers: authHeader() });
+      return response.data;
     } catch (error) {
       console.error('Error fetching student count:', error);
-      return Promise.reject(error);
+      // Fallback to mock data if API fails
+      return Promise.resolve(mockStudentCount);
+    }
+  },
+  
+  // Lấy tổng số lớp học từ API thống kê
+  getClassCount: async () => {
+    try {
+      // Sử dụng API thống kê
+      const response = await axios.get(`${STATS_API_URL}/total-classes`, { headers: authHeader() });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching class count:', error);
+      // Fallback to mock data if API fails
+      return Promise.resolve(mockClassCount);
+    }
+  },
+  
+  // Lấy tổng số giảng viên từ API thống kê
+  getLecturerCount: async () => {
+    try {
+      // Sử dụng API thống kê
+      const response = await axios.get(`${STATS_API_URL}/total-lecturers`, { headers: authHeader() });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching lecturer count:', error);
+      // Fallback to mock data if API fails
+      return Promise.resolve(mockLecturerCount);
+    }
+  },
+  
+  // Lấy tổng số bài thi trong một lớp từ API thống kê
+  getExamsInClass: async (classId) => {
+    try {
+      if (!classId) return 0;
+      
+      // Sử dụng API thống kê
+      const response = await axios.get(`${STATS_API_URL}/total-exams/${classId}`, { headers: authHeader() });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exams in class:', error);
+      return 0;
+    }
+  },
+  
+  // Lấy thống kê điểm số của một bài thi
+  getExamScoreStatistics: async (examId) => {
+    try {
+      if (!examId) return null;
+      
+      // Sử dụng API thống kê
+      const response = await axios.get(`${STATS_API_URL}/exam-score/${examId}`, { headers: authHeader() });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exam score statistics:', error);
+      return null;
+    }
+  },
+  
+  // Lấy danh sách điểm của sinh viên trong một lớp
+  getStudentScoresInClass: async (classId, page = 0, size = 10, sortBy = 'studentName', direction = 'asc') => {
+    try {
+      if (!classId) return { content: [], totalElements: 0 };
+      
+      // Sử dụng API thống kê
+      const response = await axios.get(
+        `${STATS_API_URL}/student-scores/${classId}?page=${page}&size=${size}&sortBy=${sortBy}&direction=${direction}`, 
+        { headers: authHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching student scores:', error);
+      return { content: [], totalElements: 0 };
     }
   },
   

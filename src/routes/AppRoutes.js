@@ -10,6 +10,7 @@ import SettingsPage from '../pages/SettingsPage';
 import ClassPage from '../pages/ClassPage';
 import StartExamPage from '../pages/StartExamPage';
 import TakeExamPage from '../pages/TakeExamPage';
+import ReportPage from '../pages/ReportPage';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '../hooks/useAuth';
@@ -256,6 +257,18 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN']}>
               <ClassPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Reports route - only for lecturers and admins */}
+      <Route 
+        path="/reports" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN']}>
+              <ReportPage />
             </RoleRoute>
           </ProtectedRoute>
         } 

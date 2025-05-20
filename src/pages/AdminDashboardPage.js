@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
 
@@ -198,7 +198,13 @@ const SortDropdown = styled.select`
 
 const CardsContainer = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+`;
+
+const CardRow = styled.div`
+  display: flex;
   gap: 1.5rem;
 `;
 
@@ -208,7 +214,7 @@ const Card = styled.div`
   padding: 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   flex: 1;
-  min-width: 280px;
+  min-width: 250px;
   position: relative;
 `;
 
@@ -222,6 +228,7 @@ const CardValue = styled.div`
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 1rem;
+  color: ${props => props.color || '#333'};
 `;
 
 const ChartContainer = styled.div`
@@ -254,17 +261,27 @@ function AdminDashboardPage() {
   const [sortOption, setSortOption] = useState('recent');
   const [examCount, setExamCount] = useState(0);
   const [studentCount, setStudentCount] = useState(0);
+  const [classCount, setClassCount] = useState(0);
+  const [lecturerCount, setLecturerCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const examCountData = await dashboardService.getExamCount();
+        // Lấy dữ liệu thống kê từ các API
         const studentCountData = await dashboardService.getStudentCount();
+        const classCountData = await dashboardService.getClassCount();
+        const lecturerCountData = await dashboardService.getLecturerCount();
         
-        setExamCount(examCountData);
+        // Cập nhật state với dữ liệu từ API
         setStudentCount(studentCountData);
+        setClassCount(classCountData);
+        setLecturerCount(lecturerCountData);
+        
+        // Vẫn giữ examCount như cũ vì không có API riêng
+        const examCountData = await dashboardService.getExamCount();
+        setExamCount(examCountData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       }
@@ -286,6 +303,7 @@ function AdminDashboardPage() {
     };
   }, []);
   
+  // Dữ liệu biểu đồ cho tổng số bài thi
   const examData = [
     { name: 'Jan', count: 40 },
     { name: 'Feb', count: 20 },
@@ -297,6 +315,7 @@ function AdminDashboardPage() {
     { name: 'Aug', count: examCount }
   ];
   
+  // Dữ liệu biểu đồ cho tổng số sinh viên
   const studentData = [
     { name: 'Jan', count: 100 },
     { name: 'Feb', count: 80 },
@@ -434,51 +453,104 @@ function AdminDashboardPage() {
           </HeaderRight>
         </Header>
         
+        {/* Các card thống kê tổng quan */}
         <CardsContainer>
-          <Card>
-            <CardHeader>Total Exams</CardHeader>
-            <CardValue>{examCount || 203}</CardValue>
-            <ExpandButton />
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#6a00ff" stopOpacity={0.2} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Tooltip cursor={false} />
-                  <Bar dataKey="count" fill="url(#colorExams)" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </Card>
+          <CardRow>
+            {/* Hàng 1: Sinh viên và Giảng viên */}
+            <Card>
+              <CardHeader>Total Students</CardHeader>
+              <CardValue color="#ff2e8e">{studentCount || 0}</CardValue>
+              <ExpandButton />
+              <ChartContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={studentData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ff2e8e" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#ff2e8e" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Tooltip cursor={false} />
+                    <Bar dataKey="count" fill="url(#colorStudents)" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </Card>
+            
+            <Card>
+              <CardHeader>Total Lecturers</CardHeader>
+              <CardValue color="#f5a623">{lecturerCount || 0}</CardValue>
+              <ExpandButton />
+              <ChartContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorLecturers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f5a623" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#f5a623" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Tooltip cursor={false} />
+                    <Line type="monotone" dataKey="count" stroke="#f5a623" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </Card>
+          </CardRow>
           
-          <Card>
-            <CardHeader>Total Students</CardHeader>
-            <CardValue>{studentCount || 351}</CardValue>
-            <ExpandButton />
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={studentData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ff2e8e" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#ff2e8e" stopOpacity={0.2} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Tooltip cursor={false} />
-                  <Bar dataKey="count" fill="url(#colorStudents)" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </Card>
+          <CardRow>
+            {/* Hàng 2: Bài thi và Lớp học */}
+            <Card>
+              <CardHeader>Total Exams</CardHeader>
+              <CardValue color="#6a00ff">{examCount || 0}</CardValue>
+              <ExpandButton />
+              <ChartContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6a00ff" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#6a00ff" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Tooltip cursor={false} />
+                    <Bar dataKey="count" fill="url(#colorExams)" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </Card>
+            
+            <Card>
+              <CardHeader>Total Classes</CardHeader>
+              <CardValue color="#00c16e">{classCount || 0}</CardValue>
+              <ExpandButton />
+              <ChartContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={examData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorClasses" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#00c16e" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#00c16e" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Tooltip cursor={false} />
+                    <Line type="monotone" dataKey="count" stroke="#00c16e" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </Card>
+          </CardRow>
         </CardsContainer>
+        
+        {/* Đã di chuyển các biểu đồ thống kê sang ReportPage.js */}
       </MainContent>
     </DashboardContainer>
   );

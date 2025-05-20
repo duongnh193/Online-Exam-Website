@@ -464,6 +464,331 @@ const ColumnTitle = styled.h3`
   }
 `;
 
+// New styled components for improved User Management section
+const StatsContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const StatCard = styled.div`
+  background-color: white;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid ${props => {
+    switch(props.role) {
+      case 'ROLE_ADMIN': return '#ff5757';
+      case 'ROLE_LECTURER': return '#4285f4';
+      case 'ROLE_STUDENT': return '#34a853';
+      default: return '#6a00ff';
+    }
+  }};
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background-color: ${props => {
+      switch(props.role) {
+        case 'ROLE_ADMIN': return 'rgba(255, 87, 87, 0.05)';
+        case 'ROLE_LECTURER': return 'rgba(66, 133, 244, 0.05)';
+        case 'ROLE_STUDENT': return 'rgba(52, 168, 83, 0.05)';
+        default: return 'rgba(106, 0, 255, 0.05)';
+      }
+    }};
+    border-radius: 50%;
+    transform: translate(50%, -50%);
+  }
+`;
+
+const StatValue = styled.div`
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: ${props => {
+    switch(props.role) {
+      case 'ROLE_ADMIN': return '#ff5757';
+      case 'ROLE_LECTURER': return '#4285f4';
+      case 'ROLE_STUDENT': return '#34a853';
+      default: return '#6a00ff';
+    }
+  }};
+  margin-bottom: 0.5rem;
+`;
+
+const StatLabel = styled.div`
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const StatIcon = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: ${props => {
+    switch(props.role) {
+      case 'ROLE_ADMIN': return 'rgba(255, 87, 87, 0.1)';
+      case 'ROLE_LECTURER': return 'rgba(66, 133, 244, 0.1)';
+      case 'ROLE_STUDENT': return 'rgba(52, 168, 83, 0.1)';
+      default: return 'rgba(106, 0, 255, 0.1)';
+    }
+  }};
+  color: ${props => {
+    switch(props.role) {
+      case 'ROLE_ADMIN': return '#ff5757';
+      case 'ROLE_LECTURER': return '#4285f4';
+      case 'ROLE_STUDENT': return '#34a853';
+      default: return '#6a00ff';
+    }
+  }};
+  z-index: 1;
+  font-size: 1.2rem;
+`;
+
+const RoleTabContainer = styled.div`
+  display: flex;
+  margin-bottom: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 0.5rem;
+`;
+
+const RoleTab = styled.div`
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: ${props => props.active ? '600' : '400'};
+  color: ${props => props.active ? 'white' : '#666'};
+  cursor: pointer;
+  position: relative;
+  border-radius: 8px;
+  background-color: ${props => props.active ? props.activeColor : 'transparent'};
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.active ? props.activeColor : 'rgba(0, 0, 0, 0.05)'};
+  }
+`;
+
+const UserCardContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+`;
+
+const UserCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+`;
+
+const UserCardAvatar = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background-color: ${props => {
+    // Color based on role
+    switch(props.role) {
+      case 'ROLE_ADMIN': return '#ffecec';
+      case 'ROLE_LECTURER': return '#ecf5ff';
+      case 'ROLE_STUDENT': return '#ecffec';
+      default: return '#f0f0f0';
+    }
+  }};
+  color: ${props => {
+    // Text color based on role
+    switch(props.role) {
+      case 'ROLE_ADMIN': return '#ff5757';
+      case 'ROLE_LECTURER': return '#4285f4';
+      case 'ROLE_STUDENT': return '#34a853';
+      default: return '#666';
+    }
+  }};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 0.75rem;
+`;
+
+const UserCardInfo = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const UserCardName = styled.h3`
+  font-size: 1.1rem;
+  margin: 0 0 0.25rem 0;
+  color: #333;
+`;
+
+const UserCardUsername = styled.div`
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+`;
+
+const UserCardEmail = styled.div`
+  font-size: 0.85rem;
+  color: #999;
+  word-break: break-all;
+`;
+
+const UserCardActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  gap: 0.5rem;
+`;
+
+const UserCardBadge = styled.span`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background-color: ${props => {
+    // Normalize role for consistent comparison
+    const role = props.role?.toUpperCase();
+    switch (role) {
+      case 'ROLE_ADMIN': case 'ADMIN': return '#ffecec';
+      case 'ROLE_LECTURER': case 'LECTURER': return '#ecf5ff';
+      case 'ROLE_STUDENT': case 'STUDENT': return '#ecffec';
+      default: return '#f0f0f0';
+    }
+  }};
+  color: ${props => {
+    // Normalize role for consistent comparison
+    const role = props.role?.toUpperCase();
+    switch (role) {
+      case 'ROLE_ADMIN': case 'ADMIN': return '#ff5757';
+      case 'ROLE_LECTURER': case 'LECTURER': return '#4285f4';
+      case 'ROLE_STUDENT': case 'STUDENT': return '#34a853';
+      default: return '#666';
+    }
+  }};
+`;
+
+const FilterContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+`;
+
+const FilterDropdown = styled.div`
+  position: relative;
+`;
+
+const FilterDropdownButton = styled.button`
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  
+  &:hover {
+    border-color: #6a00ff;
+  }
+  
+  &::after {
+    content: '▼';
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+  }
+`;
+
+const FilterDropdownMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  min-width: 200px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  padding: 0.5rem;
+  display: ${props => props.open ? 'block' : 'none'};
+`;
+
+const FilterDropdownItem = styled.div`
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  
+  &:hover {
+    background: #f5f5f5;
+  }
+`;
+
+// Additional SVG Icons
+const UserIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+    <circle cx="12" cy="7" r="4"></circle>
+  </svg>
+);
+
+const TeacherIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"></path>
+    <line x1="16" y1="2" x2="16" y2="6"></line>
+    <line x1="8" y1="6" x2="16" y2="6"></line>
+    <line x1="8" y1="10" x2="16" y2="10"></line>
+    <line x1="8" y1="14" x2="16" y2="14"></line>
+    <line x1="8" y1="18" x2="12" y2="18"></line>
+  </svg>
+);
+
+const AdminIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+  </svg>
+);
+
+const TotalIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+  </svg>
+);
+
 // SVG icons
 const EditIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6a00ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -531,6 +856,9 @@ function SettingsPage() {
   // Add state for 2FA status messages
   const [twoFactorError, setTwoFactorError] = useState('');
   const [twoFactorSuccess, setTwoFactorSuccess] = useState('');
+
+  // New state for role-based tabs
+  const [activeRoleTab, setActiveRoleTab] = useState('all');
 
   // Add a function to explicitly update the 2FA UI state from localStorage
   const updateTwoFactorStateFromStorage = useCallback(() => {
@@ -1321,20 +1649,88 @@ function SettingsPage() {
               </Button>
             </div>
             
-            <SearchContainer>
-              <SearchIcon>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-              </SearchIcon>
-              <SearchInput 
-                type="text" 
-                placeholder="Search by username..." 
-                value={searchTerm}
-                onChange={handleSearch}
-              />
-            </SearchContainer>
+            {/* Dashboard-style Summary Cards */}
+            <StatsContainer>
+              <StatCard role="ROLE_TOTAL">
+                <StatIcon role="ROLE_TOTAL"><TotalIcon /></StatIcon>
+                <StatValue role="ROLE_TOTAL">{users.length}</StatValue>
+                <StatLabel>Total Users</StatLabel>
+              </StatCard>
+              
+              <StatCard role="ROLE_ADMIN">
+                <StatIcon role="ROLE_ADMIN"><AdminIcon /></StatIcon>
+                <StatValue role="ROLE_ADMIN">{filteredAdmins.length}</StatValue>
+                <StatLabel>Administrators</StatLabel>
+              </StatCard>
+              
+              <StatCard role="ROLE_LECTURER">
+                <StatIcon role="ROLE_LECTURER"><TeacherIcon /></StatIcon>
+                <StatValue role="ROLE_LECTURER">{filteredLecturers.length}</StatValue>
+                <StatLabel>Lecturers</StatLabel>
+              </StatCard>
+              
+              <StatCard role="ROLE_STUDENT">
+                <StatIcon role="ROLE_STUDENT"><UserIcon /></StatIcon>
+                <StatValue role="ROLE_STUDENT">{filteredStudents.length}</StatValue>
+                <StatLabel>Students</StatLabel>
+              </StatCard>
+            </StatsContainer>
+            
+            {/* Enhanced Search and Filter */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <SearchContainer style={{ margin: 0 }}>
+                <SearchIcon>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </SearchIcon>
+                <SearchInput 
+                  type="text" 
+                  placeholder="Search by username, email..." 
+                  value={searchTerm}
+                  onChange={handleSearch}
+                />
+              </SearchContainer>
+              
+              <FilterContainer style={{ margin: 0 }}>
+                <FilterDropdownButton>
+                  Sort by: Name
+                </FilterDropdownButton>
+              </FilterContainer>
+            </div>
+            
+            {/* Role-based Tabs */}
+            <RoleTabContainer>
+              <RoleTab 
+                active={activeRoleTab === 'all'} 
+                activeColor="#6a00ff"
+                onClick={() => setActiveRoleTab('all')}
+              >
+                All Users
+              </RoleTab>
+              <RoleTab 
+                active={activeRoleTab === 'admin'} 
+                activeColor="#ff5757"
+                onClick={() => setActiveRoleTab('admin')}
+              >
+                Admins
+              </RoleTab>
+              <RoleTab 
+                active={activeRoleTab === 'lecturer'} 
+                activeColor="#4285f4"
+                onClick={() => setActiveRoleTab('lecturer')}
+              >
+                Lecturers
+              </RoleTab>
+              <RoleTab 
+                active={activeRoleTab === 'student'} 
+                activeColor="#34a853"
+                onClick={() => setActiveRoleTab('student')}
+              >
+                Students
+              </RoleTab>
+            </RoleTabContainer>
             
             {loading ? (
               <div style={{ textAlign: 'center', padding: '2rem' }}>Loading users...</div>
@@ -1342,123 +1738,144 @@ function SettingsPage() {
               <div style={{ textAlign: 'center', padding: '2rem', color: '#ff3e3e' }}>{error}</div>
             ) : (
               <>
-                {filteredAdmins.length > 0 && (
-                  <div style={{ marginTop: '1.5rem' }}>
-                    <ColumnTitle role="ROLE_ADMIN">
-                      <span>{filteredAdmins.length}</span>
-                      Admin Users
-                    </ColumnTitle>
-                    <Table>
-                      <thead>
-                        <tr>
-                          <TableHeader>Username</TableHeader>
-                          <TableHeader>Name</TableHeader>
-                          <TableHeader>Email</TableHeader>
-                          <TableHeader>Role</TableHeader>
-                          <TableHeader></TableHeader>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredAdmins.map(user => (
-                          <TableRow key={user.id}>
-                            <TableCell>{user.username}</TableCell>
-                            <TableCell>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || '-'}</TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>
-                              <RoleBadge role={user.role}>
-                                {user.role.replace('ROLE_', '')}
-                              </RoleBadge>
-                            </TableCell>
-                            <ActionCell>
-                              <ActionButton title="Edit" onClick={() => openEditModal(user)}>
-                                <EditIcon />
-                              </ActionButton>
-                              <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
-                                <DeleteIcon />
-                              </ActionButton>
-                            </ActionCell>
-                          </TableRow>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
+                {/* Display users based on active role tab */}
+                {activeRoleTab === 'all' && (
+                  <UserCardContainer>
+                    {users.filter(user => 
+                      (user.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (user.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+                    ).map(user => (
+                      <UserCard key={user.id}>
+                        <UserCardBadge role={user.role}>
+                          {user.role.replace('ROLE_', '')}
+                        </UserCardBadge>
+                        <UserCardAvatar role={user.role}>
+                          {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                        </UserCardAvatar>
+                        <UserCardInfo>
+                          <UserCardName>
+                            {`${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User'}
+                          </UserCardName>
+                          <UserCardUsername>@{user.username}</UserCardUsername>
+                          <UserCardEmail>{user.email}</UserCardEmail>
+                        </UserCardInfo>
+                        <UserCardActions>
+                          <ActionButton title="Edit" onClick={() => openEditModal(user)}>
+                            <EditIcon />
+                          </ActionButton>
+                          <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
+                            <DeleteIcon />
+                          </ActionButton>
+                        </UserCardActions>
+                      </UserCard>
+                    ))}
+                  </UserCardContainer>
                 )}
-
-                <ColumnContainer>
-                  <Column>
-                    <ColumnTitle role="ROLE_LECTURER">
-                      <span>{filteredLecturers.length}</span>
-                      Lecturers
-                    </ColumnTitle>
-                    <Table>
-                      <thead>
-                        <tr>
-                          <TableHeader>Username</TableHeader>
-                          <TableHeader>Name</TableHeader>
-                          <TableHeader></TableHeader>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredLecturers.map(user => (
-                          <TableRow key={user.id}>
-                            <TableCell>{user.username}</TableCell>
-                            <TableCell>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || '-'}</TableCell>
-                            <ActionCell>
-                              <ActionButton title="Edit" onClick={() => openEditModal(user)}>
-                                <EditIcon />
-                              </ActionButton>
-                              <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
-                                <DeleteIcon />
-                              </ActionButton>
-                            </ActionCell>
-                          </TableRow>
-                        ))}
-                        {filteredLecturers.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan="3" style={{ textAlign: 'center' }}>No lecturers found</TableCell>
-                          </TableRow>
-                        )}
-                      </tbody>
-                    </Table>
-                  </Column>
-                  
-                  <Column>
-                    <ColumnTitle role="ROLE_STUDENT">
-                      <span>{filteredStudents.length}</span>
-                      Students
-                    </ColumnTitle>
-                    <Table>
-                      <thead>
-                        <tr>
-                          <TableHeader>Username</TableHeader>
-                          <TableHeader>Name</TableHeader>
-                          <TableHeader></TableHeader>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredStudents.map(user => (
-                          <TableRow key={user.id}>
-                            <TableCell>{user.username}</TableCell>
-                            <TableCell>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || '-'}</TableCell>
-                            <ActionCell>
-                              <ActionButton title="Edit" onClick={() => openEditModal(user)}>
-                                <EditIcon />
-                              </ActionButton>
-                              <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
-                                <DeleteIcon />
-                              </ActionButton>
-                            </ActionCell>
-                          </TableRow>
-                        ))}
-                        {filteredStudents.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan="3" style={{ textAlign: 'center' }}>No students found</TableCell>
-                          </TableRow>
-                        )}
-                      </tbody>
-                    </Table>
-                  </Column>
-                </ColumnContainer>
+                
+                {activeRoleTab === 'admin' && (
+                  <UserCardContainer>
+                    {filteredAdmins.map(user => (
+                      <UserCard key={user.id}>
+                        <UserCardBadge role={user.role}>
+                          {user.role.replace('ROLE_', '')}
+                        </UserCardBadge>
+                        <UserCardAvatar role={user.role}>
+                          {user.username ? user.username.charAt(0).toUpperCase() : 'A'}
+                        </UserCardAvatar>
+                        <UserCardInfo>
+                          <UserCardName>
+                            {`${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User'}
+                          </UserCardName>
+                          <UserCardUsername>@{user.username}</UserCardUsername>
+                          <UserCardEmail>{user.email}</UserCardEmail>
+                        </UserCardInfo>
+                        <UserCardActions>
+                          <ActionButton title="Edit" onClick={() => openEditModal(user)}>
+                            <EditIcon />
+                          </ActionButton>
+                          <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
+                            <DeleteIcon />
+                          </ActionButton>
+                        </UserCardActions>
+                      </UserCard>
+                    ))}
+                    {filteredAdmins.length === 0 && (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#666' }}>
+                        No admin users found
+                      </div>
+                    )}
+                  </UserCardContainer>
+                )}
+                
+                {activeRoleTab === 'lecturer' && (
+                  <UserCardContainer>
+                    {filteredLecturers.map(user => (
+                      <UserCard key={user.id}>
+                        <UserCardBadge role={user.role}>
+                          {user.role.replace('ROLE_', '')}
+                        </UserCardBadge>
+                        <UserCardAvatar role={user.role}>
+                          {user.username ? user.username.charAt(0).toUpperCase() : 'L'}
+                        </UserCardAvatar>
+                        <UserCardInfo>
+                          <UserCardName>
+                            {`${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lecturer'}
+                          </UserCardName>
+                          <UserCardUsername>@{user.username}</UserCardUsername>
+                          <UserCardEmail>{user.email}</UserCardEmail>
+                        </UserCardInfo>
+                        <UserCardActions>
+                          <ActionButton title="Edit" onClick={() => openEditModal(user)}>
+                            <EditIcon />
+                          </ActionButton>
+                          <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
+                            <DeleteIcon />
+                          </ActionButton>
+                        </UserCardActions>
+                      </UserCard>
+                    ))}
+                    {filteredLecturers.length === 0 && (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#666' }}>
+                        No lecturers found
+                      </div>
+                    )}
+                  </UserCardContainer>
+                )}
+                
+                {activeRoleTab === 'student' && (
+                  <UserCardContainer>
+                    {filteredStudents.map(user => (
+                      <UserCard key={user.id}>
+                        <UserCardBadge role={user.role}>
+                          {user.role.replace('ROLE_', '')}
+                        </UserCardBadge>
+                        <UserCardAvatar role={user.role}>
+                          {user.username ? user.username.charAt(0).toUpperCase() : 'S'}
+                        </UserCardAvatar>
+                        <UserCardInfo>
+                          <UserCardName>
+                            {`${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Student'}
+                          </UserCardName>
+                          <UserCardUsername>@{user.username}</UserCardUsername>
+                          <UserCardEmail>{user.email}</UserCardEmail>
+                        </UserCardInfo>
+                        <UserCardActions>
+                          <ActionButton title="Edit" onClick={() => openEditModal(user)}>
+                            <EditIcon />
+                          </ActionButton>
+                          <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
+                            <DeleteIcon />
+                          </ActionButton>
+                        </UserCardActions>
+                      </UserCard>
+                    ))}
+                    {filteredStudents.length === 0 && (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#666' }}>
+                        No students found
+                      </div>
+                    )}
+                  </UserCardContainer>
+                )}
               </>
             )}
           </Card>
