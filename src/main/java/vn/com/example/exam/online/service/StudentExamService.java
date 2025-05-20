@@ -212,7 +212,7 @@ public class StudentExamService {
     private double calculateScore(StudentExam studentExam) {
         List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExam.getId());
 
-        long totalQuestions = submissions.size();
+        long totalQuestions = studentExam.getExam().getQuestions().size();
         long correctAnswers = submissions.stream()
                 .filter(s -> Boolean.TRUE.equals(s.getIsCorrect()))
                 .count();
@@ -221,6 +221,19 @@ public class StudentExamService {
 
         return (correctAnswers * 10.0) / totalQuestions;
     }
+
+//    private double calculateScore(StudentExam studentExam) {
+//        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExam.getId());
+//
+//        long totalQuestions = submissions.size();
+//        long correctAnswers = submissions.stream()
+//                .filter(s -> Boolean.TRUE.equals(s.getIsCorrect()))
+//                .count();
+//
+//        if (totalQuestions == 0) return 0.0;
+//
+//        return (correctAnswers * 10.0) / totalQuestions;
+//    }
 
 
     private Question getNextQuestion(Exam exam, Long currentQuestionId) {
