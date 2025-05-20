@@ -993,11 +993,16 @@ function ExamPage() {
                         cursor: isStudent && currentExam.status === 'ONGOING' ? 'pointer' : 'default',
                       }}
                       onClick={() => {
-                        // For students, clicking on an ongoing exam row would take them to the exam
-                        if (isStudent && currentExam.status === 'ONGOING') {
-                          // Remove the completion check and directly navigate to start-exam page
-                          navigate(`/start-exam/${currentExam.id}`);
-                        }
+                                                  // For students, clicking on an ongoing exam row would take them to the exam
+                          if (isStudent && currentExam.status === 'ONGOING') {
+                            // Chỉ lưu studentExamId vào localStorage - các thông tin khác sẽ do API cung cấp
+                            const studentExamId = `${user.id}-${currentExam.id}`;
+                            console.log(`Storing exam ID: ${currentExam.id} for user: ${user.id}`);
+                            localStorage.setItem('currentStudentExamId', studentExamId);
+                            
+                            // Then navigate to start-exam page
+                            navigate(`/start-exam/${currentExam.id}`);
+                          }
                       }}
                     >
                       <IndexCell>#{currentExam.id || 0}</IndexCell>

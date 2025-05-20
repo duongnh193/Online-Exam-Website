@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { useAuth } from '../hooks/useAuth';
 import studentExamService from '../services/studentExamService';
 import questionService from '../services/questionService';
+import examService from '../services/examService';
 
 // Styled Components for the new design
 const PageContainer = styled.div`
@@ -344,11 +345,12 @@ function TakeExamPage() {
   const [showResults, setShowResults] = useState(false);
   const [examResult, setExamResult] = useState(null);
   const [serverLastQuestionFlag, setServerLastQuestionFlag] = useState(false); // Add state for server's last question flag
+  const [resumingExam, setResumingExam] = useState(false);
+  const [timeExpirationChecked, setTimeExpirationChecked] = useState(false);
   
   // Get the studentExamId and first question from localStorage on mount
   useEffect(() => {
     const storedStudentExamId = localStorage.getItem('currentStudentExamId');
-    const storedExamSession = localStorage.getItem('examSession');
     
     if (storedStudentExamId) {
       console.log('Retrieved student exam ID from localStorage:', storedStudentExamId);
@@ -357,111 +359,108 @@ function TakeExamPage() {
       // Initialize serverLastQuestionFlag as false for new sessions
       setServerLastQuestionFlag(false);
       
-      // Fetch the exam information to get the total questions count
-      const fetchExamInfo = async () => {
+      // Try to resume the exam directly without status checks
+      const resumeExam = async () => {
         try {
-          const result = await studentExamService.getStudentExamResult(storedStudentExamId);
-          console.log('Exam info result:', result.data);
+          setResumingExam(true);
+          setLoading(true);
           
-          if (result && result.data && result.data.studentExam && result.data.studentExam.exam) {
-            const examData = result.data.studentExam.exam;
-            if (examData.questions && Array.isArray(examData.questions)) {
-              console.log(`Setting total questions count: ${examData.questions.length}`);
-              setTotalQuestions(examData.questions.length);
-              
-              // Also store in localStorage for persistence across page refreshes
-              localStorage.setItem(`exam_total_questions_${storedStudentExamId}`, examData.questions.length);
-            }
-          }
-        } catch (err) {
-          console.warn('Could not fetch exam info for total questions count:', err);
-          // Try to get from localStorage if previously stored
-          const storedTotalQuestions = localStorage.getItem(`exam_total_questions_${storedStudentExamId}`);
-          if (storedTotalQuestions) {
-            setTotalQuestions(parseInt(storedTotalQuestions, 10));
-          } else {
-            // If we can't get the total, try to set a reasonable default
-            setTotalQuestions(5); // Default to 5 questions if we can't get the actual count
-          }
-        }
-      };
-      
-      // Always try to fetch exam info to get accurate question count
-      fetchExamInfo();
-      
-      // Check if we have stored exam session data with the first question
-      if (storedExamSession) {
-        try {
-          const sessionData = JSON.parse(storedExamSession);
-          console.log('Retrieved exam session data:', sessionData);
+          // Extract examId from studentExamId to ensure we're using the correct format
+          const actualExamId = examId || storedStudentExamId.split('-')[1];
+          console.log('Actual exam ID for password retrieval:', actualExamId);
           
-          // If we have a question in the session data, use it as our first question
-          if (sessionData.currentQuestion) {
-            console.log('Found first question in session data:', sessionData.currentQuestion);
+          try {
+            console.log('Retrieving password from backend API...');
+            // Get password from backend
+            const password = await examService.getExamPassword(actualExamId);
+            console.log('Password retrieved successfully from backend');
             
-            const firstQuestion = {
-              id: sessionData.currentQuestion.id,
-              text: sessionData.currentQuestion.title,
-              type: sessionData.currentQuestion.type,
-              options: sessionData.currentQuestion.choices?.map(choice => {
-                // Handle different possible formats of choices
-                if (typeof choice === 'string') {
-                  return { id: choice, text: choice };
-                } else if (typeof choice === 'object') {
-                  return {
-                    id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
-                    text: choice.text || choice.content || choice.optionValue || JSON.stringify(choice)
-                  };
-                } else {
-                  return { id: String(choice), text: String(choice) };
-                }
-              }) || []
-            };
-            
-            setQuestions([firstQuestion]);
-            
-            // Also check if this is the last question
-            if (sessionData.lastQuestion === true) {
-              setServerLastQuestionFlag(true);
-            }
-            
-            setLoading(false);
-            
-            // Set initial time from session data if available
-            const examDuration = sessionData.studentExam?.time || 60;  // default 60 minutes
-            setTimeRemaining(examDuration * 60); // convert to seconds
-          } else {
-            // No current question in session data
-            // This could be a session that was resumed from an in-progress exam
-            // We need to get the next question from the backend
-            const fetchFirstQuestion = async () => {
+            if (password) {
               try {
-                // Use a dummy submission to get the next question
-                const dummyResponse = await studentExamService.submitAnswer(storedStudentExamId, 0, "");
+                console.log(`Attempting to resume exam ${examId} with retrieved password`);
+                // Call the start API with the password from backend - backend handles all state checks
+                const startResponse = await studentExamService.startExam(examId, password);
                 
-                // If we get a response with a next question
-                if (dummyResponse && dummyResponse.data) {
-                  console.log('Dummy submission response:', dummyResponse.data);
+                // Process the response data for resuming
+                if (startResponse && startResponse.data) {
+                  const responseData = startResponse.data;
+                  console.log('API response data:', responseData);
                   
-                  // Check if this is the last question
-                  setServerLastQuestionFlag(dummyResponse.data.lastQuestion === true);
+                  // Extract all needed data from the response
+                  const isLastQuestion = responseData.lastQuestion === true;
+                  setServerLastQuestionFlag(isLastQuestion);
                   
-                  if (dummyResponse.data.nextQuestion) {
-                    const nextQuestion = dummyResponse.data.nextQuestion;
-                    console.log('Retrieved next question from API:', nextQuestion);
+                  // Set total questions count if available
+                  if (responseData.studentExam?.exam?.questions?.length) {
+                    const totalQuestionsCount = responseData.studentExam.exam.questions.length;
+                    setTotalQuestions(totalQuestionsCount);
+                    console.log(`Total questions count: ${totalQuestionsCount}`);
+                  }
+                  
+                  // Set current question index if available
+                  if (responseData.studentExam?.currentQuestion !== undefined) {
+                    const currentIndex = responseData.studentExam.currentQuestion;
+                    setCurrentQuestionIndex(currentIndex);
+                    console.log(`Current question index: ${currentIndex}`);
+                  }
+                  
+                  // Set time remaining if available
+                  if (responseData.minuteRemaining !== undefined && responseData.minuteRemaining !== null) {
+                    const remainingTimeSeconds = responseData.minuteRemaining * 60;
+                    setTimeRemaining(remainingTimeSeconds);
+                    setTimeExpirationChecked(true);
+                    console.log(`Time remaining: ${responseData.minuteRemaining} minutes (${remainingTimeSeconds} seconds)`);
+                  }
+                  
+                  // Ensure we have all available questions 
+                  const allQuestions = [];
+                  
+                  // If the API response contains the exam's questions array, use it to initialize
+                  if (responseData.studentExam?.exam?.questions && Array.isArray(responseData.studentExam.exam.questions)) {
+                    console.log('All questions from API:', responseData.studentExam.exam.questions);
                     
+                    // Process and add all questions to our local state
+                    responseData.studentExam.exam.questions.forEach((q, index) => {
+                      const questionData = {
+                        id: q.id,
+                        text: q.title || q.text,
+                        type: q.type,
+                        options: q.choices?.map(choice => {
+                          if (typeof choice === 'string') {
+                            return { id: choice, text: choice };
+                          } else if (typeof choice === 'object') {
+                            return {
+                              id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
+                              text: choice.text || choice.content || choice.optionValue || String(choice)
+                            };
+                          } else {
+                            return { id: String(choice), text: String(choice) };
+                          }
+                        }) || []
+                      };
+                      allQuestions.push(questionData);
+                      console.log(`Added question ${index} with ID ${q.id} to local state`);
+                    });
+                  }
+                  
+                  // Then ensure the nextQuestion from API is properly processed
+                  if (responseData.nextQuestion) {
+                    const questionData = responseData.nextQuestion;
+                    console.log('Current question data from API:', questionData);
+                    
+                    // Map the question data to our format
                     const mappedQuestion = {
-                      id: nextQuestion.id,
-                      text: nextQuestion.title,
-                      type: nextQuestion.type,
-                      options: nextQuestion.choices?.map(choice => {
-                        // Handle different possible formats of choices
+                      id: questionData.id,
+                      text: questionData.title,
+                      type: questionData.type,
+                      options: questionData.choices?.map(choice => {
+                        // Handle different possible choice formats
                         if (typeof choice === 'string') {
                           return { id: choice, text: choice };
                         } else if (typeof choice === 'object') {
                           return {
                             id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
-                            text: choice.text || choice.content || choice.optionValue || JSON.stringify(choice)
+                            text: choice.text || choice.content || choice.optionValue || String(choice)
                           };
                         } else {
                           return { id: String(choice), text: String(choice) };
@@ -469,97 +468,108 @@ function TakeExamPage() {
                       }) || []
                     };
                     
-                    setQuestions([mappedQuestion]);
-                  } else if (dummyResponse.data.lastQuestion) {
-                    // No next question, but it is the last question (we've already answered all questions)
-                    setError('You have already answered all questions. Please submit your exam.');
-                  }
-                  
-                  // Set default exam duration (60 minutes) if not available
-                  setTimeRemaining(60 * 60);
-                } else {
-                  setError('Could not retrieve exam question. Please try starting the exam again.');
-                }
-              } catch (err) {
-                console.error('Error fetching first question:', err);
-                setError('Error loading exam questions. Please try starting the exam again.');
-              } finally {
-                setLoading(false);
-              }
-            };
-            
-            fetchFirstQuestion();
-          }
-        } catch (err) {
-          console.error('Error parsing stored exam session:', err);
-          setError('Error loading exam session');
-          setLoading(false);
-        }
-      } else {
-        // We have a student exam ID but no session data
-        // This could be a resumed session, so let's try to get the current question
-        const fetchExamSession = async () => {
-          try {
-            // Try to get the current question by submitting a dummy answer
-            const dummyResponse = await studentExamService.submitAnswer(storedStudentExamId, 0, "");
-            
-            if (dummyResponse && dummyResponse.data) {
-              console.log('Resumed exam session response:', dummyResponse.data);
-              
-              // Check if this is the last question
-              setServerLastQuestionFlag(dummyResponse.data.lastQuestion === true);
-              
-              if (dummyResponse.data.nextQuestion) {
-                const nextQuestion = dummyResponse.data.nextQuestion;
-                
-                const mappedQuestion = {
-                  id: nextQuestion.id,
-                  text: nextQuestion.title,
-                  type: nextQuestion.type,
-                  options: nextQuestion.choices?.map(choice => {
-                    if (typeof choice === 'string') {
-                      return { id: choice, text: choice };
-                    } else if (typeof choice === 'object') {
-                      return {
-                        id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
-                        text: choice.text || choice.content || choice.optionValue || JSON.stringify(choice)
-                      };
+                    console.log('Processed question:', mappedQuestion);
+                    
+                    // Kiểm tra xem nextQuestion đã có trong allQuestions chưa
+                    // Nếu chưa có, thêm vào allQuestions
+                    const existingIndex = allQuestions.findIndex(q => q.id === mappedQuestion.id);
+                    if (existingIndex === -1) {
+                      allQuestions.push(mappedQuestion);
+                      console.log(`Added nextQuestion with ID ${mappedQuestion.id} to questions array`);
                     } else {
-                      return { id: String(choice), text: String(choice) };
+                      // Nếu đã có, cập nhật thông tin mới nhất từ API
+                      allQuestions[existingIndex] = mappedQuestion;
+                      console.log(`Updated existing question with ID ${mappedQuestion.id}`);
                     }
-                  }) || []
-                };
-                
-                setQuestions([mappedQuestion]);
-                setTimeRemaining(60 * 60); // Default to 60 minutes
-              } else if (dummyResponse.data.lastQuestion) {
-                // No next question, but it is the last question (we've already answered all questions)
-                setError('You have already answered all questions. Please submit your exam.');
+                    
+                    // Sử dụng tất cả các câu hỏi đã thu thập
+                    setQuestions(allQuestions);
+                    
+                    // Đảm bảo currentQuestionIndex được cập nhật để khớp với câu hỏi hiện tại từ API
+                    if (responseData.studentExam?.currentQuestion !== undefined) {
+                      // Nếu API trả về một currentQuestion cụ thể, nhưng câu hỏi hiện tại
+                      // không khớp với những gì chúng ta mong đợi, điều chỉnh lại
+                      const expectedCurrentQID = responseData.studentExam?.exam?.questions?.[responseData.studentExam.currentQuestion]?.id;
+                      const actualCurrentQID = responseData.nextQuestion?.id;
+                      
+                      if (expectedCurrentQID && actualCurrentQID && expectedCurrentQID !== actualCurrentQID) {
+                        console.warn(`Current question index mismatch detected!`);
+                        console.warn(`Expected question ID at index ${responseData.studentExam.currentQuestion}: ${expectedCurrentQID}`);
+                        console.warn(`Actual next question ID from API: ${actualCurrentQID}`);
+                        
+                        // Tìm index thực tế của câu hỏi trong mảng questions của chúng ta
+                        const actualIndex = allQuestions.findIndex(q => q.id === actualCurrentQID);
+                        if (actualIndex !== -1) {
+                          console.log(`Adjusting currentQuestionIndex from ${responseData.studentExam.currentQuestion} to ${actualIndex}`);
+                          setCurrentQuestionIndex(actualIndex);
+                        }
+                      }
+                    }
+                    
+                    setLoading(false);
+                  } else if (isLastQuestion) {
+                    // If there's no next question and it's the last question,
+                    // show a message to submit the exam
+                    setError('You have reached the last question. Please submit your exam.');
+                    setLoading(false);
+                  } else {
+                    setError('Could not retrieve the current question. Please try starting the exam again.');
+                    setLoading(false);
+                  }
+                } else {
+                  console.error('No data in API response');
+                  setError('Could not retrieve exam data. Please try again.');
+                  setLoading(false);
+                }
+              } catch (startErr) {
+                console.error('Error using retrieved password:', startErr);
+                handleResumeError(startErr);
               }
-
-              setLoading(false);
             } else {
-              setError('Could not retrieve exam question. Please try starting the exam again.');
+              console.warn('No password retrieved from backend');
+              setError('Could not retrieve exam password. Please start the exam again.');
               setLoading(false);
             }
-          } catch (err) {
-            console.error('Error retrieving exam session:', err);
-            setError('Error loading exam session. Please try starting the exam again.');
+          } catch (passwordErr) {
+            console.error('Error retrieving password from backend:', passwordErr);
+            setError('Could not retrieve exam password. Please start the exam again.');
             setLoading(false);
           }
-        };
+        } catch (err) {
+          console.error('Error in resume exam flow:', err);
+          handleResumeError(err);
+        } finally {
+          setResumingExam(false);
+        }
+      };
+      
+      // Helper function to handle any errors in the resume process
+      const handleResumeError = (err) => {
+        console.error('Resume error details:', err.response?.data || err.message);
         
-        fetchExamSession();
-      }
+        // Handle specific error types
+        if (err.completed) {
+          setError('This exam has already been completed or the time has expired.');
+        } else if (err.response?.data?.message) {
+          setError(err.response.data.message);
+        } else {
+          setError('Failed to resume exam. Please try starting again.');
+        }
+        
+        setLoading(false);
+      };
+      
+      // Start the resume process
+      resumeExam();
     } else {
       setError('No active exam session found. Please start the exam again.');
       setLoading(false);
     }
-  }, []);
+  }, [examId]);
   
-  // Timer effect
+  // Timer effect for countdown and auto-submit
   useEffect(() => {
-    if (timeRemaining === null || loading) return;
+    if (timeRemaining === null || loading || timeRemaining <= 0) return;
     
     const timer = setInterval(() => {
       setTimeRemaining(prevTime => {
@@ -569,12 +579,19 @@ function TakeExamPage() {
           handleSubmitExam();
           return 0;
         }
+        
+        // Save current time remaining every 30 seconds
+        if (prevTime % 30 === 0 && studentExamId) {
+          localStorage.setItem(`exam_time_remaining_${studentExamId}`, prevTime.toString());
+          localStorage.setItem(`exam_time_last_updated_${studentExamId}`, Date.now().toString());
+        }
+        
         return prevTime - 1;
       });
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [timeRemaining, loading]);
+  }, [timeRemaining, loading, studentExamId]);
   
   const formatTime = (seconds) => {
     if (!seconds && seconds !== 0) return '--:--Mins';
@@ -592,23 +609,57 @@ function TakeExamPage() {
 
   // Handle single choice selection
   const handleSingleChoiceSelect = (questionId, optionId) => {
+    // Kiểm tra questionId và optionId tồn tại
+    if (!questionId || !optionId) return;
+    
+    // Tìm câu hỏi hiện tại
+    const currentQuestion = questions.find(q => q.id === questionId);
+    if (!currentQuestion) return;
+    
+    // Tìm lựa chọn được chọn để lấy nội dung thực tế
+    const selectedOption = currentQuestion.options?.find(opt => opt.id === optionId);
+    if (!selectedOption) return;
+    
+    // Lưu cả ID và text của lựa chọn
     setAnswers({
       ...answers,
-      [questionId]: optionId
+      [questionId]: {
+        id: optionId,
+        text: selectedOption.text || ''
+      }
     });
   };
   
   // Handle multiple choice selection
   const handleMultipleChoiceSelect = (questionId, optionId) => {
+    // Kiểm tra questionId và optionId tồn tại
+    if (!questionId || !optionId) return;
+    
+    // Tìm câu hỏi hiện tại
+    const currentQuestion = questions.find(q => q.id === questionId);
+    if (!currentQuestion) return;
+    
     const currentSelections = multipleChoiceAnswers[questionId] || [];
     let updatedSelections;
     
-    if (currentSelections.includes(optionId)) {
-      // Remove the option if already selected
-      updatedSelections = currentSelections.filter(id => id !== optionId);
+    // Kiểm tra xem optionId đã được chọn chưa
+    if (currentSelections.some(item => item.id === optionId)) {
+      // Xóa lựa chọn nếu đã được chọn
+      updatedSelections = currentSelections.filter(item => item.id !== optionId);
     } else {
-      // Add the option if not already selected
-      updatedSelections = [...currentSelections, optionId];
+      // Thêm lựa chọn nếu chưa được chọn
+      // Tìm lựa chọn để lấy nội dung text
+      const selectedOption = currentQuestion.options?.find(opt => opt.id === optionId);
+      if (!selectedOption) return;
+      
+      // Thêm cả ID và text
+      updatedSelections = [
+        ...currentSelections,
+        {
+          id: optionId,
+          text: selectedOption.text || ''
+        }
+      ];
     }
     
     setMultipleChoiceAnswers({
@@ -625,6 +676,29 @@ function TakeExamPage() {
     });
   };
   
+  // Submit single choice answers
+  const submitSingleChoiceAnswer = (questionId) => {
+    const selectedOption = answers[questionId];
+    if (!selectedOption) {
+      alert('Please select an answer');
+      return;
+    }
+    
+    console.log(`Submitting single choice answer - Question ${questionId}, Selected option:`, selectedOption);
+    
+    // Gửi nội dung câu trả lời thực tế thay vì chỉ ID
+    const answerContent = selectedOption.text;
+    
+    // For the last question, we need to save the answer first, then submit the exam
+    if (serverLastQuestionFlag) {
+      // First save the answer to the server
+      submitAnswer(questionId, answerContent, true);
+    } else {
+      // Not the last question - submit the answer and proceed to next
+      submitAnswer(questionId, answerContent);
+    }
+  };
+  
   // Submit multiple choice answers
   const submitMultipleChoiceAnswer = (questionId) => {
     const selections = multipleChoiceAnswers[questionId] || [];
@@ -633,9 +707,21 @@ function TakeExamPage() {
       return;
     }
     
-    // Join the selected option IDs with commas for the API
-    const answer = selections.join(',');
-    submitAnswer(questionId, answer);
+    // Lấy danh sách nội dung câu trả lời
+    const answerContents = selections.map(option => option.text);
+    
+    // Join các nội dung câu trả lời bằng dấu phẩy
+    const answer = answerContents.join(', ');
+    console.log(`Submitting multiple choice answer - Question ${questionId}, Selected options:`, answer);
+    
+    // For the last question, we need to save the answer first, then submit the exam
+    if (serverLastQuestionFlag) {
+      // First save the answer to the server
+      submitAnswer(questionId, answer, true);
+    } else {
+      // Not the last question - submit the answer and proceed to next
+      submitAnswer(questionId, answer);
+    }
   };
   
   // Submit essay answer
@@ -646,89 +732,96 @@ function TakeExamPage() {
       return;
     }
     
-    submitAnswer(questionId, text);
+    console.log(`Submitting essay answer - Question ${questionId}, Text length: ${text.length} chars`);
+    
+    // For the last question, we need to save the answer first, then submit the exam
+    if (serverLastQuestionFlag) {
+      // First save the answer to the server
+      submitAnswer(questionId, text, true);
+    } else {
+      // Not the last question - submit the answer and proceed to next
+      submitAnswer(questionId, text);
+    }
   };
   
-  // Submit answer to the API
-  const submitAnswer = async (questionId, answer) => {
+  // Submit answer to the API and move to next question if available
+  const submitAnswer = async (questionId, answer, isLastQuestion = false) => {
     if (loading) return; // Prevent multiple submissions
+    
+    // Check if we're in the process of submitting the entire exam
+    // If yes, don't submit this individual answer to prevent duplication
+    if (localStorage.getItem(`exam_submitting_${studentExamId}`) === 'true') {
+      console.log('Exam is being submitted, skipping individual answer submission');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      console.log(`Submitting answer for question ${questionId}, answer: ${answer}, exam ${studentExamId}`);
+      // Log rõ ràng các thông tin
+      console.log(`--- SUBMITTING ANSWER DETAILS ---`);
+      console.log(`Question ID: ${questionId}`);
+      console.log(`Answer value: ${answer}`);
+      console.log(`Student Exam ID: ${studentExamId}`);
+      console.log(`Is Last Question: ${isLastQuestion}`);
+      
       const response = await studentExamService.submitAnswer(studentExamId, questionId, answer);
       console.log('Answer submitted successfully', response.data);
       
       // The response contains the next question or indicates it's the last one
       if (response && response.data) {
         const responseData = response.data;
-        console.log('SubmitAnswer response:', responseData);
         
-        // Explicitly log the lastQuestion flag for debugging
-        console.log('Server response lastQuestion flag:', responseData.lastQuestion);
+        // Get lastQuestion flag directly from API response - this is the ONLY source of truth
+        const isLastQuestion = responseData.lastQuestion === true;
+        console.log('Server response lastQuestion flag:', isLastQuestion);
         
-        // Update our last question flag from server response
-        if (responseData.lastQuestion === true) {
-          console.log('Server indicates this is the last question');
-          setServerLastQuestionFlag(true);
-        } else {
-          console.log('Server indicates this is NOT the last question');
-          setServerLastQuestionFlag(false);
+        // Update our flag based ONLY on server response
+        setServerLastQuestionFlag(isLastQuestion);
+        
+        // Set total questions if available from server response
+        if (responseData.studentExam?.exam?.questions?.length) {
+          const count = responseData.studentExam.exam.questions.length;
+          console.log(`Setting total questions count: ${count}`);
+          setTotalQuestions(count);
         }
         
-        // Try to get total questions count if not already set
-        if (totalQuestions === 0 && responseData.studentExam && 
-            responseData.studentExam.exam && responseData.studentExam.exam.questions) {
-          const questionsArray = responseData.studentExam.exam.questions;
-          if (Array.isArray(questionsArray)) {
-            const count = questionsArray.length;
-            console.log(`Setting total questions count: ${count}`);
-            setTotalQuestions(count);
-            
-            // Also store in localStorage for persistence
-            localStorage.setItem(`exam_total_questions_${studentExamId}`, count);
-          }
-        }
-        
-        // If there's a next question in the response, add it to our list and navigate to it
-        if (responseData.nextQuestion && responseData.nextQuestion.id) {
-          // Check if we already have this question to prevent duplicates
-          const questionExists = questions.some(q => q.id === responseData.nextQuestion.id);
-          
-          if (!questionExists) {
-            const nextQuestion = {
-              id: responseData.nextQuestion.id,
-              text: responseData.nextQuestion.title,
-              type: responseData.nextQuestion.type,
-              options: responseData.nextQuestion.choices?.map(choice => {
-                // Handle different possible formats of choices
-                if (typeof choice === 'string') {
-                  return { id: choice, text: choice };
-                } else if (typeof choice === 'object') {
-                  return {
-                    id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
-                    text: choice.text || choice.content || choice.optionValue || JSON.stringify(choice)
-                  };
-                } else {
-                  return { id: String(choice), text: String(choice) };
-                }
-              }) || []
-            };
-            
-            // Add the next question to our list
-            setQuestions(prev => [...prev, nextQuestion]);
-            
-            // Automatically advance to the next question
-            setCurrentQuestionIndex(currentQuestionIndex + 1);
+        // Handle no next question case first
+        if (!responseData.nextQuestion || !responseData.nextQuestion.id) {
+          if (isLastQuestion) {
+            console.log('No next question, and server confirms this is the last question');
           } else {
-            console.warn('Question already exists, not adding duplicate:', responseData.nextQuestion.id);
+            console.warn('No next question but lastQuestion is false - unexpected state');
           }
-        } else if (responseData.lastQuestion) {
-          // No next question but lastQuestion is true - this means we're on the last question
-          console.log('No next question, and server confirms this is the last question');
-        } else {
-          console.warn('No next question and lastQuestion is not true - unexpected state');
+          // We need to stop processing here since there's no next question to load
+          setLoading(false);
+          return;
         }
+        
+        // Process next question
+        const nextQuestion = {
+          id: responseData.nextQuestion.id,
+          text: responseData.nextQuestion.title,
+          type: responseData.nextQuestion.type,
+          options: responseData.nextQuestion.choices?.map(choice => {
+            if (typeof choice === 'string') {
+              return { id: choice, text: choice };
+            } else if (typeof choice === 'object') {
+              return {
+                id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
+                text: choice.text || choice.content || choice.optionValue || JSON.stringify(choice)
+              };
+            } else {
+              return { id: String(choice), text: String(choice) };
+            }
+          }) || []
+        };
+        
+        // Add the next question to our list 
+        setQuestions(prev => [...prev, nextQuestion]);
+        
+        // Automatically advance to the next question
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
       }
     } catch (error) {
       console.error('Error submitting answer:', error);
@@ -747,19 +840,45 @@ function TakeExamPage() {
     if (window.confirm('Are you sure you want to submit the quiz? You cannot change your answers after submission.')) {
       try {
         setLoading(true);
+        
+        // Add a flag to track if we're about to submit the exam
+        // This will be used to prevent duplicate saving of the last answer
+        localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
+        
+        console.log('Submitting entire exam to server...', 'Current student exam ID:', studentExamId);
         // Submit the exam and get the result
         const response = await studentExamService.submitExam(studentExamId);
         console.log('Exam submitted successfully:', response.data);
         
+        // Debug log - Chi tiết về data trả về
+        console.log('Raw response data:', JSON.stringify(response.data, null, 2));
+        
+        // Kiểm tra cấu trúc response
+        if (response.data.answers) {
+          console.log('Answer details:', response.data.answers);
+        }
+        
+        if (response.data.questions) {
+          console.log('Question details:', response.data.questions);
+        }
+        
+        if (response.data.correctAnswers !== undefined) {
+          console.log('Correct answers count:', response.data.correctAnswers);
+          console.log('Wrong answers count:', response.data.wrongAnswers);
+          console.log('Total questions:', response.data.totalQuestions);
+        }
+        
         if (response.data) {
           // Store the exam result
           const result = {
-            correctAnswers: response.data.correctAnswers,
-            wrongAnswers: response.data.wrongAnswers,
-            totalQuestions: response.data.totalQuestions,
-            score: response.data.score,
-            duration: response.data.duration
+            correctAnswers: response.data.correctAnswers || 0,
+            wrongAnswers: response.data.wrongAnswers || 0,
+            totalQuestions: response.data.totalQuestions || 0,
+            score: response.data.score || 0,
+            duration: response.data.duration || 0
           };
+          
+          console.log('Final exam result being set:', result);
           
           setExamResult(result);
           setShowResults(true);
@@ -767,12 +886,30 @@ function TakeExamPage() {
           // Clear the current exam session from localStorage
           localStorage.removeItem('currentStudentExamId');
           localStorage.removeItem('examSession');
+          localStorage.removeItem(`exam_submitting_${studentExamId}`);
         } else {
           setError('Received invalid response from server');
         }
       } catch (err) {
         console.error('Error submitting exam:', err);
-        setError('Failed to submit exam. Please try again.');
+        
+        // Remove the submitting flag when there's an error
+        localStorage.removeItem(`exam_submitting_${studentExamId}`);
+        
+        // Chi tiết lỗi
+        if (err.response) {
+          console.error('Error response:', err.response.data);
+          console.error('Error status:', err.response.status);
+          if (err.response.data && err.response.data.message) {
+            setError(`Failed to submit exam: ${err.response.data.message}`);
+          } else {
+            setError('Failed to submit exam. Please try again.');
+          }
+        } else if (err.message) {
+          setError(`Failed to submit exam: ${err.message}`);
+        } else {
+          setError('Failed to submit exam. Please try again.');
+        }
       } finally {
         setLoading(false);
       }
@@ -874,6 +1011,38 @@ function TakeExamPage() {
           </div>
         </ResultDetails>
         
+        {examResult.answerResults && examResult.answerResults.length > 0 && (
+          <div style={{ marginTop: '2rem', textAlign: 'left' }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Answer Details</h3>
+            {examResult.answerResults.map((result, index) => (
+              <div key={index} style={{ 
+                margin: '1rem 0', 
+                padding: '1rem', 
+                borderRadius: '8px',
+                backgroundColor: result.correct ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                border: `1px solid ${result.correct ? '#4CAF50' : '#F44336'}`
+              }}>
+                <div style={{ fontWeight: '500', marginBottom: '0.5rem' }}>
+                  Question {index + 1}: {result.questionText || `Question ${result.questionId}`}
+                </div>
+                <div>
+                  <span style={{ fontWeight: '500' }}>Your answer:</span> {result.studentAnswer || 'No answer'}
+                </div>
+                <div>
+                  <span style={{ fontWeight: '500' }}>Correct answer:</span> {result.correctAnswer || 'Not available'}
+                </div>
+                <div style={{ 
+                  marginTop: '0.5rem',
+                  color: result.correct ? '#4CAF50' : '#F44336',
+                  fontWeight: '500'
+                }}>
+                  {result.correct ? '✓ Correct' : '✗ Wrong'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
         <BackButton onClick={() => navigate('/exams')}>
           Back to Exams
         </BackButton>
@@ -921,9 +1090,15 @@ function TakeExamPage() {
     );
   }
   
-  const currentQuestion = questions[currentQuestionIndex];
-  // Define isLastQuestion based on only the server flag
+  const currentQuestion = questions.length > 0 
+    ? (questions[currentQuestionIndex] || questions[0]) 
+    : null;
+  
+  // SIMPLIFIED: Just use the server flag for last question detection
+  // Based on backend logic, the server will set lastQuestion=true when reaching the last question
   const isLastQuestion = serverLastQuestionFlag;
+  
+  // console.log('Current question index:', currentQuestionIndex, 'Total questions:', totalQuestions, 'Is last question (from server):', isLastQuestion);
   const timeRunningOut = timeRemaining !== null && timeRemaining < 300; // Less than 5 minutes
   
   // Render different question types
@@ -940,9 +1115,27 @@ function TakeExamPage() {
               placeholder="Write your answer here..."
             />
             <NavigationBar>
-              <SubmitButton onClick={() => submitEssayAnswer(currentQuestion.id)}>
-                {serverLastQuestionFlag ? 'Submit' : 'Next'}
-              </SubmitButton>
+              {serverLastQuestionFlag ? (
+                <>
+                  <div style={{ 
+                    marginRight: 'auto', 
+                    backgroundColor: '#f0f8ff', 
+                    padding: '10px 15px',
+                    borderRadius: '8px',
+                    color: '#4b6dcc',
+                    fontWeight: '500'
+                  }}>
+                    🎉 You've completed the exam! Please click Submit to finish.
+                  </div>
+                  <SubmitButton onClick={handleSubmitExam}>
+                    Submit
+                  </SubmitButton>
+                </>
+              ) : (
+                <SubmitButton onClick={() => submitEssayAnswer(currentQuestion.id)}>
+                  Next
+                </SubmitButton>
+              )}
             </NavigationBar>
           </div>
         );
@@ -951,15 +1144,15 @@ function TakeExamPage() {
         return (
           <>
             <AnswerOptions>
-              {currentQuestion.options.map(option => (
+              {(currentQuestion.options || []).map(option => (
                 <AnswerOption 
-                  key={option.id}
-                  selected={(multipleChoiceAnswers[currentQuestion.id] || []).includes(option.id)}
+                  key={option.id || 'unknown'}
+                  selected={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
                 >
                   <CheckboxInput 
                     type="checkbox"
-                    name={`question-${currentQuestion.id}-option-${option.id}`}
-                    checked={(multipleChoiceAnswers[currentQuestion.id] || []).includes(option.id)}
+                    name={`question-${currentQuestion.id}-option-${option.id || 'unknown'}`}
+                    checked={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
                     onChange={() => handleMultipleChoiceSelect(currentQuestion.id, option.id)}
                   />
                   <OptionText>
@@ -971,9 +1164,27 @@ function TakeExamPage() {
               ))}
             </AnswerOptions>
             <NavigationBar>
-              <SubmitButton onClick={() => submitMultipleChoiceAnswer(currentQuestion.id)}>
-                {serverLastQuestionFlag ? 'Submit' : 'Next'}
-              </SubmitButton>
+              {serverLastQuestionFlag ? (
+                <>
+                  <div style={{ 
+                    marginRight: 'auto', 
+                    backgroundColor: '#f0f8ff', 
+                    padding: '10px 15px',
+                    borderRadius: '8px',
+                    color: '#4b6dcc',
+                    fontWeight: '500'
+                  }}>
+                    🎉 You've completed the exam! Please click Submit to finish.
+                  </div>
+                  <SubmitButton onClick={handleSubmitExam}>
+                    Submit
+                  </SubmitButton>
+                </>
+              ) : (
+                <SubmitButton onClick={() => submitMultipleChoiceAnswer(currentQuestion.id)}>
+                  Next
+                </SubmitButton>
+              )}
             </NavigationBar>
           </>
         );
@@ -983,16 +1194,16 @@ function TakeExamPage() {
         return (
           <>
             <AnswerOptions>
-              {currentQuestion.options.map(option => (
+              {(currentQuestion.options || []).map(option => (
                 <AnswerOption 
-                  key={option.id}
-                  selected={answers[currentQuestion.id] === option.id}
+                  key={option.id || 'unknown'}
+                  selected={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
                   onClick={() => handleSingleChoiceSelect(currentQuestion.id, option.id)}
                 >
                   <RadioInput 
                     type="radio"
                     name={`question-${currentQuestion.id}`}
-                    checked={answers[currentQuestion.id] === option.id}
+                    checked={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
                     onChange={() => {}}
                   />
                   <OptionText>
@@ -1004,24 +1215,31 @@ function TakeExamPage() {
               ))}
             </AnswerOptions>
             <NavigationBar>
-              <SubmitButton onClick={() => submitSingleChoiceAnswer(currentQuestion.id)}>
-                {serverLastQuestionFlag ? 'Submit' : 'Next'}
-              </SubmitButton>
+              {serverLastQuestionFlag ? (
+                <>
+                  <div style={{ 
+                    marginRight: 'auto', 
+                    backgroundColor: '#f0f8ff', 
+                    padding: '10px 15px',
+                    borderRadius: '8px',
+                    color: '#4b6dcc',
+                    fontWeight: '500'
+                  }}>
+                    🎉 You've completed the exam! Please click Submit to finish.
+                  </div>
+                  <SubmitButton onClick={handleSubmitExam}>
+                    Submit
+                  </SubmitButton>
+                </>
+              ) : (
+                <SubmitButton onClick={() => submitSingleChoiceAnswer(currentQuestion.id)}>
+                  Next
+                </SubmitButton>
+              )}
             </NavigationBar>
           </>
         );
     }
-  };
-  
-  // Submit single choice answers - modified to handle last question correctly
-  const submitSingleChoiceAnswer = (questionId) => {
-    const selectedOption = answers[questionId];
-    if (!selectedOption) {
-      alert('Please select an answer');
-      return;
-    }
-    
-    submitAnswer(questionId, selectedOption);
   };
   
   return (
@@ -1051,30 +1269,41 @@ function TakeExamPage() {
           </TimerDisplay>
         </QuizHeader>
         
-        <QuizContent>
-          <QuestionInfo>
-            Question {currentQuestionIndex + 1}/{totalQuestions > 0 ? totalQuestions : "5"}
-          </QuestionInfo>
-          
-          <Instructions>
-            Answer the question below
-          </Instructions>
-          
-          <QuestionContent>
-            <QuestionImage>
-              {/* This is a placeholder - in a real app, you'd use the question's actual image */}
-              <img src="https://placehold.co/220x280/e74c3c/ffffff" alt="Quiz question illustration" />
-            </QuestionImage>
+        {/* Kiểm tra currentQuestion tồn tại trước khi cố render nội dung */}
+        {currentQuestion ? (
+          <QuizContent>
+            <QuestionInfo>
+              {serverLastQuestionFlag 
+                ? `Question ${currentQuestionIndex + 1} (Last question)` 
+                : `Question ${currentQuestionIndex + 1}`}
+            </QuestionInfo>
             
-            <div>
-              <QuestionText>
-                {currentQuestion.text}
-              </QuestionText>
+            <Instructions>
+              Answer the question below
+            </Instructions>
+            
+            <QuestionContent>
+              <QuestionImage>
+                {/* This is a placeholder - in a real app, you'd use the question's actual image */}
+                <img src="https://placehold.co/220x280/e74c3c/ffffff" alt="Quiz question illustration" />
+              </QuestionImage>
               
-              {renderQuestionInput()}
+              <div>
+                <QuestionText>
+                  {currentQuestion.text || "Loading question..."}
+                </QuestionText>
+                
+                {renderQuestionInput()}
+              </div>
+            </QuestionContent>
+          </QuizContent>
+        ) : (
+          <QuizContent>
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <p>Loading question data... If this takes too long, please refresh the page.</p>
             </div>
-          </QuestionContent>
-        </QuizContent>
+          </QuizContent>
+        )}
       </MainContent>
     </PageContainer>
   );

@@ -93,80 +93,14 @@ function StartExamPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Try to check if this exam was already completed by the student
-  const checkIfCompleted = async () => {
-    try {
-      if (!user) return false;
-      
-      // Get the current student's ID from the user object
-      const studentId = user.id || user.userId;
-      console.log('Current user ID:', studentId);
-      
-      if (studentId) {
-        // Use the new checkExamInProgress method
-        const examStatus = await studentExamService.checkExamInProgress(studentId, examId);
-        console.log('Exam status check result:', examStatus);
-        
-        // Handle completed exams
-        if (examStatus.completed) {
-          setError('You have already completed this exam and cannot retake it.');
-          return true;
-        }
-        
-        // Handle in-progress exams
-        if (examStatus.inProgress) {
-          const continueExam = window.confirm(
-            'You have an in-progress exam session. Do you want to continue where you left off?'
-          );
-          
-          if (continueExam) {
-            // Store the exam session ID and navigate directly to the exam page
-            localStorage.setItem('currentStudentExamId', examStatus.examSessionId);
-            
-            // Create a minimal exam session object
-            localStorage.setItem('examSession', JSON.stringify({
-              studentExamId: examStatus.examSessionId,
-              examId: examId
-            }));
-            
-            // Navigate to the exam questions page
-            navigate(`/take-exam/${examId}/questions`);
-            return true;
-          }
-          // If user chooses not to continue, we'll let them enter the password again
-        }
-        
-        // If we get here and there was an error but not a "not found" error,
-        // we should handle it quietly - the exam is probably not started yet
-        if (examStatus.error && !examStatus.notFound) {
-          console.warn('Non-fatal error checking exam status:', examStatus.errorMessage);
-          // Don't show error to the user - just let them proceed to enter the password
-        }
-      }
-      
-      return false;
-    } catch (err) {
-      console.error('Error checking exam status:', err);
-      // Don't show errors to the user, just let them try to start the exam
-      return false;
-    }
-  };
-  
   useEffect(() => {
-    // Validate that we have an exam ID and check if already completed
+    // Validate that we have an exam ID
     if (!examId) {
       setError('Exam ID is missing');
       return;
     }
-
-    // Check if exam is already completed when component mounts
-    const checkStatus = async () => {
-      await checkIfCompleted();
-    };
-    
-    checkStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, user]);
+  }, [examId]);
   
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
@@ -185,40 +119,7 @@ function StartExamPage() {
     setError('');
     
     try {
-      // First check if the exam is already in progress
-      const userId = user.id || user.userId;
-      if (userId) {
-        // Use the improved checkExamInProgress method
-        const examStatus = await studentExamService.checkExamInProgress(userId, examId);
-        
-        if (examStatus.completed) {
-          setError('You have already completed this exam and cannot retake it.');
-          setLoading(false);
-          return;
-        }
-        
-        if (examStatus.inProgress) {
-          const continueExam = window.confirm(
-            'You have an in-progress exam session. Do you want to continue where you left off?'
-          );
-          
-          if (continueExam) {
-            // Store the exam session ID and navigate directly to the exam page
-            localStorage.setItem('currentStudentExamId', examStatus.examSessionId);
-            
-            // Navigate to the exam questions page
-            navigate(`/take-exam/${examId}/questions`);
-            return;
-          }
-          // If user chooses not to continue, let them enter the password again
-          // but warn that continuing will override their previous session
-          setError('Warning: Starting a new session will override your previous progress.');
-          setLoading(false);
-          return;
-        }
-      }
-      
-      // Call the student exam API to start the exam with password
+      // Trực tiếp gọi API start exam với password - để backend xử lý kiểm tra trạng thái
       const response = await studentExamService.startExam(examId, password);
       
       console.log('Start exam response:', response.data);
@@ -230,20 +131,8 @@ function StartExamPage() {
         if (studentExamId) {
           console.log('Found student exam ID:', studentExamId);
           
-          // Extract the first question properly
-          if (response.data.nextQuestion) {
-            console.log('First question found:', response.data.nextQuestion);
-          } else {
-            console.warn('No first question in the response');
-          }
-          
-          // Store minimal necessary data in localStorage
+          // Chỉ lưu studentExamId vào localStorage - API sẽ cung cấp tất cả thông tin khác khi cần
           localStorage.setItem('currentStudentExamId', studentExamId);
-          localStorage.setItem('examSession', JSON.stringify({
-            studentExamId: studentExamId,
-            currentQuestion: response.data.nextQuestion,
-            lastQuestion: response.data.lastQuestion === true
-          }));
           
           // Navigate to the exam questions page
           navigate(`/take-exam/${examId}/questions`);
@@ -314,7 +203,7 @@ function StartExamPage() {
           />
           
           <LoginButton type="submit" disabled={loading}>
-            {loading ? 'Verifying...' : 'Login'}
+            {loading ? 'Verifying...' : 'Start Exam'}
           </LoginButton>
         </form>
         

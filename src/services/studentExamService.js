@@ -30,43 +30,92 @@ class StudentExamService {
 
     const headers = authHeader();
     
-    // Special case for checking if an exam exists without starting it
-    // When used with checkExamInProgress, this param signals we just want to check if already started
-    const isCheckOnly = password === 'checkonly';
+    // For debugging
+    console.log(`startExam called with examId=${examId}, password=${password === 'checkonly' ? 'checkonly' : 'provided'}`);
     
-    // If checking only, use a password that will definitely fail but allow detecting "already started" errors
-    const url = `${API_URL}/start?examId=${examId}&password=${encodeURIComponent(isCheckOnly ? 'status_check_only' : password)}`;
+    // Trực tiếp gửi mật khẩu đến API, đã loại bỏ phần status_check_only
+    const url = `${API_URL}/start?examId=${examId}&password=${encodeURIComponent(password)}`;
     
-    console.log(`Attempting to ${isCheckOnly ? 'check' : 'start'} exam ${examId}`);
+    console.log(`Attempting to start exam ${examId}`);
     logApiCall('POST', url, headers);
     
     return axios.post(url, {}, {
       headers,
-      timeout: 10000
+      timeout: 15000  // Increased timeout to allow more time for server processing
     })
     .then(response => {
-      // If this was just a check and we get here, the exam doesn't exist yet
-      if (isCheckOnly) {
-        console.log('Exam status check: exam has not been started yet');
-        return { alreadyStarted: false };
-      }
-      
       console.log('Exam started successfully:', response.status);
       console.log('Response data structure:', JSON.stringify(response.data, null, 2));
+      
+      // Extracting time remaining from response
+      let timeRemainingMinutes = null;
+      if (response.data && response.data.minuteRemaining) {
+        timeRemainingMinutes = response.data.minuteRemaining;
+        console.log(`Time remaining from server: ${timeRemainingMinutes} minutes`);
+      }
       
       // Log the studentExam ID directly for debugging
       if (response.data && response.data.studentExam && response.data.studentExam.id) {
         console.log('Student Exam ID:', response.data.studentExam.id);
         console.log('First question:', response.data.nextQuestion);
         console.log('Is last question:', response.data.lastQuestion);
+        console.log('Current question index:', response.data.studentExam.currentQuestion);
+        
+        // Save current question index to localStorage for resuming
+        if (response.data.studentExam.currentQuestion !== undefined && response.data.studentExam.currentQuestion !== null) {
+          localStorage.setItem(`exam_current_question_${response.data.studentExam.id}`, 
+            response.data.studentExam.currentQuestion);
+        }
+        
+        // If we have time remaining info, save it for resuming
+        if (timeRemainingMinutes !== null) {
+          const timeRemainingSeconds = timeRemainingMinutes * 60;
+          localStorage.setItem(`exam_time_remaining_${response.data.studentExam.id}`, 
+            timeRemainingSeconds.toString());
+          localStorage.setItem(`exam_time_last_updated_${response.data.studentExam.id}`, 
+            Date.now().toString());
+        }
+        
+        // Store finishAtEstimate if available
+        if (response.data.studentExam.finishAtEstimate) {
+          localStorage.setItem(`exam_finish_time_${response.data.studentExam.id}`, 
+            response.data.studentExam.finishAtEstimate);
+        }
       } else {
         console.warn('No studentExam or ID found in response data');
+      }
+      
+      // Store session information about time and exam progress
+      if (examId && response.data?.studentExam?.id) {
+        const studentExamId = response.data.studentExam.id;
+        
+        // Save current question index and time data for resuming
+        if (response.data.studentExam.currentQuestion !== undefined && 
+            response.data.studentExam.currentQuestion !== null) {
+          localStorage.setItem(`exam_current_question_${studentExamId}`, 
+            response.data.studentExam.currentQuestion);
+        }
+        
+        // If we have time remaining info, save it for resuming
+        if (timeRemainingMinutes !== null) {
+          const timeRemainingSeconds = timeRemainingMinutes * 60;
+          localStorage.setItem(`exam_time_remaining_${studentExamId}`, 
+            timeRemainingSeconds.toString());
+          localStorage.setItem(`exam_time_last_updated_${studentExamId}`, 
+            Date.now().toString());
+        }
       }
       
       return response;
     })
     .catch(error => {
       console.error('Error starting exam:', error.response?.data || error.message);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Error details:', error.response.data);
+      }
       
       // Handle specific errors
       if (error.response) {
@@ -78,6 +127,10 @@ class StudentExamService {
             const alreadyStartedError = new Error('You have already started this exam. Please continue your existing session.');
             alreadyStartedError.alreadyStarted = true;
             throw alreadyStartedError;
+          } else if (errorMessage.includes("Time's up") || errorMessage.includes("already completed")) {
+            const completedError = new Error("Time's up! This exam has already been completed.");
+            completedError.completed = true;
+            throw completedError;
           } else if (errorMessage) {
             throw new Error(errorMessage);
           }
@@ -93,6 +146,12 @@ class StudentExamService {
     if (!studentExamId || !questionId) {
       console.error('submitAnswer: Missing required parameters');
       return Promise.reject(new Error('Missing required parameters'));
+    }
+
+    // Check if the exam is being submitted
+    if (localStorage.getItem(`exam_submitting_${studentExamId}`) === 'true') {
+      console.log('Exam is being submitted - skipping individual answer submission');
+      return Promise.reject(new Error('Exam is being submitted'));
     }
 
     // Check for possible duplicate submission
@@ -116,13 +175,55 @@ class StudentExamService {
       'Content-Type': 'application/json'
     };
     
+    // Xử lý định dạng câu trả lời trước khi gửi
+    console.log(`ANSWER FORMAT CHECK - Type: ${typeof answer}, Value: ${answer}`);
+    
+    // Lưu lại câu trả lời vào localStorage để debug và khôi phục nếu cần
+    try {
+      localStorage.setItem(`answer_${studentExamId}_q${questionId}`, answer);
+    } catch (e) {
+      console.warn('Could not save answer to localStorage:', e);
+    }
+    
+    // Kiểm tra các loại câu trả lời
+    if (typeof answer === 'string' && answer.includes(',')) {
+      console.log(`Multiple choice detected: ${answer}`);
+      try {
+        // Lưu lại các giá trị multiple choice để debug
+        const selections = answer.split(',');
+        console.log('Selections array:', selections);
+        
+        // Làm sạch dữ liệu nếu cần
+        if (selections.some(s => !s.trim())) {
+          // Xóa các giá trị trống
+          const cleanSelections = selections.filter(s => s.trim());
+          console.log('Cleaned selections:', cleanSelections);
+          
+          // Cập nhật câu trả lời với giá trị đã làm sạch
+          answer = cleanSelections.join(',');
+          console.log('Updated answer value:', answer);
+        }
+      } catch (e) {
+        console.error('Error processing multiple choice selections:', e);
+      }
+    }
+    
+    // Cấu trúc dữ liệu để gửi đi
     const data = {
       studentExamId,
       questionId,
       answer
     };
     
+    // Lưu lại cấu trúc dữ liệu đã gửi để debug nếu cần
+    try {
+      localStorage.setItem(`answer_payload_${studentExamId}_q${questionId}`, JSON.stringify(data));
+    } catch (e) {
+      console.warn('Could not save answer payload to localStorage:', e);
+    }
+    
     console.log(`Submitting answer for question ${questionId} in exam ${studentExamId}`);
+    console.log('Answer payload:', data);
     logApiCall('POST', `${API_URL}/submit-answer`, headers, data);
     
     return axios.post(`${API_URL}/submit-answer`, data, {
@@ -130,14 +231,24 @@ class StudentExamService {
       timeout: 5000
     })
     .then(response => {
+      // Log chi tiết phản hồi để debug
+      console.log(`Submit answer response for question ${questionId}:`, response.data);
+      
       // Update the last question flag in local storage if this is the last question
       if (response.data && response.data.lastQuestion) {
         localStorage.setItem(`last_question_${studentExamId}`, 'true');
+        console.log(`Marked question ${questionId} as last question in localStorage`);
       }
+      
       return response;
     })
     .catch(error => {
       console.error('Error submitting answer:', error);
+      // Lấy thông tin lỗi chi tiết
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
       // Remove the submission timestamp to allow retry
       localStorage.removeItem(`last_submission_${submissionKey}`);
       throw error;
@@ -154,19 +265,151 @@ class StudentExamService {
     const headers = authHeader();
     const url = `${API_URL}/submit?studentExamId=${encodeURIComponent(studentExamId)}`;
     
+    // Mark this exam as being submitted to prevent duplicate answer submissions
+    localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
+    
     console.log(`Submitting exam ${studentExamId}`);
     logApiCall('POST', url, headers);
     
     return axios.post(url, {}, {
       headers,
-      timeout: 10000
+      timeout: 15000 // Tăng timeout lên để đảm bảo đủ thời gian xử lý
     })
     .then(response => {
       console.log('Exam submitted successfully:', response.data);
-      return response;
+      
+      // Log chi tiết hơn để debug
+      console.log('----- SUBMIT EXAM RESPONSE DETAILS -----');
+      
+      // Kiểm tra cấu trúc phản hồi
+      if (!response.data) {
+        console.error('Response data is empty');
+        throw new Error('Response data is empty');
+      }
+
+      // Kiểm tra và xử lý dữ liệu phản hồi
+      const processedResponse = {
+        ...response.data
+      };
+      
+      // Kiểm tra và chuẩn hóa các trường dữ liệu
+      if (processedResponse.correctAnswers === undefined) {
+        // Nếu không có các trường này, thử tìm ở nơi khác trong cấu trúc phản hồi
+        if (processedResponse.result) {
+          processedResponse.correctAnswers = processedResponse.result.correctAnswers;
+          processedResponse.wrongAnswers = processedResponse.result.wrongAnswers;
+          processedResponse.totalQuestions = processedResponse.result.totalQuestions;
+          processedResponse.score = processedResponse.result.score;
+        } else {
+          // Đếm số câu trả lời đúng/sai nếu có danh sách câu trả lời chi tiết
+          if (processedResponse.answerResults && Array.isArray(processedResponse.answerResults)) {
+            const correctCount = processedResponse.answerResults.filter(a => a.correct).length;
+            const totalCount = processedResponse.answerResults.length;
+            
+            processedResponse.correctAnswers = correctCount;
+            processedResponse.wrongAnswers = totalCount - correctCount;
+            processedResponse.totalQuestions = totalCount;
+            processedResponse.score = totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
+          }
+        }
+      }
+      
+      // Xử lý chi tiết câu trả lời nếu có
+      if (processedResponse.answerResults === undefined) {
+        // Thử tìm ở các vị trí khác
+        if (processedResponse.answers && Array.isArray(processedResponse.answers)) {
+          processedResponse.answerResults = processedResponse.answers.map(answer => ({
+            questionId: answer.questionId,
+            questionText: answer.question?.title || answer.questionText || `Câu hỏi ${answer.questionId}`,
+            studentAnswer: answer.studentAnswer || answer.answer || 'Không có',
+            correctAnswer: answer.correctAnswer || answer.answer || 'Không có',
+            correct: answer.correct || false
+          }));
+        } else if (processedResponse.questions && Array.isArray(processedResponse.questions)) {
+          // Nếu có danh sách câu hỏi, kết hợp với danh sách câu trả lời
+          const answersMap = {};
+          if (processedResponse.answers && Array.isArray(processedResponse.answers)) {
+            processedResponse.answers.forEach(answer => {
+              answersMap[answer.questionId] = answer;
+            });
+          }
+          
+          processedResponse.answerResults = processedResponse.questions.map(question => {
+            const answer = answersMap[question.id] || {};
+            return {
+              questionId: question.id,
+              questionText: question.title || `Câu hỏi ${question.id}`,
+              studentAnswer: answer.studentAnswer || answer.answer || 'Không có',
+              correctAnswer: question.correctAnswer || answer.correctAnswer || 'Không có',
+              correct: answer.correct || false
+            };
+          });
+        }
+      }
+      
+      try {
+        // Lưu lại cấu trúc dữ liệu để có thể debug
+        localStorage.setItem('last_exam_result', JSON.stringify(processedResponse));
+        
+        // Kiểm tra các trường kết quả quan trọng
+        console.log('Processed response structure:', Object.keys(processedResponse));
+        
+        // Kiểm tra và log số lượng đúng/sai
+        if (processedResponse.correctAnswers !== undefined) {
+          console.log(`Correct answers: ${processedResponse.correctAnswers}`);
+          console.log(`Wrong answers: ${processedResponse.wrongAnswers}`);
+          console.log(`Total questions: ${processedResponse.totalQuestions}`);
+          console.log(`Score: ${processedResponse.score}%`);
+        }
+        
+        // Kiểm tra các câu trả lời chi tiết
+        if (processedResponse.answerResults) {
+          console.log('ANSWER RESULTS:');
+          processedResponse.answerResults.forEach((result, index) => {
+            console.log(`Question ${index + 1}:`);
+            console.log(`  ID: ${result.questionId}`);
+            console.log(`  Your answer: ${result.studentAnswer}`);
+            console.log(`  Correct answer: ${result.correctAnswer}`);
+            console.log(`  Is correct: ${result.correct}`);
+          });
+        }
+        
+        // Lấy ra tất cả câu trả lời đã lưu trong localStorage để so sánh
+        try {
+          const answerKeys = Object.keys(localStorage).filter(key => key.startsWith(`answer_${studentExamId}`));
+          if (answerKeys.length > 0) {
+            console.log('Locally stored answers:');
+            answerKeys.forEach(key => {
+              console.log(`  ${key}: ${localStorage.getItem(key)}`);
+            });
+          }
+        } catch (e) {
+          console.warn('Error checking localStorage for answers:', e);
+        }
+        
+      } catch (e) {
+        console.error('Error logging exam results:', e);
+      }
+      
+      // Trả về dữ liệu đã xử lý
+      return {
+        ...response,
+        data: processedResponse
+      };
     })
     .catch(error => {
       console.error('Failed to submit exam:', error.response?.status || error.message);
+      
+      // Remove the submitting flag on error
+      localStorage.removeItem(`exam_submitting_${studentExamId}`);
+      
+      // Log thêm chi tiết lỗi
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error status:', error.response.status);
+        console.error('Error headers:', error.response.headers);
+      }
+      
       throw error;
     });
   }
@@ -222,75 +465,43 @@ class StudentExamService {
     return Promise.resolve({ data: { status: 'UNKNOWN' } });
   }
 
-  // Check if student has an in-progress exam - returns studentExamId if found
-  // This is a new method to check if an exam is in progress but not submitted
-  checkExamInProgress(userId, examId) {
-    if (!userId || !examId) {
-      console.error('checkExamInProgress: Missing userId or examId');
-      return Promise.reject(new Error('Missing user ID or exam ID'));
+  // Phương thức mới để lấy câu hỏi hiện tại
+  getCurrentQuestion(studentExamId) {
+    if (!studentExamId) {
+      console.error('getCurrentQuestion: Missing studentExamId');
+      return Promise.reject(new Error('Missing student exam ID'));
     }
+
+    console.log(`Getting current question for exam ${studentExamId}`);
     
-    // Create the studentExamId using the same format as backend (userId-examId)
-    const studentExamId = `${userId}-${examId}`;
-    const headers = authHeader();
-    
-    // First, let's try to check if the exam already exists by attempting to start it
-    // When an exam already exists, the backend will return "Exam already started" error
-    return this.startExam(examId, "checkonly")
-      .then(() => {
-        // If we get here, the exam hasn't been started yet
-        return { inProgress: false, notStarted: true };
+    // Dùng submitAnswer với questionId = 0 và answer rỗng để lấy câu hỏi hiện tại
+    // Đây là hack để không ảnh hưởng đến trạng thái bài thi
+    return this.submitAnswer(studentExamId, 0, "")
+      .then(response => {
+        console.log('Current question response:', response.data);
+        return response;
       })
       .catch(error => {
-        // If we get "Exam already started" error, it means the exam is in progress
-        if (error.message && error.message.includes('already started')) {
-          console.log(`Exam ${examId} is already in progress for user ${userId}`);
-          
-          // Next, get the status of the exam to see if it's in progress or completed
-          return axios.get(`${API_URL}/${studentExamId}`, {
-            headers,
-            timeout: 5000
-          })
-          .then(response => {
-            console.log('Exam status response:', response.data);
-            
-            // Check the status of the returned exam
-            const status = response.data?.status || 
-                          (response.data?.studentExam && response.data.studentExam.status) || 
-                          'UNKNOWN';
-            
-            // Check if the exam is already completed to prevent retaking
-            if (['COMPLETED', 'SUBMITTED', 'FINISHED', 'GRADED'].includes(status.toUpperCase())) {
-              return {
-                completed: true,
-                examSessionId: studentExamId,
-                status: status
-              };
-            }
-            
-            // The exam is in progress and can be continued
-            return {
-              inProgress: true,
-              examSessionId: studentExamId,
-              status: status || 'IN_PROGRESS'
-            };
-          })
-          .catch(fetchError => {
-            console.warn('Error fetching exam status after detecting it exists:', fetchError);
-            // Even if we can't get the status, we know the exam exists
-            return {
-              inProgress: true,
-              examSessionId: studentExamId,
-              status: 'IN_PROGRESS',
-              error: true,
-              errorMessage: fetchError.message
-            };
-          });
-        }
+        console.error('Error getting current question:', error);
         
-        // For other errors, assume the exam hasn't been started
-        console.log('Exam not started or error checking status:', error.message);
-        return { inProgress: false, notFound: true };
+        // Nếu lỗi, thử phương pháp khác bằng cách lấy kết quả
+        return this.getStudentExamResult(studentExamId)
+          .then(result => {
+            console.log('Got student exam result instead:', result.data);
+            
+            // Tạo câu trả lời giả để interface hoạt động đúng
+            return {
+              data: {
+                studentExam: result.data.studentExam || result.data,
+                nextQuestion: null,
+                lastQuestion: true
+              }
+            };
+          })
+          .catch(secondError => {
+            console.error('Both methods to get current question failed:', secondError);
+            throw new Error('Failed to retrieve current question state');
+          });
       });
   }
 }

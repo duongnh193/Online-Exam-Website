@@ -399,6 +399,35 @@ class ExamService {
       return 0;
     });
   }
+
+  // Get exam password by ID
+  getExamPassword(examId) {
+    // Validate exam ID
+    if (!examId || examId === 0 || examId === '0') {
+      console.error('getExamPassword: Invalid exam ID provided:', examId);
+      return Promise.reject(new Error('Invalid exam ID provided'));
+    }
+
+    logAuthState();
+    const url = `${API_URL}/password/${examId}`;
+    const headers = authHeader();
+    
+    console.log(`Fetching password for exam ID: ${examId}`);
+    logApiCall('GET', url, headers);
+    
+    return axios.get(url, { 
+      headers,
+      timeout: 5000
+    })
+    .then(response => {
+      console.log('Password fetched successfully');
+      return response.data.password;
+    })
+    .catch(error => {
+      console.error('Error fetching exam password:', error.response?.data || error.message);
+      throw error;
+    });
+  }
 }
 
 export default new ExamService(); 
