@@ -10,6 +10,7 @@ import vn.com.example.exam.online.model.entity.StudentExam;
 import vn.com.example.exam.online.model.response.ExamScoreStatisticsResponse;
 import vn.com.example.exam.online.model.response.StudentExamScoreResponse;
 import vn.com.example.exam.online.repository.ClassRepository;
+import vn.com.example.exam.online.repository.ExamRepository;
 import vn.com.example.exam.online.repository.StudentExamRepository;
 import vn.com.example.exam.online.repository.UserRepository;
 
@@ -23,6 +24,7 @@ public class StatisticsService {
     private final UserRepository userRepository;
     private final ClassRepository classRepository;
     private final StudentExamRepository studentExamRepository;
+    private final ExamRepository examRepository;
 
 
     public Long getTotalClasses() {
@@ -33,6 +35,10 @@ public class StatisticsService {
         return classRepository.findById(classId)
                 .map(clazz -> (long) clazz.getExams().size())
                 .orElse(0L);
+    }
+
+    public Long getTotalExams() {
+        return examRepository.count();
     }
 
     public ExamScoreStatisticsResponse getExamScoreStatistics(Long examId) {

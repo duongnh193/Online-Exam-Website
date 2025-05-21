@@ -12,5 +12,5 @@ public class StudentExamResponse {
     private StudentExam studentExam;
     private QuestionExamResponse nextQuestion;
     private boolean isLastQuestion;
-    private Long minuteRemaining;
+    private Long secondRemaining;
 }

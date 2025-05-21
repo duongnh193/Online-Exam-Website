@@ -1,5 +1,6 @@
 package vn.com.example.exam.online.model.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,10 +16,14 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateQuestionRequest {
+    @NotNull
     Long examId;
+    @NotNull
     String title;
+    @NotNull
     QuestionType type;
     List<ChoiceDto> choices;
+    @NotNull
     String answer;
     String image;
 }

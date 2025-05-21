@@ -64,7 +64,7 @@ public class StudentExamService {
             StudentExam studentExam = existingExam.get();
             if (studentExam.getStatus() == StudentExamStatus.IN_PROGRESS) {
                 var now = OffsetDateTime.now();
-                var remainingTime = Duration.between(now, studentExam.getFinishAtEstimate()).toMinutes();
+                var remainingTime = Duration.between(now, studentExam.getFinishAtEstimate()).toSeconds();
 
                 // Nếu thời gian làm bài đã hết, đánh dấu là hoàn thành
                 if (remainingTime <= 0) {

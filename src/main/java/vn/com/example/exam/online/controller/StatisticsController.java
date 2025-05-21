@@ -32,6 +32,11 @@ public class StatisticsController {
         return statisticsService.getTotalExamsInClass(classId);
     }
 
+    @GetMapping("/total-exam")
+    public Long getTotalExam() {
+        return statisticsService.getTotalExams();
+    }
+
     @GetMapping("/total-lecturers")
     public Long getTotalLecturers() {
         return statisticsService.countByRole(RoleEnum.ROLE_LECTURER);
