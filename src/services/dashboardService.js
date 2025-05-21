@@ -75,12 +75,13 @@ const dashboardService = {
   // Lấy tổng số bài thi
   getExamCount: async () => {
     try {
-      // Vì không có API lấy tổng số bài thi, chúng ta sẽ tiếp tục sử dụng mock data
-      // hoặc có thể lấy tổng số bài thi của một lớp cụ thể
-      return Promise.resolve(mockExamCount);
+      // Sử dụng API thống kê mới
+      const response = await axios.get(`${STATS_API_URL}/total-exam`, { headers: authHeader() });
+      return response.data;
     } catch (error) {
       console.error('Error fetching exam count:', error);
-      return Promise.reject(error);
+      // Fallback to mock data if API fails
+      return Promise.resolve(mockExamCount);
     }
   },
   
@@ -140,31 +141,35 @@ const dashboardService = {
   // Lấy thống kê điểm số của một bài thi
   getExamScoreStatistics: async (examId) => {
     try {
-      if (!examId) return null;
-      
-      // Sử dụng API thống kê
       const response = await axios.get(`${STATS_API_URL}/exam-score/${examId}`, { headers: authHeader() });
+      console.log('Exam score statistics API response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching exam score statistics:', error);
-      return null;
+      return {
+        minScore: 0,
+        maxScore: 0,
+        avgScore: 0
+      };
     }
   },
   
   // Lấy danh sách điểm của sinh viên trong một lớp
-  getStudentScoresInClass: async (classId, page = 0, size = 10, sortBy = 'studentName', direction = 'asc') => {
+  getStudentScoresInClass: async (classId, page = 0, size = 20) => {
     try {
-      if (!classId) return { content: [], totalElements: 0 };
-      
-      // Sử dụng API thống kê
       const response = await axios.get(
-        `${STATS_API_URL}/student-scores/${classId}?page=${page}&size=${size}&sortBy=${sortBy}&direction=${direction}`, 
+        `${STATS_API_URL}/student-scores/${classId}?page=${page}&size=${size}`, 
         { headers: authHeader() }
       );
+      console.log('Student scores in class API response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error fetching student scores:', error);
-      return { content: [], totalElements: 0 };
+      console.error('Error fetching student scores for class:', error);
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0
+      };
     }
   },
   

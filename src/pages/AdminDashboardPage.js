@@ -9,6 +9,7 @@ import classService from '../services/classService';
 import examService from '../services/examService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 // Theme variables
 const ThemeStyles = createGlobalStyle`
@@ -706,6 +707,7 @@ function AdminDashboardPage() {
   const [lecturerCount, setLecturerCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   
   // State cho modal và dữ liệu
   const [modalOpen, setModalOpen] = useState(false);
@@ -790,11 +792,14 @@ function AdminDashboardPage() {
     // Make sure the dropdowns are closed
     setShowDropdown(false);
     
-    // Add a small delay to ensure state changes have time to propagate
-    setTimeout(() => {
-      console.log('AdminDashboardPage: Executing logout');
-      logout();
-    }, 100);
+    // Hiển thị modal xác nhận thay vì gọi logout trực tiếp
+    setShowLogoutConfirmation(true);
+  };
+  
+  const handleConfirmLogout = () => {
+    console.log('AdminDashboardPage: Executing logout after confirmation');
+    logout();
+    setShowLogoutConfirmation(false);
   };
   
   // Get user's first initial
@@ -1404,7 +1409,10 @@ function AdminDashboardPage() {
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
-          <NavItem to="/" onClick={handleLogout}>
+          <NavItem to="#" onClick={(e) => {
+            e.preventDefault();
+            handleLogout();
+          }}>
             <NavIcon>{getMenuIcon('signout')}</NavIcon>
             Sign out
           </NavItem>
@@ -1544,6 +1552,14 @@ function AdminDashboardPage() {
           </ModalOverlay>
         )}
       </MainContent>
+      
+      {/* Thêm modal xác nhận đăng xuất */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={() => setShowLogoutConfirmation(false)}
+        onConfirm={handleConfirmLogout}
+        message="Are you sure you want to logout?"
+      />
     </DashboardContainer>
   );
 }

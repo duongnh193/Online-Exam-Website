@@ -8,6 +8,7 @@ import questionService from '../services/questionService';
 import studentExamService from '../services/studentExamService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -15,6 +16,11 @@ const PageContainer = styled.div`
   min-height: 100vh;
   background-color: var(--bg-primary);
   transition: background-color 0.3s ease;
+  
+  /* CSS Variables for better dark mode compatibility */
+  --bg-input: ${props => props.theme === 'dark' ? '#333' : 'white'};
+  --text-input: ${props => props.theme === 'dark' ? '#ffffff' : '#333333'};
+  --hover-bg: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(106, 0, 255, 0.05)'};
 `;
 
 const Sidebar = styled.aside`
@@ -187,17 +193,22 @@ const SortDropdown = styled.select`
   padding: 0.5rem 1rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-input);
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--text-input);
   cursor: pointer;
   outline: none;
+  
+  & option {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+  }
 `;
 
 const CreateButton = styled.button`
   background-color: transparent;
-  color: #6a00ff;
-  border: 1px solid #6a00ff;
+  color: ${props => props.theme === 'dark' ? '#9d70ff' : '#6a00ff'};
+  border: 1px solid ${props => props.theme === 'dark' ? '#9d70ff' : '#6a00ff'};
   border-radius: 30px;
   padding: 8px 20px;
   font-size: 0.9rem;
@@ -209,7 +220,7 @@ const CreateButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    background-color: rgba(106, 0, 255, 0.05);
+    background-color: var(--hover-bg);
   }
 `;
 
@@ -311,7 +322,9 @@ const DeleteButton = styled.button`
 `;
 
 const ExpiryTime = styled.span`
-  color: ${props => props.expired ? '#ff3e3e' : 'inherit'};
+  color: ${props => props.expired === "true" 
+    ? (props.theme === 'dark' ? '#ff6666' : '#ff3e3e') 
+    : 'inherit'};
 `;
 
 // Add a new styled component for the status badge
@@ -324,20 +337,20 @@ const StatusBadge = styled.span`
   text-transform: capitalize;
   background-color: ${props => {
     switch(props.status) {
-      case 'SCHEDULED': return '#e3f2fd'; // Light blue
-      case 'ONGOING': return '#fff8e1'; // Light yellow
-      case 'COMPLETED': return '#e8f5e9'; // Light green
-      case 'CANCELLED': return '#ffebee'; // Light red
-      default: return '#f5f5f5'; // Light gray
+      case 'SCHEDULED': return props.theme === 'dark' ? 'rgba(25, 118, 210, 0.2)' : '#e3f2fd';
+      case 'ONGOING': return props.theme === 'dark' ? 'rgba(245, 124, 0, 0.2)' : '#fff8e1';
+      case 'COMPLETED': return props.theme === 'dark' ? 'rgba(56, 142, 60, 0.2)' : '#e8f5e9';
+      case 'CANCELLED': return props.theme === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee';
+      default: return props.theme === 'dark' ? 'rgba(117, 117, 117, 0.2)' : '#f5f5f5';
     }
   }};
   color: ${props => {
     switch(props.status) {
-      case 'SCHEDULED': return '#1976d2'; // Blue
-      case 'ONGOING': return '#f57c00'; // Orange
-      case 'COMPLETED': return '#388e3c'; // Green
-      case 'CANCELLED': return '#d32f2f'; // Red
-      default: return '#757575'; // Gray
+      case 'SCHEDULED': return props.theme === 'dark' ? '#90caf9' : '#1976d2';
+      case 'ONGOING': return props.theme === 'dark' ? '#ffcc80' : '#f57c00';
+      case 'COMPLETED': return props.theme === 'dark' ? '#a5d6a7' : '#388e3c';
+      case 'CANCELLED': return props.theme === 'dark' ? '#ef9a9a' : '#d32f2f';
+      default: return props.theme === 'dark' ? '#bdbdbd' : '#757575';
     }
   }};
 `;
@@ -376,6 +389,7 @@ function ExamPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const refreshIntervalRef = useRef(null);
   const [lastRefreshTime, setLastRefreshTime] = useState(new Date());
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   
   // Add a useEffect to handle URL query parameters
   useEffect(() => {
@@ -624,8 +638,16 @@ function ExamPage() {
     };
   }, []);
   
-  const handleLogout = () => {
+  const handleLogout = (e) => {
+    e.preventDefault();
+    setShowDropdown(false);
+    setShowLogoutConfirmation(true);
+  };
+
+  const handleConfirmLogout = () => {
+    console.log('ExamPage: Executing logout after confirmation');
     logout();
+    setShowLogoutConfirmation(false);
   };
   
   // Get user's first initial
@@ -874,7 +896,7 @@ function ExamPage() {
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
-          <NavItem to="/" onClick={handleLogout}>
+          <NavItem to="#" onClick={handleLogout}>
             <NavIcon>{getMenuIcon('signout')}</NavIcon>
             Sign out
           </NavItem>
@@ -886,7 +908,7 @@ function ExamPage() {
           <PageTitle>Exam</PageTitle>
           
           <HeaderRight>
-            <ThemeToggle />
+            {/* <ThemeToggle /> */}
             
             <div style={{ 
               display: 'flex', 
@@ -1025,12 +1047,12 @@ function ExamPage() {
                       <TableCell>{currentExam.value || 100}</TableCell>
                       <TableCell>{typeof currentExam.questions === 'number' ? currentExam.questions : (Array.isArray(currentExam.questions) ? currentExam.questions.length : 0)}</TableCell>
                       <TableCell>
-                        <ExpiryTime expired={isExpired(currentExam.timeRemains || '00:00:00') ? "true" : "false"}>
+                        <ExpiryTime expired={isExpired(currentExam.timeRemains || '00:00:00') ? "true" : "false"} theme={theme}>
                           {currentExam.timeRemains || '00:00:00'}
                         </ExpiryTime>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={currentExam.status || 'SCHEDULED'}>
+                        <StatusBadge status={currentExam.status || 'SCHEDULED'} theme={theme}>
                           {formatStatus(currentExam.status || 'SCHEDULED')}
                         </StatusBadge>
                         {isStudent && currentExam.status === 'ONGOING' && (
@@ -1061,6 +1083,14 @@ function ExamPage() {
           )}
         </TableCard>
       </MainContent>
+      
+      {/* Add logout confirmation modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={() => setShowLogoutConfirmation(false)}
+        onConfirm={handleConfirmLogout}
+        message="Are you sure you want to logout?"
+      />
     </PageContainer>
   );
 }

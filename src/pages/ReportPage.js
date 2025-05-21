@@ -1,20 +1,69 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
+import classService from '../services/classService';
+import examService from '../services/examService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
+
+// Theme variables
+const ThemeStyles = createGlobalStyle`
+  .light-theme {
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #6a00ff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: #eeeeee;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --highlight-color: #6a00ff;
+    --sidebar-text: #ffffff;
+    --sidebar-text-secondary: rgba(255, 255, 255, 0.8);
+    --sidebar-active-bg: rgba(255, 255, 255, 0.1);
+    --sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+    --sidebar-active-indicator: #ffffff;
+    --primary-color: #6a00ff;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --card-bg: #ffffff;
+    --hover-bg: #f5f5f5;
+  }
+  
+  .dark-theme {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --bg-sidebar: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: #444444;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    --highlight-color: #8d47ff;
+    --sidebar-text: #ffffff;
+    --sidebar-text-secondary: rgba(255, 255, 255, 0.7);
+    --sidebar-active-bg: rgba(255, 255, 255, 0.1);
+    --sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+    --sidebar-active-indicator: #ffffff;
+    --primary-color: #8d47ff;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --card-bg: #2a2a2a;
+    --hover-bg: #404040;
+  }
+`;
 
 // Styled Components
 const ReportContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -23,6 +72,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -98,6 +148,9 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -129,7 +182,7 @@ const UserAvatar = styled.div`
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: #6a00ff;
+  background-color: var(--primary-color);
   color: white;
   display: flex;
   align-items: center;
@@ -147,12 +200,13 @@ const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background-color: white;
+  background-color: var(--card-bg);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow-color);
   width: 180px;
   z-index: 100;
   overflow: hidden;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const DropdownItem = styled.div`
@@ -160,13 +214,13 @@ const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--hover-bg);
   }
 `;
 
@@ -175,12 +229,12 @@ const PageTitle = styled.div`
     font-size: 1.5rem;
     font-weight: bold;
     margin: 0;
-    color: #333;
+    color: var(--text-primary);
   }
   
   p {
     margin: 0;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
   }
 `;
@@ -188,7 +242,7 @@ const PageTitle = styled.div`
 const TabContainer = styled.div`
   display: flex;
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 `;
 
 const Tab = styled.div`
@@ -196,7 +250,7 @@ const Tab = styled.div`
   font-size: 1rem;
   cursor: pointer;
   position: relative;
-  color: ${props => props.active ? '#6a00ff' : '#888'};
+  color: ${props => props.active ? 'var(--primary-color)' : 'var(--text-secondary)'};
   font-weight: ${props => props.active ? '600' : '400'};
   
   &::after {
@@ -206,21 +260,22 @@ const Tab = styled.div`
     left: 0;
     right: 0;
     height: 3px;
-    background-color: ${props => props.active ? '#6a00ff' : 'transparent'};
+    background-color: ${props => props.active ? 'var(--primary-color)' : 'transparent'};
     border-radius: 3px 3px 0 0;
   }
   
   &:hover {
-    color: #6a00ff;
+    color: var(--primary-color);
   }
 `;
 
 const StatisticsCard = styled.div`
-  background-color: white;
+  background-color: var(--card-bg);
   border-radius: 1.5rem;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px var(--shadow-color);
   margin-bottom: 1.5rem;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const StatHeader = styled.div`
@@ -233,7 +288,7 @@ const StatHeader = styled.div`
 const StatTitle = styled.h3`
   margin: 0;
   font-size: 1.2rem;
-  color: #333;
+  color: var(--text-primary);
 `;
 
 const StatSelectContainer = styled.div`
@@ -243,9 +298,10 @@ const StatSelectContainer = styled.div`
 
 const StatSelect = styled.select`
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
   font-size: 0.875rem;
 `;
 
@@ -258,6 +314,7 @@ const COLORS = ['#6a00ff', '#ff2e8e', '#00c16e', '#f5a623'];
 
 function ReportPage() {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState('examScores');
   const [selectedExamId, setSelectedExamId] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState(null);
@@ -267,41 +324,121 @@ function ReportPage() {
   const [classes, setClasses] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
 
   useEffect(() => {
     const loadReportData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        // Tải danh sách lớp học và bài thi giả
-        // Trong thực tế, bạn sẽ cần API để lấy danh sách thực
-        setClasses([
-          { id: 1, name: 'Computer Science 101' },
-          { id: 2, name: 'Database Systems' },
-          { id: 3, name: 'Web Development' }
-        ]);
+        console.log('Loading report data with user:', user);
+        let classesResponse;
         
-        setExams([
-          { id: 1, name: 'Midterm Exam' },
-          { id: 2, name: 'Final Exam' },
-          { id: 3, name: 'Quiz 1' }
-        ]);
-        
-        // Đặt giá trị mặc định cho dropdown
-        if (classes.length > 0) {
-          setSelectedClassId(classes[0].id);
-          loadExamsInClass(classes[0].id);
+        // Kiểm tra role người dùng
+        if (!user || !user.id) {
+          throw new Error('User information not available');
         }
         
-        if (exams.length > 0) {
-          setSelectedExamId(exams[0].id);
-          loadExamStats(exams[0].id);
+        const userRole = user.role?.toUpperCase();
+        console.log('User role for report page:', userRole);
+        
+        // Thực hiện gọi API dựa vào vai trò
+        if (userRole === 'ROLE_ADMIN') {
+          // Nếu là admin, lấy tất cả các lớp
+          console.log('User is admin, getting all classes');
+          classesResponse = await classService.getAllClasses(0, 50);
+        } else if (userRole === 'ROLE_LECTURER') {
+          // Nếu là giảng viên, chỉ lấy các lớp họ dạy
+          console.log('User is lecturer, getting classes by teacher ID:', user.id);
+          classesResponse = await classService.getClassesByTeacher(user.id, 0, 50);
+        } else {
+          throw new Error('Unauthorized access or invalid role');
+        }
+        
+        console.log('Classes response:', classesResponse);
+        
+        // Xử lý dữ liệu classes, đảm bảo dữ liệu đúng định dạng
+        let classesData = [];
+        if (classesResponse && classesResponse.data) {
+          if (classesResponse.data.content) {
+            // Nếu là dữ liệu phân trang
+            classesData = classesResponse.data.content.map(cls => ({
+              id: cls.id,
+              name: cls.name || `Class #${cls.id}`
+            }));
+          } else if (Array.isArray(classesResponse.data)) {
+            // Nếu là mảng
+            classesData = classesResponse.data.map(cls => ({
+              id: cls.id,
+              name: cls.name || `Class #${cls.id}`
+            }));
+          }
+        }
+        setClasses(classesData);
+        
+        // Nếu có lớp học, lấy bài thi từ lớp đầu tiên
+        if (classesData.length > 0) {
+          setSelectedClassId(classesData[0].id);
+          
+          // Lấy danh sách bài thi từ lớp đầu tiên
+          const examsResponse = await examService.getExamsByClass(classesData[0].id, 0, 50);
+          console.log('Exams response:', examsResponse);
+          
+          // Xử lý dữ liệu exams
+          let examsData = [];
+          if (examsResponse && examsResponse.data) {
+            if (examsResponse.data.content) {
+              // Nếu là dữ liệu phân trang
+              examsData = examsResponse.data.content.map(exam => ({
+                id: exam.id,
+                name: exam.title || `Exam #${exam.id}`,
+                classId: exam.classId
+              }));
+            } else if (Array.isArray(examsResponse.data)) {
+              // Nếu là mảng
+              examsData = examsResponse.data.map(exam => ({
+                id: exam.id,
+                name: exam.title || `Exam #${exam.id}`,
+                classId: exam.classId
+              }));
+            }
+          }
+          setExams(examsData);
+          
+          // Nếu có bài thi, lấy thống kê từ bài thi đầu tiên
+          if (examsData.length > 0) {
+            setSelectedExamId(examsData[0].id);
+            loadExamStats(examsData[0].id);
+          } else {
+            // Không có bài thi nào, đặt giá trị mặc định
+            setSelectedExamId(null);
+            setExamScoreStats({
+              minScore: 0,
+              maxScore: 0,
+              avgScore: 0
+            });
+          }
+          
+          // Lấy danh sách điểm sinh viên trong lớp
+          loadExamsInClass(classesData[0].id);
+        } else {
+          // Không có lớp học nào
+          setError('No classes found. Please check your account permissions.');
         }
       } catch (error) {
         console.error('Error loading report data:', error);
+        setError('Failed to load report data. Please try again.');
+      } finally {
+        setLoading(false);
       }
     };
     
-    loadReportData();
-  }, []);
+    if (user) {
+      loadReportData();
+    }
+  }, [user]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -321,14 +458,70 @@ function ReportPage() {
     if (!classId) return;
     
     try {
-      const examCountInClass = await dashboardService.getExamsInClass(classId);
-      console.log(`Class ${classId} has ${examCountInClass} exams`);
+      setLoading(true);
       
-      // Tải danh sách điểm của sinh viên trong lớp
-      const scores = await dashboardService.getStudentScoresInClass(classId);
-      setStudentScores(scores.content || []);
+      // Lấy danh sách bài thi từ API
+      const examsResponse = await examService.getExamsByClass(classId, 0, 50);
+      console.log(`Exams for class ${classId}:`, examsResponse);
+      
+      // Xử lý dữ liệu exams
+      let examsData = [];
+      if (examsResponse && examsResponse.data) {
+        if (examsResponse.data.content) {
+          // Nếu là dữ liệu phân trang
+          examsData = examsResponse.data.content.map(exam => ({
+            id: exam.id,
+            name: exam.title || `Exam #${exam.id}`,
+            classId: exam.classId
+          }));
+        } else if (Array.isArray(examsResponse.data)) {
+          // Nếu là mảng
+          examsData = examsResponse.data.map(exam => ({
+            id: exam.id,
+            name: exam.title || `Exam #${exam.id}`,
+            classId: exam.classId
+          }));
+        }
+      }
+      setExams(examsData);
+      
+      // Nếu có bài thi, chọn bài thi đầu tiên và tải thống kê
+      if (examsData.length > 0) {
+        setSelectedExamId(examsData[0].id);
+        loadExamStats(examsData[0].id);
+      } else {
+        setSelectedExamId(null);
+        setExamScoreStats(null);
+      }
+      
+      // Tải danh sách điểm của sinh viên trong lớp từ API
+      try {
+        // Sử dụng API thống kê điểm sinh viên
+        const studentScoresResponse = await dashboardService.getStudentScoresInClass(classId);
+        console.log('Student scores API response:', studentScoresResponse);
+        
+        if (studentScoresResponse && studentScoresResponse.content) {
+          // Lấy dữ liệu từ API và định dạng để hiển thị trong biểu đồ
+          const studentScoresData = studentScoresResponse.content.map(score => ({
+            studentId: score.studentId,
+            studentName: score.studentName || `Student #${score.studentId}`,
+            avgScore: score.avgScore || 0,
+            avgScoreIn10: score.avgScoreIn10 || 0,
+            avgScoreIn4: score.avgScoreIn4 || 0
+          }));
+          
+          setStudentScores(studentScoresData);
+        } else {
+          setStudentScores([]);
+        }
+      } catch (studentsError) {
+        console.error('Error loading student scores:', studentsError);
+        setStudentScores([]);
+      }
     } catch (error) {
       console.error('Error loading exams in class:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -337,10 +530,43 @@ function ReportPage() {
     if (!examId) return;
     
     try {
-      const stats = await dashboardService.getExamScoreStatistics(examId);
-      setExamScoreStats(stats);
+      setLoading(true);
+      
+      // Sử dụng API thống kê điểm bài thi
+      try {
+        // Gọi API thống kê điểm bài thi
+        const examStatsResponse = await dashboardService.getExamScoreStatistics(examId);
+        console.log('Exam stats API response:', examStatsResponse);
+        
+        if (examStatsResponse) {
+          // Cập nhật state với dữ liệu từ API
+          setExamScoreStats({
+            minScore: examStatsResponse.minScore || 0,
+            maxScore: examStatsResponse.maxScore || 0,
+            avgScore: examStatsResponse.avgScore || 0
+          });
+        } else {
+          // Fallback nếu API không trả về dữ liệu hợp lệ
+          setExamScoreStats({
+            minScore: 0,
+            maxScore: 0,
+            avgScore: 0
+          });
+        }
+      } catch (examError) {
+        console.error('Error loading exam statistics:', examError);
+        
+        // Dữ liệu mẫu nếu API lỗi
+        setExamScoreStats({
+          minScore: 0,
+          maxScore: 0,
+          avgScore: 0
+        });
+      }
     } catch (error) {
       console.error('Error loading exam statistics:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -384,9 +610,13 @@ function ReportPage() {
 
   const handleLogout = () => {
     setShowDropdown(false);
-    setTimeout(() => {
-      logout();
-    }, 100);
+    setShowLogoutConfirmation(true);
+  };
+  
+  const handleConfirmLogout = () => {
+    console.log('ReportPage: Executing logout after confirmation');
+    logout();
+    setShowLogoutConfirmation(false);
   };
 
   // Get user's first initial
@@ -440,43 +670,55 @@ function ReportPage() {
         </StatSelectContainer>
       </StatHeader>
       
-      <StatChartContainer>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={getScoreDistributionData()} margin={{ top: 20, right: 30, left: 20, bottom: 30 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" />
-            <YAxis domain={[0, 10]} />
-            <Tooltip />
-            <Bar dataKey="value" fill="#6a00ff">
-              {getScoreDistributionData().map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </StatChartContainer>
-      
-      {examScoreStats && (
-        <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1rem' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: COLORS[0] }}>
-              {examScoreStats.minScore.toFixed(1)}
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#666' }}>Min Score</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: COLORS[1] }}>
-              {examScoreStats.avgScore.toFixed(1)}
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#666' }}>Average Score</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: COLORS[2] }}>
-              {examScoreStats.maxScore.toFixed(1)}
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#666' }}>Max Score</div>
-          </div>
+      {loading ? (
+        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          Loading statistics...
         </div>
+      ) : error ? (
+        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'red' }}>
+          {error}
+        </div>
+      ) : (
+        <>
+          <StatChartContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={getScoreDistributionData()} margin={{ top: 20, right: 30, left: 20, bottom: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis domain={[0, 10]} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#6a00ff">
+                  {getScoreDistributionData().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </StatChartContainer>
+          
+          {examScoreStats && (
+            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1rem' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: COLORS[0] }}>
+                  {examScoreStats.minScore.toFixed(1)}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Min Score</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: COLORS[1] }}>
+                  {examScoreStats.avgScore.toFixed(1)}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Average Score</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: COLORS[2] }}>
+                  {examScoreStats.maxScore.toFixed(1)}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>Max Score</div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </StatisticsCard>
   );
@@ -496,115 +738,172 @@ function ReportPage() {
         </StatSelectContainer>
       </StatHeader>
       
-      <StatChartContainer>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={getStudentScoreData()} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-            <YAxis domain={[0, 10]} />
-            <Tooltip />
-            <Bar dataKey="scoreIn10" name="Score (scale 10)" fill="#ff2e8e" />
-            <Bar dataKey="scoreIn4" name="Score (scale 4)" fill="#6a00ff" />
-          </BarChart>
-        </ResponsiveContainer>
-      </StatChartContainer>
-      
-      {studentScores.length > 0 && (
-        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#666' }}>
-          {`Showing scores for ${studentScores.length} students in selected class`}
+      {loading ? (
+        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          Loading statistics...
         </div>
+      ) : error ? (
+        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'red' }}>
+          {error}
+        </div>
+      ) : (
+        <>
+          <StatChartContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={getStudentScoreData()} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                <YAxis domain={[0, 10]} />
+                <Tooltip />
+                <Bar dataKey="scoreIn10" name="Score (scale 10)" fill="#ff2e8e" />
+                <Bar dataKey="scoreIn4" name="Score (scale 4)" fill="#6a00ff" />
+              </BarChart>
+            </ResponsiveContainer>
+          </StatChartContainer>
+          
+          {studentScores.length > 0 ? (
+            <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#666' }}>
+              {`Showing scores for ${studentScores.length} students in selected class`}
+            </div>
+          ) : (
+            <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#666' }}>
+              No student data available for this class
+            </div>
+          )}
+        </>
       )}
     </StatisticsCard>
   );
 
   return (
-    <ReportContainer>
-      <Sidebar>
-        <Logo>logo</Logo>
-        <SidebarMenu>
-          <NavItem to="/admin-dashboard">
-            <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
-            Dashboard
-          </NavItem>
-          <NavItem to="/exams">
-            <NavIcon>{getMenuIcon('exams')}</NavIcon>
-            Exams
-          </NavItem>
-          <NavItem to="/class">
-            <NavIcon>{getMenuIcon('class')}</NavIcon>
-            Class
-          </NavItem>
-          <NavItem to="/reports" className="active">
-            <NavIcon>{getMenuIcon('reports')}</NavIcon>
-            Reports
-          </NavItem>
-          <NavItem to="/payment">
-            <NavIcon>{getMenuIcon('payment')}</NavIcon>
-            Payment
-          </NavItem>
-          <NavItem to="/users">
-            <NavIcon>{getMenuIcon('users')}</NavIcon>
-            Users
-          </NavItem>
-        </SidebarMenu>
-        <BottomMenu>
-          <NavItem to="/settings">
-            <NavIcon>{getMenuIcon('settings')}</NavIcon>
-            Settings
-          </NavItem>
-          <NavItem to="/" onClick={handleLogout}>
-            <NavIcon>{getMenuIcon('signout')}</NavIcon>
-            Sign out
-          </NavItem>
-        </BottomMenu>
-      </Sidebar>
-      
-      <MainContent>
-        <Header>
-          <PageTitle>
-            <h1>Reports & Analytics</h1>
-            <p>View detailed statistics and reports</p>
-          </PageTitle>
+    <>
+      <ThemeStyles />
+      <ReportContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        <Sidebar theme={theme}>
+          <Logo>logo</Logo>
+          <SidebarMenu>
+            {/* Conditional rendering based on user role */}
+            {user && user.role?.toUpperCase() === 'ROLE_ADMIN' ? (
+              // Admin navigation
+              <>
+                <NavItem to="/admin-dashboard">
+                  <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+                  Dashboard
+                </NavItem>
+                <NavItem to="/exams">
+                  <NavIcon>{getMenuIcon('exams')}</NavIcon>
+                  Exams
+                </NavItem>
+                <NavItem to="/class">
+                  <NavIcon>{getMenuIcon('class')}</NavIcon>
+                  Class
+                </NavItem>
+                <NavItem to="/reports" className="active">
+                  <NavIcon>{getMenuIcon('reports')}</NavIcon>
+                  Reports
+                </NavItem>
+                <NavItem to="/payment">
+                  <NavIcon>{getMenuIcon('payment')}</NavIcon>
+                  Payment
+                </NavItem>
+                <NavItem to="/users">
+                  <NavIcon>{getMenuIcon('users')}</NavIcon>
+                  Users
+                </NavItem>
+              </>
+            ) : (
+              // Lecturer navigation
+              <>
+                <NavItem to="/lecturer-dashboard">
+                  <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
+                  Dashboard
+                </NavItem>
+                <NavItem to="/exams">
+                  <NavIcon>{getMenuIcon('exams')}</NavIcon>
+                  Exams
+                </NavItem>
+                <NavItem to="/class">
+                  <NavIcon>{getMenuIcon('class')}</NavIcon>
+                  Class
+                </NavItem>
+                <NavItem to="/reports" className="active">
+                  <NavIcon>{getMenuIcon('reports')}</NavIcon>
+                  Reports
+                </NavItem>
+              </>
+            )}
+          </SidebarMenu>
+          <BottomMenu>
+            <NavItem to="/settings">
+              <NavIcon>{getMenuIcon('settings')}</NavIcon>
+              Settings
+            </NavItem>
+            <NavItem to="#" onClick={(e) => {
+              e.preventDefault();
+              handleLogout();
+            }}>
+              <NavIcon>{getMenuIcon('signout')}</NavIcon>
+              Sign out
+            </NavItem>
+          </BottomMenu>
+        </Sidebar>
+        
+        <MainContent>
+          <Header>
+            <PageTitle>
+              <h1>Reports & Analytics</h1>
+              <p>View detailed statistics and reports</p>
+            </PageTitle>
+            
+            <HeaderRight>
+              <ThemeToggle />
+              <NotificationIcon />
+              <DropdownContainer ref={dropdownRef}>
+                <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+                {showDropdown && (
+                  <Dropdown>
+                    <DropdownItem>
+                      <span>👤</span> Profile
+                    </DropdownItem>
+                    <DropdownItem>
+                      <span>⚙️</span> Settings
+                    </DropdownItem>
+                    <DropdownItem onClick={handleLogout}>
+                      <span>🚪</span> Sign out
+                    </DropdownItem>
+                  </Dropdown>
+                )}
+              </DropdownContainer>
+            </HeaderRight>
+          </Header>
           
-          <HeaderRight>
-            <NotificationIcon />
-            <DropdownContainer ref={dropdownRef}>
-              <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
-              {showDropdown && (
-                <Dropdown>
-                  <DropdownItem>
-                    <span>👤</span> Profile
-                  </DropdownItem>
-                  <DropdownItem>
-                    <span>⚙️</span> Settings
-                  </DropdownItem>
-                  <DropdownItem onClick={handleLogout}>
-                    <span>🚪</span> Sign out
-                  </DropdownItem>
-                </Dropdown>
-              )}
-            </DropdownContainer>
-          </HeaderRight>
-        </Header>
+          <TabContainer>
+            <Tab 
+              active={activeTab === 'examScores'} 
+              onClick={() => setActiveTab('examScores')}
+            >
+              Exam Scores
+            </Tab>
+            <Tab 
+              active={activeTab === 'studentScores'} 
+              onClick={() => setActiveTab('studentScores')}
+            >
+              Student Scores
+            </Tab>
+          </TabContainer>
+          
+          {activeTab === 'examScores' ? renderExamStatistics() : renderStudentScoreStatistics()}
+        </MainContent>
         
-        <TabContainer>
-          <Tab 
-            active={activeTab === 'examScores'} 
-            onClick={() => setActiveTab('examScores')}
-          >
-            Exam Scores
-          </Tab>
-          <Tab 
-            active={activeTab === 'studentScores'} 
-            onClick={() => setActiveTab('studentScores')}
-          >
-            Student Scores
-          </Tab>
-        </TabContainer>
-        
-        {activeTab === 'examScores' ? renderExamStatistics() : renderStudentScoreStatistics()}
-      </MainContent>
-    </ReportContainer>
+        {/* Thêm modal xác nhận đăng xuất */}
+        <ConfirmationModal
+          isOpen={showLogoutConfirmation}
+          onClose={() => setShowLogoutConfirmation(false)}
+          onConfirm={handleConfirmLogout}
+          message="Are you sure you want to logout?"
+        />
+      </ReportContainer>
+    </>
   );
 }
 

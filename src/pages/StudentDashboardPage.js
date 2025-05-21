@@ -10,6 +10,7 @@ import examService from '../services/examService';
 import { FaEllipsisV } from 'react-icons/fa';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 // Theme variables
 const ThemeStyles = createGlobalStyle`
@@ -318,6 +319,7 @@ function StudentDashboardPage() {
   const [updating2FA, setUpdating2FA] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   
   const dropdownRef = useRef(null);
   const [openMenuIdx, setOpenMenuIdx] = useState(null);
@@ -506,11 +508,14 @@ function StudentDashboardPage() {
     // Make sure the dropdowns are closed
     setShowDropdown(false);
     
-    // Add a small delay to ensure state changes have time to propagate
-    setTimeout(() => {
-      console.log('StudentDashboardPage: Executing logout');
-      logout();
-    }, 100);
+    // Hiển thị modal xác nhận thay vì gọi logout trực tiếp
+    setShowLogoutConfirmation(true);
+  };
+  
+  const handleConfirmLogout = () => {
+    console.log('StudentDashboardPage: Executing logout after confirmation');
+    logout();
+    setShowLogoutConfirmation(false);
   };
   
   // Get user's first initial
@@ -628,7 +633,10 @@ function StudentDashboardPage() {
               <NavIcon>{getMenuIcon('settings')}</NavIcon>
               Settings
             </NavItem>
-            <NavItem to="/" onClick={handleLogout}>
+            <NavItem to="#" onClick={(e) => {
+              e.preventDefault();
+              handleLogout();
+            }}>
               <NavIcon>{getMenuIcon('signout')}</NavIcon>
               Sign out
             </NavItem>
@@ -885,6 +893,14 @@ function StudentDashboardPage() {
             </>
           )}
         </MainContent>
+        
+        {/* Thêm modal xác nhận đăng xuất */}
+        <ConfirmationModal
+          isOpen={showLogoutConfirmation}
+          onClose={() => setShowLogoutConfirmation(false)}
+          onConfirm={handleConfirmLogout}
+          message="Are you sure you want to logout?"
+        />
       </DashboardContainer>
     </>
   );

@@ -5,17 +5,20 @@ import { useAuth } from '../hooks/useAuth';
 import examService from '../services/examService';
 import classService from '../services/classService';
 import questionService from '../services/questionService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Styled Components
 const PageContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -24,6 +27,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -99,6 +103,8 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem 3rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -111,14 +117,21 @@ const Header = styled.header`
 const PageTitle = styled.div`
   font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 `;
 
 const Card = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 1.5rem;
   padding: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const FormGroup = styled.div`
@@ -140,48 +153,53 @@ const Label = styled.label`
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #444;
+  color: var(--text-secondary);
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
   
   &:focus {
     outline: none;
-    border-color: #6a00ff;
+    border-color: var(--highlight-color);
   }
 `;
 
 const Select = styled.select`
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
-  background-color: white;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
   
   &:focus {
     outline: none;
-    border-color: #6a00ff;
+    border-color: var(--highlight-color);
   }
 `;
 
 const Textarea = styled.textarea`
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
   min-height: 120px;
   resize: vertical;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
   
   &:focus {
     outline: none;
-    border-color: #6a00ff;
+    border-color: var(--highlight-color);
   }
 `;
 
@@ -371,6 +389,7 @@ const TrashIcon = () => (
 
 function CreateExamPage() {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const { examId } = useParams();
   const isEditMode = !!examId;
@@ -404,6 +423,10 @@ function CreateExamPage() {
   const [showQuestionManager, setShowQuestionManager] = useState(false);
   const [activeTab, setActiveTab] = useState('add'); // 'add' or 'import'
   const [questions, setQuestions] = useState([]);
+  
+  // For editing questions
+  const [isQuestionEditMode, setIsQuestionEditMode] = useState(false);
+  const [editingQuestionId, setEditingQuestionId] = useState(null);
   
   // For adding questions
   const [questionData, setQuestionData] = useState({
@@ -514,8 +537,10 @@ function CreateExamPage() {
     
     // Special validation for password
     if (name === 'password') {
-      // Only validate if there's a value (password is optional)
-      if (value && value.length > 0 && value.length < 4) {
+      // Password is now required
+      if (!value || value.trim() === '') {
+        setPasswordError('Password is required');
+      } else if (value.length < 4) {
         setPasswordError('Password must be at least 4 characters long');
       } else {
         setPasswordError('');
@@ -568,8 +593,14 @@ function CreateExamPage() {
     setLoading(true);
     setError(null);
     
-    // Validate password if provided
-    if (examData.password && examData.password.length > 0 && examData.password.length < 4) {
+    // Validate password - now required
+    if (!examData.password || examData.password.trim() === '') {
+      setError('Exam password is required');
+      setLoading(false);
+      return;
+    }
+    
+    if (examData.password.length < 4) {
       setError('Exam password must be at least 4 characters long');
       setLoading(false);
       return;
@@ -581,8 +612,8 @@ function CreateExamPage() {
         ...examData,
         classId: Number(examData.classId),
         duration: Number(examData.duration),
-        // Include password (empty string is fine if not set)
-        password: examData.password || ''
+        // Include password (now required)
+        password: examData.password.trim()
       };
       
       // Format dates to ISO strings if needed
@@ -703,12 +734,59 @@ function CreateExamPage() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Kiểm tra kích thước file, giới hạn 2MB
+      const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`Kích thước ảnh quá lớn (${(file.size / (1024 * 1024)).toFixed(2)}MB). Vui lòng sử dụng ảnh dưới 2MB.`);
+        // Reset file input
+        if (imageInputRef.current) {
+          imageInputRef.current.value = '';
+        }
+        return;
+      }
+      
       const reader = new FileReader();
       reader.onloadend = () => {
-        setQuestionImage({
-          file,
-          preview: reader.result
-        });
+        // Load image để resize
+        const img = new Image();
+        img.onload = () => {
+          // Giới hạn kích thước tối đa
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+          
+          // Resize nếu ảnh quá lớn
+          if (width > MAX_WIDTH) {
+            height = Math.round(height * MAX_WIDTH / width);
+            width = MAX_WIDTH;
+          }
+          if (height > MAX_HEIGHT) {
+            width = Math.round(width * MAX_HEIGHT / height);
+            height = MAX_HEIGHT;
+          }
+          
+          // Tạo canvas để resize và nén
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Nén với chất lượng 80%
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          
+          // Xóa thông báo lỗi nếu có
+          if (error && error.includes('Kích thước ảnh')) {
+            setError(null);
+          }
+          
+          setQuestionImage({
+            file,
+            preview: compressedDataUrl
+          });
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
@@ -846,6 +924,195 @@ function CreateExamPage() {
     setSelectedFile(e.target.files[0]);
   };
   
+  // Thêm các hàm xử lý chỉnh sửa câu hỏi
+  const handleEditQuestion = (question) => {
+    // Chuyển đến tab add question
+    setActiveTab('add');
+    setIsQuestionEditMode(true);
+    setEditingQuestionId(question.id);
+    
+    // Chuẩn bị dữ liệu câu hỏi để chỉnh sửa
+    // Đối với các câu hỏi dạng lựa chọn, cần xác định lại answerKeys
+    let answerKeys = '';
+    
+    if (question.type === 'SINGLE_CHOICE') {
+      // Tìm optionKey của đáp án (lựa chọn có optionValue khớp với answer)
+      const correctChoice = question.choices.find(choice => choice.optionValue === question.answer);
+      answerKeys = correctChoice ? correctChoice.optionKey : '';
+    } else if (question.type === 'MULTIPLE_CHOICE') {
+      // Với multiple choice, answer là chuỗi các đáp án phân cách bởi dấu phẩy
+      // Cần tìm các optionKey tương ứng với mỗi phần trong answer
+      const answerValues = question.answer ? question.answer.split(',').map(a => a.trim()) : [];
+      const selectedKeys = [];
+      
+      answerValues.forEach(answer => {
+        const choice = question.choices.find(choice => choice.optionValue === answer);
+        if (choice) {
+          selectedKeys.push(choice.optionKey);
+        }
+      });
+      
+      // Sắp xếp các optionKey và nối lại thành chuỗi
+      answerKeys = selectedKeys.sort().join(',');
+    }
+    
+    // Chuẩn bị dữ liệu để điền vào form
+    setQuestionData({
+      title: question.title,
+      type: question.type,
+      choices: [...question.choices], // Tạo bản sao
+      answer: question.answer || '',
+      answerKeys: answerKeys
+    });
+    
+    // Chuẩn bị ảnh nếu có
+    if (question.image) {
+      setQuestionImage({
+        preview: question.image
+      });
+    } else {
+      setQuestionImage(null);
+    }
+    
+    // Xóa thông báo lỗi nếu có
+    setError(null);
+  };
+  
+  const handleUpdateQuestion = async () => {
+    try {
+      // Thực hiện các bước kiểm tra tương tự như khi thêm câu hỏi
+      if (!questionData.title || questionData.title.trim() === '') {
+        setError('Please enter a question title.');
+        return;
+      }
+
+      // Validate that an answer is selected for choice-based questions
+      if (questionData.type === 'SINGLE_CHOICE' && !questionData.answerKeys) {
+        setError('Please select a correct answer for your single choice question.');
+        return;
+      }
+      
+      if (questionData.type === 'MULTIPLE_CHOICE' && (!questionData.answerKeys || questionData.answerKeys.trim() === '')) {
+        setError('Please select at least one correct answer for your multiple choice question.');
+        return;
+      }
+      
+      const targetExamId = createdExamId || examId;
+      console.log(`Updating question ID: ${editingQuestionId} for exam ID: ${targetExamId}`);
+      
+      // Prepare data exactly as expected by the backend CreateQuestionRequest
+      const data = {
+        examId: Number(targetExamId),
+        title: questionData.title.trim(),
+        type: questionData.type,
+        answer: "",
+        image: null // Will be updated if we have an image
+      };
+      
+      // Format choices based on question type
+      if (data.type === 'ESSAY') {
+        data.choices = [];
+        data.answer = questionData.answer || ""; // Model answer for essay
+      } else {
+        // Ensure choices are properly formatted and not empty
+        data.choices = questionData.choices
+          .filter(choice => choice.optionValue.trim() !== '')
+          .map(choice => ({
+            optionKey: choice.optionKey,
+            optionValue: choice.optionValue.trim()
+          }));
+          
+        // Validate that we have choices
+        if (data.choices.length < 2) {
+          setError('Please provide at least two answer choices for a choice question.');
+          return;
+        }
+        
+        // Format answer based on question type
+        if (data.type === 'SINGLE_CHOICE' && questionData.answerKeys) {
+          // For single choice, find the selected choice and use its value
+          const selectedChoice = questionData.choices.find(c => c.optionKey === questionData.answerKeys);
+          if (selectedChoice) {
+            data.answer = selectedChoice.optionValue;
+          }
+        } else if (data.type === 'MULTIPLE_CHOICE') {
+          // For multiple choice, use the answer string already prepared (comma-separated)
+          data.answer = questionData.answer || "";
+        }
+      }
+
+      // Process image if provided
+      if (questionImage && questionImage.preview) {
+        data.image = questionImage.preview;
+      }
+      
+      try {
+        // Gọi API cập nhật câu hỏi
+        const response = await questionService.updateQuestion(editingQuestionId, data);
+        console.log('Question updated successfully:', response.data);
+        
+        // Show success message
+        setSuccess('Question updated successfully!');
+        setError(null); // Clear any existing errors
+        
+        // Reset form và trạng thái chỉnh sửa
+        setQuestionData({
+          title: '',
+          type: 'SINGLE_CHOICE',
+          choices: [
+            { optionKey: 'A', optionValue: '' },
+            { optionKey: 'B', optionValue: '' },
+            { optionKey: 'C', optionValue: '' },
+            { optionKey: 'D', optionValue: '' }
+          ],
+          answer: '',
+          answerKeys: ''
+        });
+        setQuestionImage(null); // Clear image
+        setIsQuestionEditMode(false);
+        setEditingQuestionId(null);
+        
+        // Cập nhật lại danh sách câu hỏi
+        fetchQuestions(targetExamId);
+        
+        // Clear success message after delay
+        setTimeout(() => {
+          setSuccess(null);
+        }, 5000);
+      } catch (err) {
+        console.error('Error updating question:', err);
+        if (err.message) {
+          setError(err.message);
+        } else {
+          setError('Failed to update question. Please try again.');
+        }
+      }
+    } catch (err) {
+      console.error('Error in question form processing:', err);
+      setError('An error occurred while processing the form. Please try again.');
+    }
+  };
+  
+  const handleCancelEdit = () => {
+    // Hủy chỉnh sửa và đặt lại form về trạng thái ban đầu
+    setQuestionData({
+      title: '',
+      type: 'SINGLE_CHOICE',
+      choices: [
+        { optionKey: 'A', optionValue: '' },
+        { optionKey: 'B', optionValue: '' },
+        { optionKey: 'C', optionValue: '' },
+        { optionKey: 'D', optionValue: '' }
+      ],
+      answer: '',
+      answerKeys: ''
+    });
+    setQuestionImage(null);
+    setIsQuestionEditMode(false);
+    setEditingQuestionId(null);
+    setError(null);
+  };
+  
   const handleImportQuestions = async () => {
     if (!selectedFile) {
       setError('Please select a file to import.');
@@ -962,8 +1229,8 @@ function CreateExamPage() {
   }, [showQuestionManager, questions.length]);
   
   return (
-    <PageContainer>
-      <Sidebar>
+    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+      <Sidebar theme={theme}>
         <Logo>logo</Logo>
         <SidebarMenu>
           {isLecturer ? (
@@ -1030,11 +1297,10 @@ function CreateExamPage() {
       
       <MainContent>
         <Header>
-          <PageTitle>
-            {showQuestionManager 
-              ? 'Manage Questions' 
-              : (isEditMode ? 'Edit Exam' : 'Create New Exam')}
-          </PageTitle>
+          <PageTitle>{examId ? 'Edit Exam' : 'Create New Exam'}</PageTitle>
+          <HeaderRight>
+            {/* <ThemeToggle /> */}
+          </HeaderRight>
         </Header>
         
         {!showQuestionManager ? (
@@ -1135,7 +1401,7 @@ function CreateExamPage() {
               </FormGroup>
               
               <FormGroup>
-                <Label htmlFor="password">Exam Password (Optional)</Label>
+                <Label htmlFor="password">Exam Password</Label>
                 <div style={{ position: 'relative' }}>
                   <Input 
                     id="password"
@@ -1143,8 +1409,9 @@ function CreateExamPage() {
                     type={showPassword ? "text" : "password"}
                     value={examData.password}
                     onChange={handleChange}
-                    placeholder="Leave blank for no password protection"
+                    placeholder="Enter exam password"
                     style={{ paddingRight: '40px' }}
+                    required
                   />
                   <button 
                     type="button"
@@ -1193,7 +1460,7 @@ function CreateExamPage() {
                   </div>
                 )}
                 <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
-                  If set, students will need to enter this password to access the exam.
+                  Students will need to enter this password to access the exam.
                 </div>
               </FormGroup>
               
@@ -1294,6 +1561,9 @@ function CreateExamPage() {
                   {/* Add the image upload section */}
                   <ImageUploadContainer>
                     <Label>Question Image (optional)</Label>
+                    {/* <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                      Kích thước tối đa: 2MB. Ảnh sẽ được tự động resize nếu quá lớn.
+                    </div> */}
                     <ButtonGroup style={{ marginTop: '0.5rem', justifyContent: 'flex-start' }}>
                       <Button 
                         type="button" 
@@ -1397,9 +1667,20 @@ function CreateExamPage() {
                   )}
                   
                   <ButtonGroup>
-                    <Button type="button" onClick={handleAddQuestion}>
-                      Add Question
-                    </Button>
+                    {isQuestionEditMode ? (
+                      <>
+                        <Button type="button" variant="outline" onClick={handleCancelEdit}>
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={handleUpdateQuestion}>
+                          Update Question
+                        </Button>
+                      </>
+                    ) : (
+                      <Button type="button" onClick={handleAddQuestion}>
+                        Add Question
+                      </Button>
+                    )}
                   </ButtonGroup>
                 </>
               )}
@@ -1458,9 +1739,29 @@ function CreateExamPage() {
                   ) : (
                     questions.map((question, index) => (
                       <QuestionCard key={question.id} type={question.type}>
-                        <div style={{ fontWeight: 500, marginBottom: '0.75rem' }}>
-                          {index + 1}. {question.title}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                          <div style={{ fontWeight: 500 }}>
+                            {index + 1}. {question.title}
+                          </div>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                            onClick={() => handleEditQuestion(question)}
+                          >
+                            Edit
+                          </Button>
                         </div>
+                        
+                        {question.image && (
+                          <div style={{ marginBottom: '0.75rem', textAlign: 'center' }}>
+                            <img 
+                              src={question.image} 
+                              alt="Question" 
+                              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} 
+                            />
+                          </div>
+                        )}
                         
                         {question.type !== 'ESSAY' && question.choices && (
                           <div style={{ marginLeft: '1.5rem' }}>

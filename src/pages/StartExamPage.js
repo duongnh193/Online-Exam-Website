@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../hooks/useAuth';
 import studentExamService from '../services/studentExamService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 const PageContainer = styled.div`
   display: flex;
@@ -10,8 +13,15 @@ const PageContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
   padding: 20px;
+  transition: background-color 0.3s ease;
+`;
+
+const ThemeToggleContainer = styled.div`
+  position: absolute;
+  top: 20px;
+  right: 20px;
 `;
 
 const ContentContainer = styled.div`
@@ -24,28 +34,33 @@ const Welcome = styled.h1`
   font-size: 24px;
   font-weight: 500;
   margin-bottom: 10px;
+  color: var(--text-primary);
 `;
 
 const ReadyMessage = styled.h2`
   font-size: 20px;
   font-weight: 400;
   margin-bottom: 30px;
+  color: var(--text-primary);
 `;
 
 const InstructionText = styled.p`
   font-size: 14px;
   margin-bottom: 20px;
   line-height: 1.5;
+  color: var(--text-secondary);
 `;
 
 const PasswordInput = styled.input`
   width: 100%;
   padding: 12px;
   margin-bottom: 20px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 16px;
   box-sizing: border-box;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
 `;
 
 const LoginButton = styled.button`
@@ -75,13 +90,13 @@ const ErrorMessage = styled.div`
 `;
 
 const InfoBox = styled.div`
-  background-color: rgba(106, 0, 255, 0.05);
-  border-left: 3px solid #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'rgba(150, 120, 255, 0.1)' : 'rgba(106, 0, 255, 0.05)'};
+  border-left: 3px solid var(--highlight-color);
   padding: 12px 16px;
   margin-top: 20px;
   font-size: 13px;
   line-height: 1.5;
-  color: #333;
+  color: var(--text-primary);
   text-align: left;
 `;
 
@@ -89,9 +104,12 @@ function StartExamPage() {
   const { examId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showStartConfirmation, setShowStartConfirmation] = useState(false);
+  const [examResponse, setExamResponse] = useState(null);
   
   useEffect(() => {
     // Validate that we have an exam ID
@@ -119,27 +137,16 @@ function StartExamPage() {
     setError('');
     
     try {
-      // Trực tiếp gọi API start exam với password - để backend xử lý kiểm tra trạng thái
+      // Gọi API start exam để kiểm tra
       const response = await studentExamService.startExam(examId, password);
       
       console.log('Start exam response:', response.data);
       
       if (response && response.data && response.data.studentExam) {
-        // The ID is within the studentExam object in the response
-        const studentExamId = response.data.studentExam.id;
-        
-        if (studentExamId) {
-          console.log('Found student exam ID:', studentExamId);
-          
-          // Chỉ lưu studentExamId vào localStorage - API sẽ cung cấp tất cả thông tin khác khi cần
-          localStorage.setItem('currentStudentExamId', studentExamId);
-          
-          // Navigate to the exam questions page
-          navigate(`/take-exam/${examId}/questions`);
-        } else {
-          console.error('Missing ID in studentExam object:', response.data);
-          setError('Invalid response from server. Missing exam session ID.');
-        }
+        // Lưu response để sử dụng sau khi xác nhận
+        setExamResponse(response.data);
+        // Hiển thị modal xác nhận
+        setShowStartConfirmation(true);
       } else {
         console.error('Invalid response structure:', response.data);
         setError('Failed to start exam. Invalid response from server.');
@@ -170,6 +177,23 @@ function StartExamPage() {
     }
   };
   
+  // Hàm xử lý khi người dùng xác nhận bắt đầu làm bài
+  const handleConfirmStart = () => {
+    if (examResponse && examResponse.studentExam) {
+      const studentExamId = examResponse.studentExam.id;
+      
+      if (studentExamId) {
+        console.log('Starting exam with ID:', studentExamId);
+        
+        // Lưu studentExamId vào localStorage
+        localStorage.setItem('currentStudentExamId', studentExamId);
+        
+        // Chuyển hướng đến trang làm bài
+        navigate(`/take-exam/${examId}/questions`);
+      }
+    }
+  };
+  
   const getFullName = () => {
     if (user) {
       const firstName = user.firstName || '';
@@ -180,7 +204,11 @@ function StartExamPage() {
   };
   
   return (
-    <PageContainer>
+    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+      <ThemeToggleContainer>
+        {/* <ThemeToggle /> */}
+      </ThemeToggleContainer>
+      
       <ContentContainer>
         <Welcome>Welcome {getFullName()},</Welcome>
         <ReadyMessage>Are you ready to take your exam?</ReadyMessage>
@@ -203,16 +231,23 @@ function StartExamPage() {
           />
           
           <LoginButton type="submit" disabled={loading}>
-            {loading ? 'Verifying...' : 'Start Exam'}
+            {loading ? 'Starting...' : 'Start Exam'}
           </LoginButton>
         </form>
         
-        <InfoBox>
-          <strong>Note:</strong> This password is specific to this exam session and 
-          is provided by your lecturer. If you don't have the password, please 
-          contact your lecturer directly.
+        <InfoBox theme={theme}>
+          <strong>Note:</strong> Once you start the exam, you cannot pause or exit without submitting. 
+          Make sure you have stable internet connection and enough time to complete.
         </InfoBox>
       </ContentContainer>
+      
+      {/* Modal xác nhận bắt đầu làm bài */}
+      <ConfirmationModal
+        isOpen={showStartConfirmation}
+        onClose={() => setShowStartConfirmation(false)}
+        onConfirm={handleConfirmStart}
+        message="Are you sure you want to start exam?"
+      />
     </PageContainer>
   );
 }

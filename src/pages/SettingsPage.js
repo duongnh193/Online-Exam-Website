@@ -6,6 +6,7 @@ import { userService } from '../services/userService';
 import authService from '../services/authService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -13,6 +14,19 @@ const PageContainer = styled.div`
   min-height: 100vh;
   background-color: var(--bg-primary);
   transition: background-color 0.3s ease;
+  
+  /* Add CSS Variables for new components */
+  --bg-disabled: ${props => props.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+  --bg-input: ${props => props.theme === 'dark' ? '#333' : 'white'};
+  --highlight-color: #6a00ff;
+  --error-bg: ${props => props.theme === 'dark' ? '#331515' : '#ffecec'};
+  --error-color: ${props => props.theme === 'dark' ? '#ff6b6b' : '#d32f2f'};
+  --success-bg: ${props => props.theme === 'dark' ? '#113323' : '#d1fae5'};
+  --success-color: ${props => props.theme === 'dark' ? '#34d399' : '#10b981'};
+  --info-bg: ${props => props.theme === 'dark' ? '#0f2942' : '#e0f2fe'};
+  --info-color: ${props => props.theme === 'dark' ? '#60a5fa' : '#0891b2'};
+  --text-input: ${props => props.theme === 'dark' ? '#ffffff' : '#333333'};
+  --text-input-disabled: ${props => props.theme === 'dark' ? '#bbbbbb' : '#666666'};
 `;
 
 const Sidebar = styled.aside`
@@ -330,30 +344,44 @@ const Label = styled.label`
 const Input = styled.input`
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
+  background-color: var(--bg-input);
+  color: var(--text-input);
   
   &:focus {
     outline: none;
-    border-color: #6a00ff;
+    border-color: var(--highlight-color);
+  }
+  
+  &:disabled {
+    background-color: var(--bg-disabled);
+    color: var(--text-input-disabled);
   }
 `;
 
 const Select = styled.select`
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23333' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1rem center;
+  background-color: var(--bg-input);
+  color: var(--text-input);
   
   &:focus {
     outline: none;
-    border-color: #6a00ff;
+    border-color: var(--highlight-color);
+  }
+  
+  &:disabled {
+    background-color: var(--bg-disabled);
+    color: var(--text-input-disabled);
   }
 `;
 
@@ -811,6 +839,344 @@ const DeleteIcon = () => (
   </svg>
 );
 
+// Add these new styled components below the existing ones
+const ProfileCard = styled.div`
+  background-color: var(--bg-secondary);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+`;
+
+const ProfileHeader = styled.div`
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
+  padding: 2rem;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+`;
+
+const AvatarUpload = styled.div`
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  
+  &:hover::after {
+    content: 'Update';
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+`;
+
+const ProfileInfo = styled.div`
+  flex: 1;
+`;
+
+const ProfileName = styled.div`
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+`;
+
+const ProfileRole = styled.div`
+  font-size: 0.9rem;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  span {
+    display: inline-block;
+    padding: 0.15rem 0.75rem;
+    border-radius: 1rem;
+    background-color: rgba(255, 255, 255, 0.2);
+    font-size: 0.8rem;
+  }
+`;
+
+const ProfileBody = styled.div`
+  padding: 2rem;
+`;
+
+const ProfileField = styled.div`
+  margin-bottom: 1.5rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const FieldLabel = styled.label`
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+`;
+
+const FieldInput = styled.input`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background-color: ${props => props.readOnly ? 'var(--bg-disabled)' : 'var(--bg-input)'};
+  color: ${props => props.readOnly ? 'var(--text-input-disabled)' : 'var(--text-input)'};
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.readOnly ? 'var(--border-color)' : 'var(--highlight-color)'};
+  }
+`;
+
+// Update the SecurityCard component
+const SecurityCard = styled(Card)`
+  border-radius: 1.5rem;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+`;
+
+// Update the PasswordStrengthMeter for better visibility in dark mode
+const PasswordStrengthMeter = styled.div`
+  height: 6px;
+  border-radius: 3px;
+  background-color: ${props => props.theme === 'dark' ? '#444' : '#eee'};
+  margin-top: 1rem;
+  overflow: hidden;
+  display: flex;
+`;
+
+// Add a new component for form feedback messages
+const FormFeedback = styled.div`
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  
+  &.error {
+    background-color: var(--error-bg);
+    color: var(--error-color);
+  }
+  
+  &.success {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+  }
+`;
+
+// Update the SecurityHeader component
+const SecurityHeader = styled.div`
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+`;
+
+const StatusBadge = styled.span`
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+  background-color: ${props => props.success ? '#d1fae5' : '#ffecec'};
+  color: ${props => props.success ? '#10b981' : '#ef4444'};
+`;
+
+const TwoFACard = styled(Card)`
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.5rem;
+  overflow: hidden;
+`;
+
+const TwoFAHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+`;
+
+const TwoFAStatus = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background-color: ${props => props.enabled ? 'var(--success-bg)' : 'var(--info-bg)'};
+  color: ${props => props.enabled ? 'var(--success-color)' : 'var(--info-color)'};
+`;
+
+const TwoFAStatusIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background-color: ${props => props.enabled ? 'var(--success-color)' : 'var(--info-color)'};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+`;
+
+const TwoFAStatusText = styled.div`
+  flex: 1;
+  
+  h3 {
+    font-size: 1.1rem;
+    margin: 0 0 0.25rem 0;
+  }
+  
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+`;
+
+const Toggle = styled.label`
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 30px;
+  
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    
+    &:checked + span {
+      background-color: #6a00ff;
+    }
+    
+    &:checked + span:before {
+      transform: translateX(30px);
+    }
+    
+    &:disabled + span {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+`;
+
+const Slider = styled.span`
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .3s;
+  border-radius: 34px;
+  
+  &:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+  }
+`;
+
+// Add this new component with the existing styled components
+const ProfileEditButton = styled(Button)`
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+// Update the ProfileEditIcon component name to avoid duplicate
+const ProfileEditIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
+
+const ProfileFormModal = styled(Modal)`
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 1001;
+`;
+
+const ProfileFormContent = styled(ModalContent)`
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  max-width: 600px;
+  width: 100%;
+  transition: background-color 0.3s ease;
+`;
+
+const ProfileFormHeader = styled(ModalHeader)`
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const ProfileFormTitle = styled(ModalTitle)`
+  color: var(--text-primary);
+`;
+
+const ProfileFormCloseButton = styled(CloseButton)`
+  color: var(--text-secondary);
+  
+  &:hover {
+    color: var(--text-primary);
+  }
+`;
+
+// Add back the StrengthSegment component with improved dark mode compatibility
+const StrengthSegment = styled.div`
+  height: 100%;
+  flex: 1;
+  margin-right: 4px;
+  
+  &:last-child {
+    margin-right: 0;
+  }
+  
+  background-color: ${props => {
+    if (props.active) {
+      switch(props.level) {
+        case 1: return '#ff4d4d';
+        case 2: return '#ffaa33';
+        case 3: return '#ffd633';
+        case 4: return '#4dff4d';
+        default: return props.theme === 'dark' ? '#444' : '#eee';
+      }
+    }
+    return props.theme === 'dark' ? '#444' : '#eee';
+  }};
+`;
+
 function SettingsPage() {
   const { user, logout, refreshUser } = useAuth();
   const location = useLocation();
@@ -867,6 +1233,10 @@ function SettingsPage() {
 
   // New state for role-based tabs
   const [activeRoleTab, setActiveRoleTab] = useState('all');
+  
+  // Add state for profile edit modal
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
 
   // Add a function to explicitly update the 2FA UI state from localStorage
   const updateTwoFactorStateFromStorage = useCallback(() => {
@@ -1101,8 +1471,16 @@ function SettingsPage() {
     }
   };
   
-  const handleLogout = () => {
+  const handleLogout = (e) => {
+    if (e) e.preventDefault();
+    setShowDropdown(false);
+    setShowLogoutConfirmation(true);
+  };
+  
+  const handleConfirmLogout = () => {
+    console.log('SettingsPage: Executing logout after confirmation');
     logout();
+    setShowLogoutConfirmation(false);
   };
   
   const getUserInitial = () => {
@@ -1346,6 +1724,9 @@ function SettingsPage() {
       // updateUser(updatedUser);
       
       alert('Profile updated successfully');
+      
+      // Close the modal after successful update
+      setShowProfileModal(false);
     } catch (error) {
       console.error('Error updating profile:', error);
       alert(`Error: ${error.response?.data?.message || 'Failed to update profile'}`);
@@ -1506,6 +1887,16 @@ function SettingsPage() {
     return location.pathname.startsWith(path);
   };
 
+  // Handle edit button click
+  const handleEditProfile = () => {
+    setShowProfileModal(true);
+  };
+
+  // Handle close modal
+  const handleCloseProfileModal = () => {
+    setShowProfileModal(false);
+  };
+
   return (
     <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
       <Sidebar theme={theme}>
@@ -1582,7 +1973,7 @@ function SettingsPage() {
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
-          <NavItem to="/" onClick={handleLogout}>
+          <NavItem to="#" onClick={handleLogout}>
             <NavIcon>{getMenuIcon('signout')}</NavIcon>
             Sign out
           </NavItem>
@@ -1595,7 +1986,7 @@ function SettingsPage() {
           
           <HeaderRight>
             {/* Add ThemeToggle component */}
-            <ThemeToggle />
+            {/* <ThemeToggle /> */}
             
             <DropdownContainer ref={dropdownRef}>
               <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
@@ -1690,19 +2081,19 @@ function SettingsPage() {
             {/* Enhanced Search and Filter */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <SearchContainer style={{ margin: 0 }}>
-                <SearchIcon>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                </SearchIcon>
-                <SearchInput 
-                  type="text" 
+              <SearchIcon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </SearchIcon>
+              <SearchInput 
+                type="text" 
                   placeholder="Search by username, email..." 
-                  value={searchTerm}
-                  onChange={handleSearch}
-                />
-              </SearchContainer>
+                value={searchTerm}
+                onChange={handleSearch}
+              />
+            </SearchContainer>
               
               <FilterContainer style={{ margin: 0 }}>
                 <FilterDropdownButton>
@@ -1785,10 +2176,10 @@ function SettingsPage() {
                 
                 {activeRoleTab === 'admin' && (
                   <UserCardContainer>
-                    {filteredAdmins.map(user => (
+                        {filteredAdmins.map(user => (
                       <UserCard key={user.id}>
                         <UserCardBadge role={user.role}>
-                          {user.role.replace('ROLE_', '')}
+                                {user.role.replace('ROLE_', '')}
                         </UserCardBadge>
                         <UserCardAvatar role={user.role}>
                           {user.username ? user.username.charAt(0).toUpperCase() : 'A'}
@@ -1801,26 +2192,26 @@ function SettingsPage() {
                           <UserCardEmail>{user.email}</UserCardEmail>
                         </UserCardInfo>
                         <UserCardActions>
-                          <ActionButton title="Edit" onClick={() => openEditModal(user)}>
-                            <EditIcon />
-                          </ActionButton>
-                          <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
-                            <DeleteIcon />
-                          </ActionButton>
+                              <ActionButton title="Edit" onClick={() => openEditModal(user)}>
+                                <EditIcon />
+                              </ActionButton>
+                              <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
+                                <DeleteIcon />
+                              </ActionButton>
                         </UserCardActions>
                       </UserCard>
-                    ))}
+                        ))}
                     {filteredAdmins.length === 0 && (
                       <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#666' }}>
                         No admin users found
-                      </div>
+                  </div>
                     )}
                   </UserCardContainer>
                 )}
                 
                 {activeRoleTab === 'lecturer' && (
                   <UserCardContainer>
-                    {filteredLecturers.map(user => (
+                        {filteredLecturers.map(user => (
                       <UserCard key={user.id}>
                         <UserCardBadge role={user.role}>
                           {user.role.replace('ROLE_', '')}
@@ -1836,16 +2227,16 @@ function SettingsPage() {
                           <UserCardEmail>{user.email}</UserCardEmail>
                         </UserCardInfo>
                         <UserCardActions>
-                          <ActionButton title="Edit" onClick={() => openEditModal(user)}>
-                            <EditIcon />
-                          </ActionButton>
-                          <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
-                            <DeleteIcon />
-                          </ActionButton>
+                              <ActionButton title="Edit" onClick={() => openEditModal(user)}>
+                                <EditIcon />
+                              </ActionButton>
+                              <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
+                                <DeleteIcon />
+                              </ActionButton>
                         </UserCardActions>
                       </UserCard>
-                    ))}
-                    {filteredLecturers.length === 0 && (
+                        ))}
+                        {filteredLecturers.length === 0 && (
                       <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#666' }}>
                         No lecturers found
                       </div>
@@ -1855,7 +2246,7 @@ function SettingsPage() {
                 
                 {activeRoleTab === 'student' && (
                   <UserCardContainer>
-                    {filteredStudents.map(user => (
+                        {filteredStudents.map(user => (
                       <UserCard key={user.id}>
                         <UserCardBadge role={user.role}>
                           {user.role.replace('ROLE_', '')}
@@ -1871,16 +2262,16 @@ function SettingsPage() {
                           <UserCardEmail>{user.email}</UserCardEmail>
                         </UserCardInfo>
                         <UserCardActions>
-                          <ActionButton title="Edit" onClick={() => openEditModal(user)}>
-                            <EditIcon />
-                          </ActionButton>
-                          <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
-                            <DeleteIcon />
-                          </ActionButton>
+                              <ActionButton title="Edit" onClick={() => openEditModal(user)}>
+                                <EditIcon />
+                              </ActionButton>
+                              <ActionButton title="Delete" onClick={() => handleDelete(user.id)}>
+                                <DeleteIcon />
+                              </ActionButton>
                         </UserCardActions>
                       </UserCard>
-                    ))}
-                    {filteredStudents.length === 0 && (
+                        ))}
+                        {filteredStudents.length === 0 && (
                       <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#666' }}>
                         No students found
                       </div>
@@ -1893,82 +2284,145 @@ function SettingsPage() {
         )}
         
         {activeTab === 'profile' && (
-          <Card>
-            <CardTitle>My Profile</CardTitle>
-            <form onSubmit={handleProfileSubmit}>
-              <FormGroup>
-                <Label>Username</Label>
-                <Input 
+          <ProfileCard>
+            <ProfileHeader theme={theme}>
+              <AvatarUpload>
+                {getUserInitial()}
+              </AvatarUpload>
+              <ProfileInfo>
+                <ProfileName>{getFullName()}</ProfileName>
+                <ProfileRole>
+                  <span>{user?.role?.replace('ROLE_', '')}</span>
+                  {user?.email}
+                </ProfileRole>
+              </ProfileInfo>
+            </ProfileHeader>
+            
+            <ProfileBody>
+              <ProfileField>
+                <FieldLabel>Username</FieldLabel>
+                <FieldInput 
                   type="text" 
                   value={user?.username || ''} 
-                  disabled
+                  readOnly
                 />
-              </FormGroup>
-              <FormGroup>
-                <Label>Email</Label>
-                <Input 
+              </ProfileField>
+              
+              <ProfileField>
+                <FieldLabel>Email</FieldLabel>
+                <FieldInput 
                   type="email" 
                   value={user?.email || ''} 
-                  disabled
+                  readOnly
                 />
-              </FormGroup>
+              </ProfileField>
+              
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <FormGroup style={{ flex: 1 }}>
-                  <Label>First Name</Label>
-                  <Input 
+                <ProfileField style={{ flex: 1 }}>
+                  <FieldLabel>First Name</FieldLabel>
+                  <FieldInput 
                     type="text" 
-                    name="firstName"
-                    value={profileData.firstName}
-                    onChange={handleProfileChange}
+                    value={profileData.firstName || ''}
+                    readOnly
                   />
-                </FormGroup>
-                <FormGroup style={{ flex: 1 }}>
-                  <Label>Last Name</Label>
-                  <Input 
+                </ProfileField>
+                <ProfileField style={{ flex: 1 }}>
+                  <FieldLabel>Last Name</FieldLabel>
+                  <FieldInput 
                     type="text" 
-                    name="lastName"
-                    value={profileData.lastName}
-                    onChange={handleProfileChange}
+                    value={profileData.lastName || ''}
+                    readOnly
                   />
-                </FormGroup>
+                </ProfileField>
               </div>
               
-              <ButtonGroup>
-                <Button variant="outlined" type="button">Cancel</Button>
-                <Button type="submit">Save Changes</Button>
-              </ButtonGroup>
-            </form>
-          </Card>
+              <ProfileEditButton onClick={handleEditProfile}>
+                <ProfileEditIcon /> Edit Profile
+              </ProfileEditButton>
+            </ProfileBody>
+            
+            {showProfileModal && (
+              <ProfileFormModal>
+                <ProfileFormContent>
+                  <ProfileFormHeader>
+                    <ProfileFormTitle>Edit Profile</ProfileFormTitle>
+                    <ProfileFormCloseButton onClick={handleCloseProfileModal}>×</ProfileFormCloseButton>
+                  </ProfileFormHeader>
+                  
+                  <form onSubmit={handleProfileSubmit}>
+                    <FormGroup>
+                      <Label>Username</Label>
+                      <Input 
+                        type="text" 
+                        value={user?.username || ''} 
+                        disabled
+                      />
+                    </FormGroup>
+                    
+                    <FormGroup>
+                      <Label>Email</Label>
+                      <Input 
+                        type="email" 
+                        value={user?.email || ''} 
+                        disabled
+                      />
+                    </FormGroup>
+                    
+                    <FormGroup>
+                      <Label>First Name</Label>
+                      <Input 
+                        type="text" 
+                        name="firstName"
+                        value={profileData.firstName}
+                        onChange={handleProfileChange}
+                      />
+                    </FormGroup>
+                    
+                    <FormGroup>
+                      <Label>Last Name</Label>
+                      <Input 
+                        type="text" 
+                        name="lastName"
+                        value={profileData.lastName}
+                        onChange={handleProfileChange}
+                      />
+                    </FormGroup>
+                    
+                    <ButtonGroup>
+                      <Button variant="outlined" type="button" onClick={handleCloseProfileModal}>Cancel</Button>
+                      <Button type="submit">Save Changes</Button>
+                    </ButtonGroup>
+                  </form>
+                </ProfileFormContent>
+              </ProfileFormModal>
+            )}
+          </ProfileCard>
         )}
         
         {activeTab === 'security' && (
-          <Card>
-            <CardTitle>Change Password</CardTitle>
-            <form onSubmit={handlePasswordSubmit}>
-              {passwordError && (
-                <div style={{ 
-                  padding: '0.75rem', 
-                  backgroundColor: '#ffebee', 
-                  color: '#d32f2f',
-                  borderRadius: '8px',
-                  marginBottom: '1rem'
-                }}>
-                  {passwordError}
-                </div>
-              )}
-              
-              {passwordSuccess && (
-                <div style={{ 
-                  padding: '0.75rem', 
-                  backgroundColor: '#e8f5e9', 
-                  color: '#388e3c',
-                  borderRadius: '8px',
-                  marginBottom: '1rem'
-                }}>
-                  Password updated successfully!
-                </div>
-              )}
+          <SecurityCard>
+            <SecurityHeader>
+              <CardTitle>Change Password</CardTitle>
+              <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                Keep your account secure with a strong, unique password
+              </p>
+            </SecurityHeader>
+            
+            {passwordError && (
+              <FormFeedback className="error">
+                <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                <span>{passwordError}</span>
+              </FormFeedback>
+            )}
+            
+            {passwordSuccess && (
+              <FormFeedback className="success">
+                <span style={{ fontSize: '1.2rem' }}>✓</span>
+                <span>Password updated successfully!</span>
+              </FormFeedback>
+            )}
 
+            <form onSubmit={handlePasswordSubmit}>
               <FormGroup>
                 <Label>Current Password</Label>
                 <Input 
@@ -1979,6 +2433,7 @@ function SettingsPage() {
                   required
                 />
               </FormGroup>
+              
               <FormGroup>
                 <Label>New Password</Label>
                 <Input 
@@ -1988,7 +2443,23 @@ function SettingsPage() {
                   onChange={handlePasswordChange}
                   required
                 />
+                
+                {passwordData.newPassword && (
+                  <>
+                    <PasswordStrengthMeter theme={theme}>
+                      <StrengthSegment level={1} active={passwordData.newPassword.length >= 1} />
+                      <StrengthSegment level={2} active={passwordData.newPassword.length >= 6} />
+                      <StrengthSegment level={3} active={passwordData.newPassword.length >= 8} />
+                      <StrengthSegment level={4} active={passwordData.newPassword.length >= 10 && /[A-Z]/.test(passwordData.newPassword) && /[0-9]/.test(passwordData.newPassword)} />
+                    </PasswordStrengthMeter>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Weak</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Strong</span>
+                    </div>
+                  </>
+                )}
               </FormGroup>
+              
               <FormGroup>
                 <Label>Confirm New Password</Label>
                 <Input 
@@ -1998,6 +2469,16 @@ function SettingsPage() {
                   onChange={handlePasswordChange}
                   required
                 />
+                
+                {passwordData.confirmPassword && (
+                  <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                    {passwordData.newPassword === passwordData.confirmPassword ? (
+                      <StatusBadge success>Passwords match</StatusBadge>
+                    ) : (
+                      <StatusBadge>Passwords don't match</StatusBadge>
+                    )}
+                  </div>
+                )}
               </FormGroup>
               
               <ButtonGroup>
@@ -2023,130 +2504,89 @@ function SettingsPage() {
                 </Button>
               </ButtonGroup>
             </form>
-
-            {/* Debug panel - only visible in development */}
-            {process.env.NODE_ENV === 'development' && (
-              <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f8f8f8', borderRadius: '8px', fontSize: '12px' }}>
-                <h4 style={{ margin: '0 0 0.5rem', fontSize: '14px' }}>Debug Info (Dev Only)</h4>
-                <div>
-                  <strong>API Status:</strong> 
-                  <button 
-                    onClick={async () => {
-                      try {
-                        await userService.testApiConnection();
-                        alert('API Connection: SUCCESS');
-                      } catch (error) {
-                        alert(`API Connection: FAILED - ${error.message}`);
-                      }
-                    }}
-                    style={{ 
-                      marginLeft: '0.5rem', 
-                      padding: '2px 8px', 
-                      fontSize: '11px',
-                      backgroundColor: '#6a00ff',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Test Connection
-                  </button>
-                </div>
-                <div style={{ marginTop: '0.5rem' }}>
-                  <strong>Token:</strong> {localStorage.getItem('token')?.substring(0, 15)}...
-                </div>
-                <div style={{ marginTop: '0.5rem' }}>
-                  <strong>Token Type:</strong> {localStorage.getItem('token_type') || 'Bearer'}
-                </div>
-                <div style={{ marginTop: '0.5rem' }}>
-                  <strong>User ID:</strong> {user?.id}
-                </div>
-                <div style={{ marginTop: '0.5rem' }}>
-                  <strong>Backend Fix:</strong> Using fallback method that bypasses backend password comparison
-                </div>
-              </div>
-            )}
-          </Card>
+          </SecurityCard>
         )}
         
         {activeTab === 'twofa' && (isStudent || isLecturer) && (
-          <Card>
-            <CardTitle>Two-Factor Authentication</CardTitle>
-            <p style={{ marginBottom: '1.5rem', color: '#666' }}>
-              Two-factor authentication adds an extra layer of security to your account. 
-              When enabled, you'll need to provide a verification code in addition to your password when signing in.
-            </p>
+          <TwoFACard>
+            <TwoFAHeader>
+              <div>
+                <CardTitle>Two-Factor Authentication</CardTitle>
+                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  Add an extra layer of security to your account
+                </p>
+              </div>
+            </TwoFAHeader>
             
             {twoFactorError && (
               <div style={{ 
-                padding: '0.75rem', 
-                backgroundColor: '#ffebee', 
-                color: '#d32f2f',
+                padding: '0.75rem 1rem', 
+                backgroundColor: 'var(--error-bg)', 
+                color: 'var(--error-color)',
                 borderRadius: '8px',
-                marginBottom: '1rem'
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
               }}>
-                {twoFactorError}
+                <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                <span>{twoFactorError}</span>
               </div>
             )}
             
             {twoFactorSuccess && (
               <div style={{ 
-                padding: '0.75rem', 
-                backgroundColor: '#e8f5e9', 
-                color: '#388e3c',
+                padding: '0.75rem 1rem', 
+                backgroundColor: 'var(--success-bg)', 
+                color: 'var(--success-color)',
                 borderRadius: '8px',
-                marginBottom: '1rem'
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
               }}>
-                {twoFactorSuccess}
+                <span style={{ fontSize: '1.2rem' }}>✓</span>
+                <span>{twoFactorSuccess}</span>
               </div>
             )}
             
-            <div style={{ 
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '1.5rem',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '0.5rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-                  {twoFactorEnabled ? '2FA is currently enabled' : '2FA is currently disabled'}
-                </h3>
-                <p style={{ color: '#666', margin: 0 }}>
-                  {twoFactorEnabled 
-                    ? 'You will be asked for a verification code when logging in.' 
-                    : 'Enable 2FA to add an extra layer of security to your account.'}
-                </p>
-              </div>
-              <Button 
-                onClick={handle2FAToggle}
-                disabled={updating2FA}
-                variant={twoFactorEnabled ? 'outlined' : undefined}
-              >
-                {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
-              </Button>
-            </div>
+            <TwoFAStatus enabled={twoFactorEnabled}>
+              <TwoFAStatusIcon enabled={twoFactorEnabled}>
+                {twoFactorEnabled ? '🔒' : '🔑'}
+              </TwoFAStatusIcon>
+              <TwoFAStatusText>
+                <h3>{twoFactorEnabled ? '2FA is enabled' : '2FA is disabled'}</h3>
+                <p>{twoFactorEnabled 
+                  ? 'Your account has an extra layer of security' 
+                  : 'Enable 2FA to better protect your account'}</p>
+              </TwoFAStatusText>
+              <Toggle>
+                <input 
+                  type="checkbox"
+                  checked={twoFactorEnabled}
+                  onChange={handle2FAToggle}
+                  disabled={updating2FA}
+                />
+                <Slider />
+              </Toggle>
+            </TwoFAStatus>
             
             {twoFactorEnabled && (
-              <div style={{ padding: '1rem', backgroundColor: '#ecf5ff', borderRadius: '0.5rem' }}>
-                <p style={{ margin: 0, color: '#4285f4' }}>
-                  <strong>Note:</strong> When signing in, you'll need to enter a verification code that will be sent to your email address.
-                </p>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '1rem',
+                padding: '1rem',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px'
+              }}>
+                <div style={{ fontSize: '1.5rem' }}>📧</div>
+                <div style={{ flex: 1, fontSize: '0.9rem' }}>
+                  Verification codes will be sent to your email when logging in
+                </div>
               </div>
             )}
-            
-            <div style={{ marginTop: '2rem' }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>About Two-Factor Authentication</h3>
-              <ul style={{ color: '#666', paddingLeft: '1.5rem' }}>
-                <li style={{ marginBottom: '0.5rem' }}>Two-factor authentication requires you to verify your identity using two different factors: your password and a verification code.</li>
-                <li style={{ marginBottom: '0.5rem' }}>When enabled, you'll receive a verification code via email each time you log in.</li>
-                <li style={{ marginBottom: '0.5rem' }}>This helps protect your account even if your password is compromised.</li>
-              </ul>
-            </div>
-          </Card>
+          </TwoFACard>
         )}
       </MainContent>
       
@@ -2247,6 +2687,14 @@ function SettingsPage() {
           </ModalContent>
         </Modal>
       )}
+      
+      {/* Add logout confirmation modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={() => setShowLogoutConfirmation(false)}
+        onConfirm={handleConfirmLogout}
+        message="Are you sure you want to logout?"
+      />
     </PageContainer>
   );
 }

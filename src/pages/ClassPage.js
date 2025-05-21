@@ -3,17 +3,29 @@ import styled from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import classService from '../services/classService';
+import ThemeToggle from '../components/common/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 // Styled Components
 const PageContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
+  
+  /* CSS Variables for dark mode compatibility */
+  --bg-secondary: ${props => props.theme === 'dark' ? '#222' : 'white'};
+  --text-primary: ${props => props.theme === 'dark' ? '#fff' : '#333'};
+  --text-secondary: ${props => props.theme === 'dark' ? '#ccc' : '#666'};
+  --border-color: ${props => props.theme === 'dark' ? '#444' : '#ddd'};
+  --card-shadow: ${props => props.theme === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)'};
+  --hover-bg: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9f9f9'};
 `;
 
 const Sidebar = styled.aside`
   width: 180px;
-  background-color: #6a00ff;
+  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
   position: fixed;
   height: 100vh;
   overflow-y: auto;
@@ -22,6 +34,7 @@ const Sidebar = styled.aside`
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   border-radius: 0 20px 20px 0;
+  transition: background-color 0.3s ease;
 `;
 
 const Logo = styled.div`
@@ -97,6 +110,8 @@ const MainContent = styled.main`
   flex: 1;
   margin-left: 180px;
   padding: 2rem 3rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 `;
 
 const Header = styled.header`
@@ -109,7 +124,7 @@ const Header = styled.header`
 const PageTitle = styled.div`
   font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
 `;
 
 const HeaderRight = styled.div`
@@ -152,9 +167,9 @@ const Dropdown = styled.div`
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   width: 180px;
   z-index: 100;
   overflow: hidden;
@@ -165,13 +180,13 @@ const DropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--bg-primary);
   }
 `;
 
@@ -184,11 +199,11 @@ const ContentHeader = styled.div`
 
 const SortDropdown = styled.select`
   padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--bg-secondary);
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-primary);
   cursor: pointer;
   outline: none;
 `;
@@ -213,7 +228,7 @@ const ImportButton = styled.button`
 `;
 
 const ExamineesTable = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -224,16 +239,16 @@ const TableHeader = styled.div`
   display: grid;
   grid-template-columns: 40px 1fr 1fr 1fr 80px;
   padding: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   font-weight: 600;
-  color: #333;
+  color: var(--text-secondary);
 `;
 
 const TableRow = styled.div`
   display: grid;
   grid-template-columns: 40px 1fr 1fr 1fr 80px;
   padding: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   align-items: center;
   
   &:last-child {
@@ -241,12 +256,12 @@ const TableRow = styled.div`
   }
   
   &:hover {
-    background-color: #f9f9f9;
+    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9f9f9'};
   }
 `;
 
 const RowNumber = styled.div`
-  color: #777;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 `;
 
@@ -301,11 +316,12 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 1rem;
   padding: 2rem;
   width: 500px;
   max-width: 90%;
+  color: var(--text-primary);
 `;
 
 const ModalHeader = styled.div`
@@ -317,18 +333,18 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   font-size: 1.2rem;
-  color: #333;
+  color: var(--text-primary);
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   
   &:hover {
-    color: #333;
+    color: var(--text-primary);
   }
 `;
 
@@ -340,15 +356,17 @@ const Label = styled.label`
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-secondary);
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   
   &:focus {
     outline: none;
@@ -366,8 +384,8 @@ const ButtonGroup = styled.div`
 const TabButton = styled.button`
   padding: 0.75rem 1.5rem;
   background-color: ${props => props.active ? '#6a00ff' : 'transparent'};
-  color: ${props => props.active ? 'white' : '#666'};
-  border: ${props => props.active ? 'none' : '1px solid #ddd'};
+  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
+  border: ${props => props.active ? 'none' : `1px solid var(--border-color)`};
   border-radius: 30px;
   font-size: 0.9rem;
   font-weight: 500;
@@ -376,7 +394,7 @@ const TabButton = styled.button`
   margin-right: 0.5rem;
   
   &:hover {
-    background-color: ${props => props.active ? '#6a00ff' : '#f8f8f8'};
+    background-color: ${props => props.active ? '#6a00ff' : props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f8f8f8'};
   }
   
   &:last-child {
@@ -425,6 +443,7 @@ const DeleteIcon = () => (
 
 function ClassPage() {
   const { logout, user } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   
   // Redirect if not a lecturer or admin
@@ -463,6 +482,10 @@ function ClassPage() {
   const [importError, setImportError] = useState(null);
   const [importSuccess, setImportSuccess] = useState(null);
   const [classStudents, setClassStudents] = useState([]);
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [selectedFileError, setSelectedFileError] = useState('');
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -692,8 +715,16 @@ function ClassPage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = (e) => {
+    if (e) e.preventDefault();
+    setShowDropdown(false);
+    setShowLogoutConfirmation(true);
+  };
+
+  const handleConfirmLogout = () => {
+    console.log('ClassPage: Executing logout after confirmation');
     logout();
+    setShowLogoutConfirmation(false);
   };
 
   const getUserInitial = () => {
@@ -829,8 +860,8 @@ function ClassPage() {
   };
 
   return (
-    <PageContainer>
-      <Sidebar>
+    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+      <Sidebar theme={theme}>
         <Logo>logo</Logo>
         <SidebarMenu>
           {isAdmin ? (
@@ -888,7 +919,7 @@ function ClassPage() {
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
-          <NavItem to="/" onClick={handleLogout}>
+          <NavItem to="#" onClick={handleLogout}>
             <NavIcon>{getMenuIcon('signout')}</NavIcon>
             Sign out
           </NavItem>
@@ -899,6 +930,7 @@ function ClassPage() {
         <Header>
           <PageTitle>Classes</PageTitle>
           <HeaderRight>
+            {/* <ThemeToggle /> */}
             <NotificationIcon />
             <DropdownContainer ref={dropdownRef}>
               <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
@@ -1265,6 +1297,14 @@ function ClassPage() {
           </ModalContent>
         </Modal>
       )}
+      
+      {/* Add logout confirmation modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={() => setShowLogoutConfirmation(false)}
+        onConfirm={handleConfirmLogout}
+        message="Are you sure you want to logout?"
+      />
     </PageContainer>
   );
 }
