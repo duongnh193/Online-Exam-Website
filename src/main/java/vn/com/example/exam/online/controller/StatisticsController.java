@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.com.example.exam.online.model.RoleEnum;
 import vn.com.example.exam.online.model.response.ExamScoreStatisticsResponse;
 import vn.com.example.exam.online.model.response.StudentExamScoreResponse;
+import vn.com.example.exam.online.model.response.StudentScoreClassResultResponse;
 import vn.com.example.exam.online.service.StatisticsService;
 import vn.com.example.exam.online.util.Constants;
 
@@ -69,5 +70,10 @@ public class StatisticsController {
         PageRequest pageRequest = PageRequest.of(page, size, sort);
 
         return statisticsService.getStudentScoresInClass(classId, pageRequest);
+    }
+
+    @GetMapping("/student-score-in-classes/{studentId}")
+    public StudentScoreClassResultResponse getStudentScoreByClasses(@PathVariable Long studentId) {
+        return statisticsService.getStudentScoreByClasses(studentId);
     }
 }

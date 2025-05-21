@@ -75,8 +75,13 @@ public class StudentExamService {
 
                 // Lấy câu hỏi hiện tại
                 List<Question> orderedQuestions = getOrderedQuestions(exam);
-                int currentQuestionIndex = Optional.ofNullable(studentExam.getCurrentQuestion()).orElse(0);
-                Question currentQuestion = orderedQuestions.get(currentQuestionIndex + 1);
+                int currentQuestionIndex;
+                if (studentExam.getCurrentQuestion() == null) {
+                    currentQuestionIndex = 0;
+                } else {
+                    currentQuestionIndex = studentExam.getCurrentQuestion() + 1;
+                }
+                Question currentQuestion = orderedQuestions.get(currentQuestionIndex);
 
                 return new StudentExamResponse(studentExam, mapToQuestionResponse(currentQuestion), false, remainingTime);
             } else if (studentExam.getStatus() == StudentExamStatus.COMPLETED) {

@@ -5,16 +5,24 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import vn.com.example.exam.online.model.ClassResultDto;
 import vn.com.example.exam.online.model.RoleEnum;
+import vn.com.example.exam.online.model.entity.Class;
+import vn.com.example.exam.online.model.entity.Exam;
+import vn.com.example.exam.online.model.entity.StudentClass;
 import vn.com.example.exam.online.model.entity.StudentExam;
 import vn.com.example.exam.online.model.response.ExamScoreStatisticsResponse;
 import vn.com.example.exam.online.model.response.StudentExamScoreResponse;
+import vn.com.example.exam.online.model.response.StudentScoreClassResultResponse;
 import vn.com.example.exam.online.repository.ClassRepository;
 import vn.com.example.exam.online.repository.ExamRepository;
+import vn.com.example.exam.online.repository.StudentClassRepository;
 import vn.com.example.exam.online.repository.StudentExamRepository;
 import vn.com.example.exam.online.repository.UserRepository;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 
@@ -25,6 +33,7 @@ public class StatisticsService {
     private final ClassRepository classRepository;
     private final StudentExamRepository studentExamRepository;
     private final ExamRepository examRepository;
+    private final StudentClassRepository studentClassRepository;
 
 
     public Long getTotalClasses() {
@@ -116,4 +125,49 @@ public class StatisticsService {
             return 0.0;
         }
     }
+
+    public StudentScoreClassResultResponse getStudentScoreByClasses(Long studentId) {
+        var studentOpt = userRepository.findById(studentId);
+        if (studentOpt.isEmpty()) {
+            throw new IllegalArgumentException("Student not found");
+        }
+        var student = studentOpt.get();
+
+        List<StudentClass> studentClasses = studentClassRepository.findByStudentId(studentId);
+        List<ClassResultDto> classResults = new ArrayList<>();
+
+        for (StudentClass studentClass : studentClasses) {
+            Class clazz = studentClass.getClassEntity();
+            List<Exam> exams = clazz.getExams();
+
+            double totalWeightedScore = 0.0;
+            double totalCoefficient = 0.0;
+
+            for (Exam exam : exams) {
+                Optional<StudentExam> studentExamOpt = studentExamRepository.findById(studentId + "-" + exam.getId());
+                double score = studentExamOpt.map(StudentExam::getScore).orElse(0.0);
+                totalWeightedScore += score * exam.getCoefficient();
+                totalCoefficient += exam.getCoefficient();
+            }
+
+            if (totalCoefficient == 0) continue;
+
+            double avgScore = totalWeightedScore / totalCoefficient;
+
+            classResults.add(new ClassResultDto(
+                    clazz.getId(),
+                    avgScore,
+                    avgScore,
+                    calculateScoreIn4(avgScore)
+            ));
+        }
+
+        return new StudentScoreClassResultResponse(
+                student.getId(),
+                student.getFirstName() + " " + student.getLastName(),
+                classResults
+        );
+    }
+
+
 }

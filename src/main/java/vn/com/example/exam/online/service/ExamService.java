@@ -50,6 +50,10 @@ public class ExamService {
         return examRepository.findByClassEntityId(classId, pageable).map(Exam2ExamResponseMapper.INSTANCE::map);
     }
 
+    public Page<ExamResponse> getExams(Pageable pageable) {
+        return examRepository.findAll(pageable).map(Exam2ExamResponseMapper.INSTANCE::map);
+    }
+
     public Exam getById(Long examId) {
         return examRepository.findById(examId)
                 .orElseThrow(() -> new ExamNotFoundException(Constants.EXAM_NOT_FOUND_ID.formatted(examId)));
