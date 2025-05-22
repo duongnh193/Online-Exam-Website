@@ -224,8 +224,6 @@ const dashboardService = {
   // Lấy danh sách tất cả bài thi
   getAllExams: async (page = 0, size = 10) => {
     try {
-      // Vì chưa có API cụ thể, chúng ta có thể sử dụng API lấy danh sách bài thi của tất cả lớp học
-      // hoặc mock data tạm thời
       console.log('Fetching all exams with page:', page, 'size:', size);
       
       // Mock data tạm thời
@@ -243,13 +241,11 @@ const dashboardService = {
         { id: 11, title: 'Midterm Software Engineering', classId: 11, className: 'Software Engineering', duration: 90, status: 'COMPLETED' },
         { id: 12, title: 'Quiz Design Patterns', classId: 12, className: 'Design Patterns', duration: 45, status: 'ONGOING' }
       ];
-      
-      // Tính phân trang
+  
       const startIndex = page * size;
       const endIndex = startIndex + size;
       const paginatedExams = mockExams.slice(startIndex, endIndex);
-      
-      // Tạo response với định dạng phân trang tương tự API thực
+    
       const response = {
         content: paginatedExams,
         totalElements: mockExams.length,

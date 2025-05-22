@@ -830,8 +830,8 @@ function AdminDashboardPage() {
       case 'exams': return '📝';
       case 'class': return '📋';
       case 'reports': return '📊';
-      case 'payment': return '💳';
-      case 'users': return '👥';
+      // case 'payment': return '💳';
+      // case 'users': return '👥';
       case 'settings': return '⚙️';
       case 'signout': return '🚪';
       default: return '•';
@@ -863,8 +863,7 @@ function AdminDashboardPage() {
           break;
         case 'exams':
           setModalTitle('Exam List');
-          // Sử dụng các API có sẵn để lấy danh sách exam
-          response = await dashboardService.getAllExams(currentPage, pageSize);
+          response = await examService.getExams(currentPage, pageSize);
           break;
         case 'classes':
           setModalTitle('Class List');
@@ -926,7 +925,7 @@ function AdminDashboardPage() {
           response = await userService.getAllLecturers(newPage, pageSize);
           break;
         case 'exams':
-          response = await dashboardService.getAllExams(newPage, pageSize);
+          response = await examService.getExams(newPage, pageSize);
           break;
         case 'classes':
           response = await classService.getAllClasses(newPage, pageSize);
@@ -1395,14 +1394,14 @@ function AdminDashboardPage() {
             <NavIcon>{getMenuIcon('reports')}</NavIcon>
             Reports
           </NavItem>
-          <NavItem to="/payment">
+          {/* <NavItem to="/payment">
             <NavIcon>{getMenuIcon('payment')}</NavIcon>
             Payment
           </NavItem>
           <NavItem to="/users">
             <NavIcon>{getMenuIcon('users')}</NavIcon>
             Users
-          </NavItem>
+          </NavItem> */}
         </SidebarMenu>
         <BottomMenu>
           <NavItem to="/settings">

@@ -428,6 +428,100 @@ class ExamService {
       throw error;
     });
   }
+
+  // Get all exams (paginated)
+  getExams(page = 0, size = 10) {
+    logAuthState();
+    const url = `${API_URL}/all?page=${page}&size=${size}`;
+    const headers = authHeader();
+    
+    console.log(`Fetching all exams`);
+    logApiCall('GET', url, headers);
+    
+    return axios.get(url, { 
+      headers,
+      timeout: 15000 // Increased timeout for potentially larger responses
+    })
+    .then(response => {
+      console.log('All exams fetched successfully:', response.data);
+      
+      // Transform data to ensure title is properly set
+      let processedResponse = { ...response };
+      let responseData = response.data;
+      
+      if (!responseData) {
+        console.warn('Empty response data from API');
+        return {
+          ...response,
+          data: { content: [] }
+        };
+      }
+      
+      // Handle paginated response
+      if (responseData && responseData.content) {
+        const examCount = responseData.content.length;
+        console.log(`Received ${examCount} exams (paginated)`);
+        
+        // Process each exam
+        if (examCount > 0) {
+          const processedContent = responseData.content.map(exam => {
+            // Calculate the correct status based on time
+            const calculatedStatus = calculateExamStatus(exam);
+            
+            return {
+              ...exam,
+              id: exam.id || 0,
+              title: exam.title || `Exam #${exam.id || 0}`,
+              // Use the calculated status instead of existing one
+              status: calculatedStatus,
+              questions: Array.isArray(exam.questions) ? exam.questions : []
+            };
+          });
+          
+          processedResponse.data = {
+            ...responseData,
+            content: processedContent
+          };
+        }
+      } 
+      // Handle array response
+      else if (Array.isArray(responseData)) {
+        const examCount = responseData.length;
+        console.log(`Received ${examCount} exams (array)`);
+        
+        if (examCount > 0) {
+          const processedArray = responseData.map(exam => {
+            // Calculate the correct status based on time
+            const calculatedStatus = calculateExamStatus(exam);
+            
+            return {
+              ...exam,
+              id: exam.id || 0,
+              title: exam.title || `Exam #${exam.id || 0}`,
+              // Use the calculated status
+              status: calculatedStatus,
+              questions: Array.isArray(exam.questions) ? exam.questions : []
+            };
+          });
+          
+          processedResponse.data = processedArray;
+        }
+      }
+      
+      return processedResponse;
+    })
+    .catch(error => {
+      console.error('Error fetching all exams:', error.response?.data || error.message);
+      
+      // Provide more detailed error logging
+      if (error.response) {
+        console.error('Error status:', error.response.status);
+        console.error('Error details:', error.response.data);
+      }
+      
+      throw error;
+    });
+  }
 }
 
 export default new ExamService(); 

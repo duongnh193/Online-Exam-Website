@@ -18,7 +18,7 @@ const PageContainer = styled.div`
   /* Add CSS Variables for new components */
   --bg-disabled: ${props => props.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
   --bg-input: ${props => props.theme === 'dark' ? '#333' : 'white'};
-  --highlight-color: #6a00ff;
+  --highlight-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a00ff'};
   --error-bg: ${props => props.theme === 'dark' ? '#331515' : '#ffecec'};
   --error-color: ${props => props.theme === 'dark' ? '#ff6b6b' : '#d32f2f'};
   --success-bg: ${props => props.theme === 'dark' ? '#113323' : '#d1fae5'};
@@ -224,14 +224,28 @@ const Card = styled.div`
 
 const CardTitle = styled.h2`
   font-size: 1.2rem;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 1.5rem;
 `;
 
 const Button = styled.button`
-  background-color: ${props => props.variant === 'outlined' ? 'transparent' : '#6a00ff'};
-  color: ${props => props.variant === 'outlined' ? '#6a00ff' : 'white'};
-  border: ${props => props.variant === 'outlined' ? '1px solid #6a00ff' : 'none'};
+  background-color: ${props => {
+    if (props.variant === 'outlined') {
+      return 'transparent';
+    } else {
+      return props.theme === 'dark' ? '#8d47ff' : '#6a00ff';
+    }
+  }};
+  color: ${props => {
+    if (props.variant === 'outlined') {
+      return props.theme === 'dark' ? '#8d47ff' : '#6a00ff';
+    } else {
+      return 'white';
+    }
+  }};
+  border: ${props => props.variant === 'outlined' 
+    ? `1px solid ${props.theme === 'dark' ? '#8d47ff' : '#6a00ff'}` 
+    : 'none'};
   border-radius: 30px;
   padding: 0.5rem 1.5rem;
   font-size: 0.9rem;
@@ -243,7 +257,13 @@ const Button = styled.button`
   gap: 0.5rem;
   
   &:hover {
-    background-color: ${props => props.variant === 'outlined' ? 'rgba(106, 0, 255, 0.05)' : '#5900d9'};
+    background-color: ${props => {
+      if (props.variant === 'outlined') {
+        return props.theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : 'rgba(106, 0, 255, 0.05)';
+      } else {
+        return props.theme === 'dark' ? '#7d37ef' : '#5900d9';
+      }
+    }};
   }
 `;
 
@@ -338,7 +358,7 @@ const Label = styled.label`
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-secondary);
 `;
 
 const Input = styled.input`
@@ -599,7 +619,7 @@ const StatIcon = styled.div`
 const RoleTabContainer = styled.div`
   display: flex;
   margin-bottom: 1.5rem;
-  background-color: #f8f9fa;
+  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f8f9fa'};
   border-radius: 12px;
   padding: 0.5rem;
 `;
@@ -997,8 +1017,12 @@ const StatusBadge = styled.span`
   font-size: 0.75rem;
   font-weight: 500;
   margin-left: 0.5rem;
-  background-color: ${props => props.success ? '#d1fae5' : '#ffecec'};
-  color: ${props => props.success ? '#10b981' : '#ef4444'};
+  background-color: ${props => props.success 
+    ? (props.theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#d1fae5') 
+    : (props.theme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#ffecec')};
+  color: ${props => props.success 
+    ? (props.theme === 'dark' ? '#34d399' : '#10b981') 
+    : (props.theme === 'dark' ? '#f87171' : '#ef4444')};
 `;
 
 const TwoFACard = styled(Card)`
@@ -1024,15 +1048,33 @@ const TwoFAStatus = styled.div`
   margin-bottom: 1.5rem;
   padding: 1.5rem;
   border-radius: 1rem;
-  background-color: ${props => props.enabled ? 'var(--success-bg)' : 'var(--info-bg)'};
-  color: ${props => props.enabled ? 'var(--success-color)' : 'var(--info-color)'};
+  background-color: ${props => {
+    if (props.theme === 'dark') {
+      return props.enabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(14, 165, 233, 0.15)';
+    } else {
+      return props.enabled ? 'var(--success-bg)' : 'var(--info-bg)';
+    }
+  }};
+  color: ${props => {
+    if (props.theme === 'dark') {
+      return props.enabled ? '#34d399' : '#7dd3fc';
+    } else {
+      return props.enabled ? 'var(--success-color)' : 'var(--info-color)';
+    }
+  }};
 `;
 
 const TwoFAStatusIcon = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 24px;
-  background-color: ${props => props.enabled ? 'var(--success-color)' : 'var(--info-color)'};
+  background-color: ${props => {
+    if (props.theme === 'dark') {
+      return props.enabled ? '#10b981' : '#0ea5e9';
+    } else {
+      return props.enabled ? 'var(--success-color)' : 'var(--info-color)';
+    }
+  }};
   color: white;
   display: flex;
   align-items: center;
@@ -1046,11 +1088,13 @@ const TwoFAStatusText = styled.div`
   h3 {
     font-size: 1.1rem;
     margin: 0 0 0.25rem 0;
+    color: var(--text-primary);
   }
   
   p {
     margin: 0;
     font-size: 0.9rem;
+    color: var(--text-secondary);
   }
 `;
 
@@ -1066,7 +1110,7 @@ const Toggle = styled.label`
     height: 0;
     
     &:checked + span {
-      background-color: #6a00ff;
+      background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a00ff'};
     }
     
     &:checked + span:before {
@@ -1087,7 +1131,7 @@ const Slider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: ${props => props.theme === 'dark' ? '#555' : '#ccc'};
   transition: .3s;
   border-radius: 34px;
   
@@ -1098,7 +1142,7 @@ const Slider = styled.span`
     width: 22px;
     left: 4px;
     bottom: 4px;
-    background-color: white;
+    background-color: ${props => props.theme === 'dark' ? '#888' : 'white'};
     transition: .3s;
     border-radius: 50%;
   }
@@ -2044,9 +2088,9 @@ function SettingsPage() {
         
         {activeTab === 'users' && isAdmin && (
           <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <CardTitle>User Management</CardTitle>
-              <Button onClick={openCreateModal}>
+              <Button theme={theme} onClick={openCreateModal}>
                 + Create User
               </Button>
             </div>
@@ -2103,7 +2147,7 @@ function SettingsPage() {
             </div>
             
             {/* Role-based Tabs */}
-            <RoleTabContainer>
+            <RoleTabContainer theme={theme}>
               <RoleTab 
                 active={activeRoleTab === 'all'} 
                 activeColor="#6a00ff"
@@ -2336,7 +2380,7 @@ function SettingsPage() {
                 </ProfileField>
               </div>
               
-              <ProfileEditButton onClick={handleEditProfile}>
+              <ProfileEditButton theme={theme} onClick={handleEditProfile}>
                 <ProfileEditIcon /> Edit Profile
               </ProfileEditButton>
             </ProfileBody>
@@ -2389,8 +2433,8 @@ function SettingsPage() {
                     </FormGroup>
                     
                     <ButtonGroup>
-                      <Button variant="outlined" type="button" onClick={handleCloseProfileModal}>Cancel</Button>
-                      <Button type="submit">Save Changes</Button>
+                      <Button theme={theme} variant="outlined" type="button" onClick={handleCloseProfileModal}>Cancel</Button>
+                      <Button theme={theme} type="submit">Save Changes</Button>
                     </ButtonGroup>
                   </form>
                 </ProfileFormContent>
@@ -2473,9 +2517,9 @@ function SettingsPage() {
                 {passwordData.confirmPassword && (
                   <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
                     {passwordData.newPassword === passwordData.confirmPassword ? (
-                      <StatusBadge success>Passwords match</StatusBadge>
+                      <StatusBadge success theme={theme}>Passwords match</StatusBadge>
                     ) : (
-                      <StatusBadge>Passwords don't match</StatusBadge>
+                      <StatusBadge theme={theme}>Passwords don't match</StatusBadge>
                     )}
                   </div>
                 )}
@@ -2483,6 +2527,7 @@ function SettingsPage() {
               
               <ButtonGroup>
                 <Button 
+                  theme={theme}
                   variant="outlined" 
                   type="button" 
                   onClick={() => {
@@ -2497,6 +2542,7 @@ function SettingsPage() {
                   Cancel
                 </Button>
                 <Button 
+                  theme={theme}
                   type="submit"
                   disabled={isPasswordLoading}
                 >
@@ -2519,39 +2565,21 @@ function SettingsPage() {
             </TwoFAHeader>
             
             {twoFactorError && (
-              <div style={{ 
-                padding: '0.75rem 1rem', 
-                backgroundColor: 'var(--error-bg)', 
-                color: 'var(--error-color)',
-                borderRadius: '8px',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
+              <FormFeedback className="error">
                 <span style={{ fontSize: '1.2rem' }}>⚠️</span>
                 <span>{twoFactorError}</span>
-              </div>
+              </FormFeedback>
             )}
             
             {twoFactorSuccess && (
-              <div style={{ 
-                padding: '0.75rem 1rem', 
-                backgroundColor: 'var(--success-bg)', 
-                color: 'var(--success-color)',
-                borderRadius: '8px',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
+              <FormFeedback className="success">
                 <span style={{ fontSize: '1.2rem' }}>✓</span>
                 <span>{twoFactorSuccess}</span>
-              </div>
+              </FormFeedback>
             )}
             
-            <TwoFAStatus enabled={twoFactorEnabled}>
-              <TwoFAStatusIcon enabled={twoFactorEnabled}>
+            <TwoFAStatus enabled={twoFactorEnabled} theme={theme}>
+                              <TwoFAStatusIcon enabled={twoFactorEnabled} theme={theme}>
                 {twoFactorEnabled ? '🔒' : '🔑'}
               </TwoFAStatusIcon>
               <TwoFAStatusText>
@@ -2560,14 +2588,14 @@ function SettingsPage() {
                   ? 'Your account has an extra layer of security' 
                   : 'Enable 2FA to better protect your account'}</p>
               </TwoFAStatusText>
-              <Toggle>
+              <Toggle theme={theme}>
                 <input 
                   type="checkbox"
                   checked={twoFactorEnabled}
                   onChange={handle2FAToggle}
                   disabled={updating2FA}
                 />
-                <Slider />
+                <Slider theme={theme} />
               </Toggle>
             </TwoFAStatus>
             
@@ -2577,8 +2605,9 @@ function SettingsPage() {
                 alignItems: 'center', 
                 gap: '1rem',
                 padding: '1rem',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '8px'
+                backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f8f9fa',
+                borderRadius: '8px',
+                color: 'var(--text-primary)'
               }}>
                 <div style={{ fontSize: '1.5rem' }}>📧</div>
                 <div style={{ flex: 1, fontSize: '0.9rem' }}>
@@ -2676,10 +2705,10 @@ function SettingsPage() {
               </FormGroup>
               
               <ButtonGroup>
-                <Button type="button" variant="outlined" onClick={() => setShowModal(false)}>
+                <Button theme={theme} type="button" variant="outlined" onClick={() => setShowModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button theme={theme} type="submit">
                   {modalMode === 'create' ? 'Create User' : 'Save Changes'}
                 </Button>
               </ButtonGroup>

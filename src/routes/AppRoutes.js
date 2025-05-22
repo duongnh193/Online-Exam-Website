@@ -11,6 +11,7 @@ import ClassPage from '../pages/ClassPage';
 import StartExamPage from '../pages/StartExamPage';
 import TakeExamPage from '../pages/TakeExamPage';
 import ReportPage from '../pages/ReportPage';
+import ResultsPage from '../pages/ResultsPage';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '../hooks/useAuth';
@@ -190,7 +191,7 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <RoleRoute allowedRoles={['ROLE_STUDENT']}>
-              <Navigate to="/student-dashboard" replace />
+              <ResultsPage />
             </RoleRoute>
           </ProtectedRoute>
         } 

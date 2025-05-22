@@ -31,11 +31,12 @@ const Header = styled.header`
 const SearchContainer = styled.div`
   display: flex;
   align-items: center;
-  background-color: var(--bg-primary);
+  background-color: ${props => props.theme === 'dark' ? '#333' : 'var(--bg-primary)'};
   border-radius: 20px;
   padding: 0.5rem 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: ${props => props.theme === 'dark' ? '0 1px 3px rgba(0, 0, 0, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.05)'};
   width: 200px;
+  border: 1px solid ${props => props.theme === 'dark' ? '#444' : 'transparent'};
 `;
 
 const SearchInput = styled.input`
@@ -64,7 +65,7 @@ const ActionButtons = styled.div`
 `;
 
 const SubmitQuizButton = styled.button`
-  background-color: #6a7efc;
+  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   color: white;
   border: none;
   border-radius: 20px;
@@ -74,7 +75,7 @@ const SubmitQuizButton = styled.button`
   cursor: pointer;
   
   &:hover {
-    background-color: #586df5;
+    background-color: ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'};
   }
 `;
 
@@ -90,7 +91,7 @@ const UserAvatar = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #333;
+  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   color: white;
   display: flex;
   align-items: center;
@@ -123,11 +124,13 @@ const QuizTitle = styled.h1`
 const TimerDisplay = styled.div`
   font-size: 1.1rem;
   font-weight: 500;
-  color: ${props => props.timeRunningOut ? '#d32f2f' : '#333'};
-  background: white;
+  color: ${props => props.timeRunningOut ? 
+    (props.theme === 'dark' ? '#ff6666' : '#d32f2f') : 
+    (props.theme === 'dark' ? '#ffffff' : '#333')};
+  background: ${props => props.theme === 'dark' ? '#333' : 'white'};
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: ${props => props.theme === 'dark' ? '0 1px 3px rgba(0, 0, 0, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.05)'};
 `;
 
 const QuizContent = styled.div`
@@ -180,6 +183,7 @@ const QuestionText = styled.div`
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 1.5rem;
+  line-height: 1.5;
 `;
 
 const AnswerOptions = styled.div`
@@ -192,14 +196,22 @@ const AnswerOption = styled.label`
   display: flex;
   align-items: flex-start;
   padding: 0.7rem 1rem;
-  border: 1px solid ${props => props.selected ? '#6a7efc' : '#eee'};
+  border: 1px solid ${props => props.selected ? 
+    (props.theme === 'dark' ? '#8d47ff' : '#6a7efc') : 
+    (props.theme === 'dark' ? '#444' : '#eee')};
   border-radius: 8px;
   cursor: pointer;
-  background-color: ${props => props.selected ? 'rgba(106, 126, 252, 0.05)' : 'white'};
+  background-color: ${props => props.selected ? 
+    (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : 'rgba(106, 126, 252, 0.05)') : 
+    (props.theme === 'dark' ? '#2a2a2a' : 'white')};
   
   &:hover {
-    border-color: ${props => props.selected ? '#6a7efc' : '#ddd'};
-    background-color: ${props => props.selected ? 'rgba(106, 126, 252, 0.05)' : '#fafafa'};
+    border-color: ${props => props.selected ? 
+      (props.theme === 'dark' ? '#8d47ff' : '#6a7efc') : 
+      (props.theme === 'dark' ? '#555' : '#ddd')};
+    background-color: ${props => props.selected ? 
+      (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.15)' : 'rgba(106, 126, 252, 0.05)') : 
+      (props.theme === 'dark' ? '#333' : '#fafafa')};
   }
 `;
 
@@ -217,21 +229,23 @@ const EssayInput = styled.textarea`
   width: 100%;
   min-height: 200px;
   padding: 1rem;
-  border: 1px solid #eee;
+  border: 1px solid ${props => props.theme === 'dark' ? '#444' : '#eee'};
   border-radius: 8px;
   font-family: inherit;
   font-size: 0.95rem;
   resize: vertical;
+  background-color: ${props => props.theme === 'dark' ? '#333' : 'white'};
+  color: var(--text-primary);
   
   &:focus {
     outline: none;
-    border-color: #6a7efc;
+    border-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   }
 `;
 
 const OptionText = styled.div`
   font-size: 0.95rem;
-  color: #333;
+  color: var(--text-primary);
 `;
 
 const NavigationBar = styled.div`
@@ -247,11 +261,11 @@ const SubmitButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   font-size: 0.9rem;
-  background-color: #6a7efc;
+  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   color: white;
   
   &:hover {
-    background-color: #586df5;
+    background-color: ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'};
   }
 `;
 
@@ -269,45 +283,50 @@ const ErrorContainer = styled.div`
   margin: 5rem auto;
   text-align: center;
   padding: 2rem;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   
   h2 {
-    color: #d32f2f;
+    color: ${props => props.theme === 'dark' ? '#ff6666' : '#d32f2f'};
     margin-bottom: 1rem;
   }
   
   p {
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 2rem;
   }
 `;
 
 const BackButton = styled.button`
-  background-color: #6a7efc;
+  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   color: white;
   border: none;
   border-radius: 8px;
   padding: 0.7rem 1.5rem;
   font-weight: 500;
   cursor: pointer;
+  
+  &:hover {
+    background-color: ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'};
+  }
 `;
 
 const ResultContainer = styled.div`
   max-width: 600px;
   margin: 3rem auto;
   padding: 2rem;
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
   text-align: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
+  color: var(--text-primary);
 `;
 
 const ScoreDisplay = styled.div`
   font-size: 3.5rem;
   font-weight: 700;
-  color: #6a7efc;
+  color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   margin: 2rem 0;
 `;
 
@@ -323,13 +342,13 @@ const ResultDetails = styled.div`
       display: block;
       font-size: 2rem;
       font-weight: 500;
-      color: #333;
+      color: var(--text-primary);
       margin-bottom: 0.5rem;
     }
     
     label {
       font-size: 0.9rem;
-      color: #666;
+      color: var(--text-secondary);
     }
   }
 `;
@@ -435,6 +454,8 @@ function TakeExamPage() {
                         id: q.id,
                         text: q.title || q.text,
                         type: q.type,
+                        // Kiểm tra nhiều trường ảnh có thể có
+                        imageUrl: q.imageUrl || q.image || q.img || q.imagePath || q.imageUri || null,
                         options: q.choices?.map(choice => {
                           if (typeof choice === 'string') {
                             return { id: choice, text: choice };
@@ -457,12 +478,21 @@ function TakeExamPage() {
                   if (responseData.nextQuestion) {
                     const questionData = responseData.nextQuestion;
                     console.log('Current question data from API:', questionData);
+                    console.log('Image fields in question data:', {
+                      imageUrl: questionData.imageUrl,
+                      image: questionData.image,
+                      img: questionData.img,
+                      imagePath: questionData.imagePath,
+                      imageUri: questionData.imageUri,
+                    });
                     
                     // Map the question data to our format
                     const mappedQuestion = {
                       id: questionData.id,
                       text: questionData.title,
                       type: questionData.type,
+                      // Kiểm tra nhiều trường ảnh có thể có
+                      imageUrl: questionData.imageUrl || questionData.image || questionData.img || questionData.imagePath || questionData.imageUri || null,
                       options: questionData.choices?.map(choice => {
                         // Handle different possible choice formats
                         if (typeof choice === 'string') {
@@ -913,14 +943,14 @@ function TakeExamPage() {
   const ExamResultsScreen = () => {
     if (!examResult) return null;
     
-    return (
-      <ResultContainer>
-        <h2>Quiz Completed</h2>
-        
-        <ScoreDisplay>
-          {Math.round(examResult.score)}%
-        </ScoreDisplay>
-        
+      return (
+    <ResultContainer theme={theme}>
+      <h2>Quiz Completed</h2>
+      
+      <ScoreDisplay theme={theme}>
+        {Math.round(examResult.score)}%
+      </ScoreDisplay>
+              
         <ResultDetails>
           <div>
             <span>{examResult.correctAnswers}</span>
@@ -968,7 +998,7 @@ function TakeExamPage() {
           </div>
         )}
         
-        <BackButton onClick={() => navigate('/exams')}>
+        <BackButton theme={theme} onClick={() => navigate('/exams')}>
           Back to Exams
         </BackButton>
       </ResultContainer>
@@ -987,10 +1017,10 @@ function TakeExamPage() {
   // Show error screen
   if (error) {
     return (
-      <ErrorContainer>
+      <ErrorContainer theme={theme}>
         <h2>Error</h2>
         <p>{error}</p>
-        <BackButton onClick={() => navigate('/exams')}>
+        <BackButton theme={theme} onClick={() => navigate('/exams')}>
           Back to Exams
         </BackButton>
       </ErrorContainer>
@@ -1005,10 +1035,10 @@ function TakeExamPage() {
   // No questions loaded
   if (questions.length === 0) {
     return (
-      <ErrorContainer>
+      <ErrorContainer theme={theme}>
         <h2>No Questions Available</h2>
         <p>There was an issue loading the questions for this quiz.</p>
-        <BackButton onClick={() => navigate('/exams')}>
+        <BackButton theme={theme} onClick={() => navigate('/exams')}>
           Back to Exams
         </BackButton>
       </ErrorContainer>
@@ -1073,6 +1103,7 @@ function TakeExamPage() {
                 <AnswerOption 
                   key={option.id || 'unknown'}
                   selected={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
+                  theme={theme}
                 >
                   <CheckboxInput 
                     type="checkbox"
@@ -1123,6 +1154,7 @@ function TakeExamPage() {
                 <AnswerOption 
                   key={option.id || 'unknown'}
                   selected={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
+                  theme={theme}
                   onClick={() => handleSingleChoiceSelect(currentQuestion.id, option.id)}
                 >
                   <RadioInput 
@@ -1157,7 +1189,7 @@ function TakeExamPage() {
                   </SubmitButton>
                 </>
               ) : (
-                <SubmitButton onClick={() => submitSingleChoiceAnswer(currentQuestion.id)}>
+                <SubmitButton theme={theme} onClick={() => submitSingleChoiceAnswer(currentQuestion.id)}>
                   Next
                 </SubmitButton>
               )}
@@ -1261,7 +1293,7 @@ function TakeExamPage() {
   return (
     <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
       <Header>
-        <SearchContainer>
+        <SearchContainer theme={theme}>
           <SearchIcon>🔍</SearchIcon>
           <SearchInput placeholder="Search..." />
         </SearchContainer>
@@ -1273,7 +1305,7 @@ function TakeExamPage() {
           </SubmitQuizButton>
           <UserProfile>
             <span>{getUserName()}</span>
-            <UserAvatar>{getUserInitial()}</UserAvatar>
+            <UserAvatar theme={theme}>{getUserInitial()}</UserAvatar>
           </UserProfile>
         </ActionButtons>
       </Header>
@@ -1281,7 +1313,7 @@ function TakeExamPage() {
       <MainContent>
         <QuizHeader>
           <QuizTitle>Quiz</QuizTitle>
-          <TimerDisplay timeRunningOut={timeRunningOut}>
+          <TimerDisplay timeRunningOut={timeRunningOut} theme={theme}>
             Timer: {formatTime(timeRemaining)}
           </TimerDisplay>
         </QuizHeader>
@@ -1301,8 +1333,16 @@ function TakeExamPage() {
             
             <QuestionContent>
               <QuestionImage>
-                {/* This is a placeholder - in a real app, you'd use the question's actual image */}
-                <img src="https://placehold.co/220x280/e74c3c/ffffff" alt="Quiz question illustration" />
+                {currentQuestion.imageUrl ? (
+                  <img src={currentQuestion.imageUrl} alt="Quiz question illustration" />
+                ) : (
+                  <div style={{ 
+                    width: '220px', 
+                    height: '280px', 
+                    backgroundColor: theme === 'dark' ? '#333' : '#f5f5f5', 
+                    borderRadius: '8px' 
+                  }} />
+                )}
               </QuestionImage>
               
               <div>

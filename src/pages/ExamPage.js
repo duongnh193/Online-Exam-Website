@@ -923,17 +923,17 @@ function ExamPage() {
                 alignItems: 'center', 
                 marginRight: '0.5rem', 
                 fontSize: '0.8rem',
-                color: '#666'
+                color: theme === 'dark' ? '#aaa' : '#666'
               }}>
                 <span>Last updated: {lastRefreshTime.toLocaleTimeString()}</span>
                 <button 
                   onClick={() => selectedClassId ? fetchExams(selectedClassId) : null}
                   style={{
                     marginLeft: '8px',
-                    background: 'none',
+                    background: theme === 'dark' ? 'rgba(25, 118, 210, 0.1)' : 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#1976d2',
+                    color: theme === 'dark' ? '#90caf9' : '#1976d2',
                     padding: '4px',
                     borderRadius: '4px',
                   }}
@@ -975,7 +975,7 @@ function ExamPage() {
             </SortDropdown>
           </div>
         ) : (
-          <div style={{ marginBottom: '1rem', color: '#666' }}>
+          <div style={{ marginBottom: '1rem', color: theme === 'dark' ? '#aaa' : '#666' }}>
             {error ? error : 'No classes available.'}
             {isLecturer && !error && (
               <span> Please create a class first to manage exams.</span>
@@ -997,10 +997,14 @@ function ExamPage() {
               {error}
             </div>
           ) : exams.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: theme === 'dark' ? '#aaa' : '#666' }}>
               No exams available for this class.
               {isStudent && (
-                <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
+                <p style={{ 
+                  marginTop: '1rem', 
+                  fontSize: '0.9rem',
+                  color: theme === 'dark' ? '#bbb' : '#888'
+                }}>
                   If you believe this is an error, please contact your instructor.
                 </p>
               )}
@@ -1025,8 +1029,10 @@ function ExamPage() {
                     <TableRow 
                       key={currentExam.id || `exam-${Math.random()}`}
                       style={{
-                        // For student view, highlight ongoing exams
-                        backgroundColor: isStudent && currentExam.status === 'ONGOING' ? '#f8f9ff' : 'inherit',
+                        // For student view, highlight ongoing exams with theme-appropriate colors
+                        backgroundColor: isStudent && currentExam.status === 'ONGOING' 
+                          ? (theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : '#f8f9ff') 
+                          : 'inherit',
                         cursor: isStudent && currentExam.status === 'ONGOING' ? 'pointer' : 'default',
                       }}
                       onClick={() => {
@@ -1056,7 +1062,12 @@ function ExamPage() {
                           {formatStatus(currentExam.status || 'SCHEDULED')}
                         </StatusBadge>
                         {isStudent && currentExam.status === 'ONGOING' && (
-                          <div style={{ fontSize: '0.7rem', color: '#1976d2', marginTop: '0.2rem' }}>
+                          <div style={{ 
+                            fontSize: '0.7rem', 
+                            color: theme === 'dark' ? '#90caf9' : '#1976d2', 
+                            marginTop: '0.2rem',
+                            fontWeight: '500'
+                          }}>
                             Click to take exam
                           </div>
                         )}
