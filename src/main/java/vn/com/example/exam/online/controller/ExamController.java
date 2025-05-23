@@ -112,6 +112,22 @@ public class ExamController {
     }
 
     @Operation(
+            summary = "Get all exams REST API",
+            description = "Get all exams by teacherId")
+    @ApiResponse(
+            responseCode = "200",
+            description = "HTTP Status 200 OK")
+    @GetMapping("/teacher/{teacherId}/all")
+    public ResponseEntity<Page<ExamResponse>> getExamsByTeacher(
+            @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
+            @PathVariable Long teacherId
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(examService.getExamsByTeacher(teacherId, pageable));
+    }
+
+    @Operation(
             summary = "Get class REST API",
             description = "Get password exam by examId")
     @ApiResponse(

@@ -51,5 +51,4 @@ public class Exam {
     ExamStatus status;
     @OneToMany(mappedBy = "exam")
     List<Question> questions = new ArrayList<>();
-    double coefficient;
 }

@@ -91,15 +91,13 @@ public class StatisticsService {
                     Long studentId = entry.getKey();
                     List<StudentExam> exams = entry.getValue();
 
-                    double totalWeightedScore = exams.stream()
-                            .mapToDouble(se -> se.getScore() * se.getExam().getCoefficient())
+                    double totalScore = exams.stream()
+                            .mapToDouble(StudentExam::getScore)
                             .sum();
 
-                    double totalCoefficient = exams.stream()
-                            .mapToDouble(se -> se.getExam().getCoefficient())
-                            .sum();
+                    double avgScore = exams.isEmpty() ? 0.0 : totalScore / exams.size();
 
-                    double avgScore = totalCoefficient == 0 ? 0.0 : totalWeightedScore / totalCoefficient;
+
                     Double avgScoreIn10 = avgScore;
 
                     Double avgScoreIn4 = calculateScoreIn4(avgScore);
@@ -140,19 +138,20 @@ public class StatisticsService {
             Class clazz = studentClass.getClassEntity();
             List<Exam> exams = clazz.getExams();
 
-            double totalWeightedScore = 0.0;
-            double totalCoefficient = 0.0;
+            double totalScore = 0.0;
+            int examCount = 0;
 
             for (Exam exam : exams) {
                 Optional<StudentExam> studentExamOpt = studentExamRepository.findById(studentId + "-" + exam.getId());
-                double score = studentExamOpt.map(StudentExam::getScore).orElse(0.0);
-                totalWeightedScore += score * exam.getCoefficient();
-                totalCoefficient += exam.getCoefficient();
+                if (studentExamOpt.isPresent()) {
+                    totalScore += studentExamOpt.get().getScore();
+                    examCount++;
+                }
             }
 
-            if (totalCoefficient == 0) continue;
+            if (examCount == 0) continue;
 
-            double avgScore = totalWeightedScore / totalCoefficient;
+            double avgScore = totalScore / examCount;
 
             classResults.add(new ClassResultDto(
                     clazz.getId(),

@@ -26,6 +26,4 @@ public class CreateExamRequest {
     @NotNull
     String password;
     ExamStatus status;
-    @NotNull
-    double coefficient;
 }

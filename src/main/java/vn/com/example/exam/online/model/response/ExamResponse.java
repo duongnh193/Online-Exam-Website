@@ -27,5 +27,4 @@ public class ExamResponse {
     String password;
     ExamStatus status;
     double coefficient;
-    long totalQuestions;
 }
