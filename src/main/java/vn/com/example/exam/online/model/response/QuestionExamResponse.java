@@ -16,4 +16,5 @@ public class QuestionExamResponse {
     private String title;
     private QuestionType type;
     private List<ChoiceDto> choices;
+    private String image;
 }

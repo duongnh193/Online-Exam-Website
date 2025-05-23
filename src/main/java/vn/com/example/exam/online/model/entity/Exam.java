@@ -15,6 +15,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
 import vn.com.example.exam.online.model.ExamStatus;
@@ -30,6 +31,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
 @Table(name = "exam")
+@ToString(exclude = {"classEntity", "creator", "questions"})
 public class Exam {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

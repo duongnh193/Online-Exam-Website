@@ -12,6 +12,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
 import vn.com.example.exam.online.model.StudentExamStatus;
@@ -25,6 +26,7 @@ import java.time.OffsetDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
 @Table(name = "student_exam")
+@ToString(exclude = {"exam", "student"})
 public class StudentExam {
     @Id
     String id;

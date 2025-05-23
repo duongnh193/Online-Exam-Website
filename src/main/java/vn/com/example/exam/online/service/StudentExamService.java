@@ -5,7 +5,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.com.example.exam.online.mapper.StudentExam2StudentExamResultResponseMapper;
 import vn.com.example.exam.online.model.ExamResult;
-import vn.com.example.exam.online.model.QuestionType;
 import vn.com.example.exam.online.model.StudentExamStatus;
 import vn.com.example.exam.online.model.entity.Exam;
 import vn.com.example.exam.online.model.entity.ExamSubmission;
@@ -75,13 +74,8 @@ public class StudentExamService {
 
                 // Lấy câu hỏi hiện tại
                 List<Question> orderedQuestions = getOrderedQuestions(exam);
-                int currentQuestionIndex;
-                if (studentExam.getCurrentQuestion() == null) {
-                    currentQuestionIndex = 0;
-                } else {
-                    currentQuestionIndex = studentExam.getCurrentQuestion() + 1;
-                }
-                Question currentQuestion = orderedQuestions.get(currentQuestionIndex);
+                int currentIndex = Optional.ofNullable(studentExam.getCurrentQuestion()).orElse(0);
+                Question currentQuestion = orderedQuestions.get(currentIndex);
 
                 return new StudentExamResponse(studentExam, mapToQuestionResponse(currentQuestion), false, remainingTime);
             } else if (studentExam.getStatus() == StudentExamStatus.COMPLETED) {
@@ -108,40 +102,6 @@ public class StudentExamService {
         return new StudentExamResponse(studentExam, mapToQuestionResponse(firstQuestion), false, null);
     }
 
-
-//    public StudentExamResponse startExam(Long examId, String password) {
-//        User student = getAuthenticatedStudent();
-//        Exam exam = examRepository.findById(examId)
-//                .orElseThrow(() -> new RuntimeException("Exam not found"));
-//        if(!isCurrentUserInClass(student.getId(), exam.getClassEntity().getId())) {
-//            throw new RuntimeException("Student is not in class");
-//        }
-//        if(!password.equals(exam.getPassword())) {
-//            throw new RuntimeException("Wrong password");
-//        }
-//        String studentExamId = student.getId() + "-" + examId;
-//
-//        if (studentExamRepository.existsById(studentExamId)) {
-//            throw new RuntimeException("Exam already started");
-//        }
-//
-//        // Tạo đối tượng StudentExam và lưu vào DB
-//        StudentExam studentExam = new StudentExam()
-//                .setId(studentExamId)  // Sử dụng id ghép
-//                .setExam(exam)
-//                .setStudent(student)
-//                .setScore(0.0)
-//                .setStatus(StudentExamStatus.IN_PROGRESS)
-//                .setStartAt(OffsetDateTime.now())
-//                .setTime(exam.getDuration());
-//
-//        studentExam = studentExamRepository.save(studentExam);
-//
-//        Question firstQuestion = getOrderedQuestions(exam).get(0);
-//
-//        return new StudentExamResponse(studentExam, mapToQuestionResponse(firstQuestion), false);
-//    }
-
     private List<Question> getOrderedQuestions(Exam exam) {
         return exam.getQuestions().stream()
                 .sorted(Comparator.comparing(Question::getId))
@@ -165,17 +125,17 @@ public class StudentExamService {
         List<Question> orderedQuestions = getOrderedQuestions(studentExam.getExam());
         int currentIndex = findIndexById(orderedQuestions, questionId);
         double score = calculateScore(studentExam);
-        studentExam.setScore(score)
-                .setCurrentQuestion(currentIndex);
-        studentExamRepository.save(studentExam);
-
-        if (currentIndex + 1 < orderedQuestions.size()) {
+        studentExam.setScore(score);
+        boolean isLast = (currentIndex + 1 == orderedQuestions.size());
+        if (!isLast) {
+            studentExam.setCurrentQuestion(currentIndex + 1);
+            studentExamRepository.save(studentExam);
             Question nextQuestion = orderedQuestions.get(currentIndex + 1);
             return new StudentExamResponse(studentExam, mapToQuestionResponse(nextQuestion), false, null);
         } else {
-            return new StudentExamResponse(studentExam, null, true, null); // nextQuestion = null, isLast = true
+            studentExamRepository.save(studentExam); // vẫn lưu lại score, currentQuestion
+            return new StudentExamResponse(studentExam, null, true, null); // isLast = true
         }
-
     }
 
     private int findIndexById(List<Question> list, Long id) {
@@ -227,34 +187,14 @@ public class StudentExamService {
         return (correctAnswers * 10.0) / totalQuestions;
     }
 
-//    private double calculateScore(StudentExam studentExam) {
-//        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExam.getId());
-//
-//        long totalQuestions = submissions.size();
-//        long correctAnswers = submissions.stream()
-//                .filter(s -> Boolean.TRUE.equals(s.getIsCorrect()))
-//                .count();
-//
-//        if (totalQuestions == 0) return 0.0;
-//
-//        return (correctAnswers * 10.0) / totalQuestions;
-//    }
-
-
-    private Question getNextQuestion(Exam exam, Long currentQuestionId) {
-        return exam.getQuestions().stream()
-                .filter(q -> q.getId() > currentQuestionId)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No more questions available"));
-    }
-
     private User getAuthenticatedStudent() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private QuestionExamResponse mapToQuestionResponse(Question question) {
-        return new QuestionExamResponse(question.getId(), question.getTitle(), question.getType(), question.getChoices());
+        return new QuestionExamResponse(question.getId(), question.getTitle(), question.getType(),
+                question.getChoices(), question.getImage());
     }
 
     private boolean isCurrentUserInClass(Long userId, Long classId) {
