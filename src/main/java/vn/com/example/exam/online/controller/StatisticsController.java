@@ -76,4 +76,14 @@ public class StatisticsController {
     public StudentScoreClassResultResponse getStudentScoreByClasses(@PathVariable Long studentId) {
         return statisticsService.getStudentScoreByClasses(studentId);
     }
+
+    @GetMapping("/count/class/{teacherId}")
+    public Long countClassByTeacherId(@PathVariable Long teacherId) {
+        return statisticsService.countClassByTeacherId(teacherId);
+    }
+
+    @GetMapping("/count/exam/{teacherId}")
+    public Long countExamByTeacherId(@PathVariable Long teacherId) {
+        return statisticsService.countExamByTeacherId(teacherId);
+    }
 }

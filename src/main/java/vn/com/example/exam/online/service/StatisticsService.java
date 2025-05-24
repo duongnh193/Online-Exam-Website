@@ -35,6 +35,14 @@ public class StatisticsService {
     private final ExamRepository examRepository;
     private final StudentClassRepository studentClassRepository;
 
+    public Long countClassByTeacherId(Long teacherId) {
+        return classRepository.countByTeacherId(teacherId);
+    }
+
+    public Long countExamByTeacherId(Long teacherId) {
+        return examRepository.countByCreatorId(teacherId);
+    }
+
 
     public Long getTotalClasses() {
         return classRepository.count();
