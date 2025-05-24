@@ -7,6 +7,7 @@ import classService from '../services/classService';
 import questionService from '../services/questionService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -267,10 +268,10 @@ const Tab = styled.div`
 `;
 
 const QuestionCard = styled.div`
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   margin-bottom: 1rem;
   border-left: 3px solid ${props => {
     switch(props.type) {
@@ -280,6 +281,7 @@ const QuestionCard = styled.div`
       default: return '#ddd';
     }
   }};
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const ChoiceItem = styled.div`
@@ -311,17 +313,19 @@ const ChoiceText = styled.div`
 `;
 
 const FileUploadContainer = styled.div`
-  border: 2px dashed #ddd;
+  border: 2px dashed ${props => props.theme === 'dark' ? '#555' : '#ddd'};
   border-radius: 12px;
   padding: 2rem;
   text-align: center;
   margin-bottom: 1.5rem;
   cursor: pointer;
   transition: all 0.2s;
+  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'};
+  color: var(--text-secondary);
   
   &:hover {
-    border-color: #6a00ff;
-    background-color: rgba(106, 0, 255, 0.02);
+    border-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a00ff'};
+    background-color: ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.05)' : 'rgba(106, 0, 255, 0.02)'};
   }
 `;
 
@@ -332,11 +336,12 @@ const ImageUploadContainer = styled.div`
 
 const ImagePreview = styled.div`
   margin-top: 0.75rem;
-  border: 1px dashed #ddd;
+  border: 1px dashed ${props => props.theme === 'dark' ? '#555' : '#ddd'};
   border-radius: 8px;
   padding: 0.5rem;
   text-align: center;
   display: ${props => props.hasImage ? 'block' : 'none'};
+  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'};
 `;
 
 const ImagePreviewImg = styled.img`
@@ -356,8 +361,8 @@ const ImageIconButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f1f1f1;
-  color: #333;
+  background-color: ${props => props.theme === 'dark' ? '#444' : '#f1f1f1'};
+  color: ${props => props.theme === 'dark' ? '#fff' : '#333'};
   border: none;
   border-radius: 50%;
   width: 36px;
@@ -366,7 +371,7 @@ const ImageIconButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    background-color: #e0e0e0;
+    background-color: ${props => props.theme === 'dark' ? '#555' : '#e0e0e0'};
   }
 `;
 
@@ -453,6 +458,10 @@ function CreateExamPage() {
   // Add a new state for showing/hiding password
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  
+  // Add state for delete confirmation
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState(null);
   
   // Fetch exam data if in edit mode
   useEffect(() => {
@@ -1187,6 +1196,53 @@ function CreateExamPage() {
     });
   };
   
+  // Handle delete question
+  const handleDeleteQuestion = (question) => {
+    setQuestionToDelete(question);
+    setShowDeleteConfirmation(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    if (!questionToDelete) return;
+    
+    try {
+      setLoading(true);
+      console.log(`Deleting question ID: ${questionToDelete.id}`);
+      
+      await questionService.deleteQuestion(questionToDelete.id);
+      
+      // Show success message
+      setSuccess(`Question "${questionToDelete.title}" deleted successfully!`);
+      setError(null);
+      
+      // Refresh questions list
+      const targetExamId = createdExamId || examId;
+      fetchQuestions(targetExamId);
+      
+      // Clear success message after delay
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      
+    } catch (err) {
+      console.error('Error deleting question:', err);
+      if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Failed to delete question. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+      setShowDeleteConfirmation(false);
+      setQuestionToDelete(null);
+    }
+  };
+  
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
+    setQuestionToDelete(null);
+  };
+  
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -1584,12 +1640,12 @@ function CreateExamPage() {
                     />
                     
                     {/* Image Preview */}
-                    <ImagePreview hasImage={!!questionImage}>
+                    <ImagePreview theme={theme} hasImage={!!questionImage}>
                       {questionImage && (
                         <>
                           <ImagePreviewImg src={questionImage.preview} alt="Question" />
                           <ImageActions>
-                            <ImageIconButton onClick={handleRemoveImage} title="Remove image">
+                            <ImageIconButton theme={theme} onClick={handleRemoveImage} title="Remove image">
                               <TrashIcon />
                             </ImageIconButton>
                           </ImageActions>
@@ -1695,7 +1751,7 @@ function CreateExamPage() {
                     <li>answer - Correct answer(s). For multiple choice, separate with commas</li>
                   </ul>
                   
-                  <FileUploadContainer onClick={handleFileSelect}>
+                  <FileUploadContainer theme={theme} onClick={handleFileSelect}>
                     {selectedFile ? (
                       <p>Selected file: {selectedFile.name}</p>
                     ) : (
@@ -1743,14 +1799,29 @@ function CreateExamPage() {
                           <div style={{ fontWeight: 500 }}>
                             {index + 1}. {question.title}
                           </div>
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
-                            onClick={() => handleEditQuestion(question)}
-                          >
-                            Edit
-                          </Button>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                              onClick={() => handleEditQuestion(question)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              style={{ 
+                                padding: '0.25rem 0.75rem', 
+                                fontSize: '0.8rem',
+                                borderColor: '#dc3545',
+                                color: '#dc3545'
+                              }}
+                              onClick={() => handleDeleteQuestion(question)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </div>
                         
                         {question.image && (
@@ -1812,6 +1883,14 @@ function CreateExamPage() {
           </>
         )}
       </MainContent>
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirmation}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        message={`Are you sure you want to delete the question "${questionToDelete?.title}"? This action cannot be undone.`}
+      />
     </PageContainer>
   );
 }

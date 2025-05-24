@@ -237,6 +237,10 @@ const EssayInput = styled.textarea`
   background-color: ${props => props.theme === 'dark' ? '#333' : 'white'};
   color: var(--text-primary);
   
+  &::placeholder {
+    color: ${props => props.theme === 'dark' ? '#aaa' : '#999'};
+  }
+  
   &:focus {
     outline: none;
     border-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
@@ -353,6 +357,78 @@ const ResultDetails = styled.div`
   }
 `;
 
+const CompletionContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 3rem;
+  background: linear-gradient(135deg, 
+    ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : 'rgba(106, 126, 252, 0.05)'}, 
+    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)'}
+  );
+  border: 1px solid ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.2)' : 'rgba(106, 126, 252, 0.1)'};
+  border-radius: 1.5rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: ${props => props.theme === 'dark' 
+    ? '0 8px 32px rgba(0, 0, 0, 0.3)' 
+    : '0 8px 32px rgba(106, 126, 252, 0.1)'};
+`;
+
+const CompletionIcon = styled.div`
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+`;
+
+const CompletionTitle = styled.h2`
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, 
+    ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'}, 
+    ${props => props.theme === 'dark' ? '#ff6b9d' : '#ff7eb3'}
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+`;
+
+const CompletionMessage = styled.p`
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+`;
+
+const CompletionSubmitButton = styled.button`
+  padding: 1rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, 
+    ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'}, 
+    ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'}
+  );
+  color: white;
+  box-shadow: 0 4px 16px rgba(106, 126, 252, 0.3);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(106, 126, 252, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 function TakeExamPage() {
   const { examId } = useParams();
   const navigate = useNavigate();
@@ -376,6 +452,8 @@ function TakeExamPage() {
   const [timeExpirationChecked, setTimeExpirationChecked] = useState(false);
   // Thêm state cho modal xác nhận nộp bài
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  // Thêm state để track khi exam đã completed
+  const [examCompleted, setExamCompleted] = useState(false);
   
   // Get the studentExamId and first question from localStorage on mount
   useEffect(() => {
@@ -826,6 +904,14 @@ function TakeExamPage() {
         // Update our flag based ONLY on server response
         setServerLastQuestionFlag(isLastQuestion);
         
+        // Set examCompleted state when it's the last question and we've just answered it
+        if (isLastQuestion) {
+          console.log('🎉 Exam completed! Setting examCompleted to true');
+          setExamCompleted(true);
+          setLoading(false);
+          return; // Stop processing further
+        }
+        
         // Set total questions if available from server response
         if (responseData.studentExam?.exam?.questions?.length) {
           const count = responseData.studentExam.exam.questions.length;
@@ -997,6 +1083,104 @@ function TakeExamPage() {
     return 'Student';
   };
 
+  // Handle exam submission
+  const handleSubmitExam = () => {
+    if (!studentExamId) {
+      setError('No active exam session found');
+      return;
+    }
+    
+    // Hiển thị modal xác nhận thay vì dùng window.confirm
+    setShowSubmitConfirmation(true);
+  };
+  
+  // Handle confirmed submission
+  const handleConfirmSubmit = async () => {
+    try {
+      setLoading(true);
+      
+      // Add a flag to track if we're about to submit the exam
+      // This will be used to prevent duplicate saving of the last answer
+      localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
+      
+      console.log('Submitting entire exam to server...', 'Current student exam ID:', studentExamId);
+      // Submit the exam and get the result
+      const response = await studentExamService.submitExam(studentExamId);
+      console.log('Exam submitted successfully:', response.data);
+      
+      // Debug log - Chi tiết về data trả về
+      console.log('Raw response data:', JSON.stringify(response.data, null, 2));
+      
+      // Kiểm tra cấu trúc response
+      if (response.data.answers) {
+        console.log('Answer details:', response.data.answers);
+      }
+      
+      if (response.data.questions) {
+        console.log('Question details:', response.data.questions);
+      }
+      
+      if (response.data.correctAnswers !== undefined) {
+        console.log('Correct answers count:', response.data.correctAnswers);
+        console.log('Wrong answers count:', response.data.wrongAnswers);
+        console.log('Total questions:', response.data.totalQuestions);
+      }
+      
+      if (response.data) {
+        // Store the exam result
+        const result = {
+          correctAnswers: response.data.correctAnswers || 0,
+          wrongAnswers: response.data.wrongAnswers || 0,
+          totalQuestions: response.data.totalQuestions || 0,
+          score: response.data.score || 0,
+          duration: response.data.duration || 0
+        };
+        
+        console.log('Final exam result being set:', result);
+        console.log('📊 Score Calculation Info:', {
+          correctAnswers: result.correctAnswers,
+          totalQuestions: result.totalQuestions,
+          rawScore: result.score,
+          scoreDisplay: `${result.score.toFixed(1)} điểm`,
+          calculationMethod: '(correctAnswers * 10.0) / totalQuestions'
+        });
+        
+        setExamResult(result);
+        setShowResults(true);
+        
+        // Clear the current exam session from localStorage
+        localStorage.removeItem('currentStudentExamId');
+        localStorage.removeItem('examSession');
+        localStorage.removeItem(`exam_submitting_${studentExamId}`);
+      } else {
+        setError('Received invalid response from server');
+      }
+    } catch (err) {
+      console.error('Error submitting exam:', err);
+      
+      // Remove the submitting flag when there's an error
+      localStorage.removeItem(`exam_submitting_${studentExamId}`);
+      
+      // Chi tiết lỗi
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        console.error('Error status:', err.response.status);
+        if (err.response.data && err.response.data.message) {
+          setError(`Failed to submit exam: ${err.response.data.message}`);
+        } else {
+          setError('Failed to submit exam. Please try again.');
+        }
+      } else if (err.message) {
+        setError(`Failed to submit exam: ${err.message}`);
+      } else {
+        setError('Failed to submit exam. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+      setShowSubmitConfirmation(false);
+    }
+  };
+
   // Results screen component
   const ExamResultsScreen = () => {
     if (!examResult) return null;
@@ -1072,6 +1256,23 @@ function TakeExamPage() {
     );
   };
   
+  // Completion screen component
+  const ExamCompletionScreen = () => {
+    return (
+      <CompletionContainer theme={theme}>
+        <CompletionIcon>🎉</CompletionIcon>
+        <CompletionTitle theme={theme}>Exam Completed!</CompletionTitle>
+        <CompletionMessage>
+          You have successfully completed all questions in this exam. 
+          Please click the submit button below to finalize your answers and view your results.
+        </CompletionMessage>
+        <CompletionSubmitButton theme={theme} onClick={handleSubmitExam}>
+          Submit Exam
+        </CompletionSubmitButton>
+      </CompletionContainer>
+    );
+  };
+  
   // Show loading screen
   if (loading) {
     return (
@@ -1097,6 +1298,50 @@ function TakeExamPage() {
   // Show results screen
   if (showResults) {
     return <ExamResultsScreen />;
+  }
+
+  // Calculate timeRunningOut before using it
+  const timeRunningOut = timeRemaining !== null && timeRemaining < 300; // Less than 5 minutes
+
+  // Show completion screen when exam is completed but not yet submitted
+  if (examCompleted) {
+    return (
+      <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        <Header>
+          <SearchContainer theme={theme}>
+            <SearchIcon>🔍</SearchIcon>
+            <SearchInput placeholder="Search..." />
+          </SearchContainer>
+          
+          <ActionButtons>
+            <UserProfile>
+              <span>{getUserName()}</span>
+              <UserAvatar theme={theme}>{getUserInitial()}</UserAvatar>
+            </UserProfile>
+          </ActionButtons>
+        </Header>
+        
+        <MainContent>
+          <QuizHeader>
+            <QuizTitle>Quiz</QuizTitle>
+            <TimerDisplay timeRunningOut={timeRunningOut} theme={theme}>
+              Timer: {formatTime(timeRemaining)}
+            </TimerDisplay>
+          </QuizHeader>
+          
+          <QuizContent>
+            <ExamCompletionScreen />
+          </QuizContent>
+        </MainContent>
+        
+        <ConfirmationModal
+          isOpen={showSubmitConfirmation}
+          onClose={() => setShowSubmitConfirmation(false)}
+          onConfirm={handleConfirmSubmit}
+          message="Are you sure you want to submit Quiz?"
+        />
+      </PageContainer>
+    );
   }
   
   // No questions loaded
@@ -1133,7 +1378,6 @@ function TakeExamPage() {
   const isLastQuestion = serverLastQuestionFlag;
   
   // console.log('Current question index:', currentQuestionIndex, 'Total questions:', totalQuestions, 'Is last question (from server):', isLastQuestion);
-  const timeRunningOut = timeRemaining !== null && timeRemaining < 300; // Less than 5 minutes
   
   // Render different question types
   const renderQuestionInput = () => {
@@ -1144,6 +1388,7 @@ function TakeExamPage() {
         return (
           <div>
             <EssayInput
+              theme={theme}
               value={essayAnswers[currentQuestion.id] || ''}
               onChange={(e) => handleEssayChange(currentQuestion.id, e.target.value)}
               placeholder="Write your answer here..."
@@ -1275,104 +1520,6 @@ function TakeExamPage() {
             </NavigationBar>
           </>
         );
-    }
-  };
-  
-  // Cập nhật hàm handleSubmitExam
-  const handleSubmitExam = () => {
-    if (!studentExamId) {
-      setError('No active exam session found');
-      return;
-    }
-    
-    // Hiển thị modal xác nhận thay vì dùng window.confirm
-    setShowSubmitConfirmation(true);
-  };
-  
-  // Thêm hàm xử lý khi người dùng xác nhận nộp bài
-  const handleConfirmSubmit = async () => {
-    try {
-      setLoading(true);
-      
-      // Add a flag to track if we're about to submit the exam
-      // This will be used to prevent duplicate saving of the last answer
-      localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
-      
-      console.log('Submitting entire exam to server...', 'Current student exam ID:', studentExamId);
-      // Submit the exam and get the result
-      const response = await studentExamService.submitExam(studentExamId);
-      console.log('Exam submitted successfully:', response.data);
-      
-      // Debug log - Chi tiết về data trả về
-      console.log('Raw response data:', JSON.stringify(response.data, null, 2));
-      
-      // Kiểm tra cấu trúc response
-      if (response.data.answers) {
-        console.log('Answer details:', response.data.answers);
-      }
-      
-      if (response.data.questions) {
-        console.log('Question details:', response.data.questions);
-      }
-      
-      if (response.data.correctAnswers !== undefined) {
-        console.log('Correct answers count:', response.data.correctAnswers);
-        console.log('Wrong answers count:', response.data.wrongAnswers);
-        console.log('Total questions:', response.data.totalQuestions);
-      }
-      
-      if (response.data) {
-        // Store the exam result
-        const result = {
-          correctAnswers: response.data.correctAnswers || 0,
-          wrongAnswers: response.data.wrongAnswers || 0,
-          totalQuestions: response.data.totalQuestions || 0,
-          score: response.data.score || 0,
-          duration: response.data.duration || 0
-        };
-        
-        console.log('Final exam result being set:', result);
-        console.log('📊 Score Calculation Info:', {
-          correctAnswers: result.correctAnswers,
-          totalQuestions: result.totalQuestions,
-          rawScore: result.score,
-          scoreDisplay: `${result.score.toFixed(1)} điểm`,
-          calculationMethod: '(correctAnswers * 10.0) / totalQuestions'
-        });
-        
-        setExamResult(result);
-        setShowResults(true);
-        
-        // Clear the current exam session from localStorage
-        localStorage.removeItem('currentStudentExamId');
-        localStorage.removeItem('examSession');
-        localStorage.removeItem(`exam_submitting_${studentExamId}`);
-      } else {
-        setError('Received invalid response from server');
-      }
-    } catch (err) {
-      console.error('Error submitting exam:', err);
-      
-      // Remove the submitting flag when there's an error
-      localStorage.removeItem(`exam_submitting_${studentExamId}`);
-      
-      // Chi tiết lỗi
-      if (err.response) {
-        console.error('Error response:', err.response.data);
-        console.error('Error status:', err.response.status);
-        if (err.response.data && err.response.data.message) {
-          setError(`Failed to submit exam: ${err.response.data.message}`);
-        } else {
-          setError('Failed to submit exam. Please try again.');
-        }
-      } else if (err.message) {
-        setError(`Failed to submit exam: ${err.message}`);
-      } else {
-        setError('Failed to submit exam. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      setShowSubmitConfirmation(false);
     }
   };
   

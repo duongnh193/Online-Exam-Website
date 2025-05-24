@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../contexts/ThemeContext';
 import statisticsService from '../services/statisticsService';
+import classService from '../services/classService';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 
 // Styled Components
@@ -186,15 +187,41 @@ const ClassResultsContainer = styled.div`
 `;
 
 const ClassResultCard = styled.div`
-  background-color: var(--bg-secondary);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: var(--card-shadow);
+  background: linear-gradient(135deg, ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : 'rgba(106, 126, 252, 0.05)'}, ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)'});
+  border: 1px solid ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.2)' : 'rgba(106, 126, 252, 0.1)'};
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: ${props => props.theme === 'dark' 
+    ? '0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(141, 71, 255, 0.1)' 
+    : '0 8px 32px rgba(106, 126, 252, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)'};
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(45deg, ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'}, transparent);
+    border-radius: 50%;
+    opacity: 0.1;
+    transition: all 0.3s ease;
+  }
   
   &:hover {
-    box-shadow: ${props => props.theme === 'dark' ? '0 4px 20px rgba(0, 0, 0, 0.2)' : '0 4px 20px rgba(0, 0, 0, 0.1)'};
-    transform: translateY(-2px);
-    transition: all 0.3s ease;
+    transform: translateY(-8px);
+    box-shadow: ${props => props.theme === 'dark' 
+      ? '0 12px 48px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(141, 71, 255, 0.2)' 
+      : '0 12px 48px rgba(106, 126, 252, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08)'};
+    
+    &::before {
+      transform: scale(1.2);
+      opacity: 0.15;
+    }
   }
 `;
 
@@ -202,9 +229,18 @@ const ClassHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: ${props => props.theme === 'dark' 
+    ? 'rgba(255, 255, 255, 0.05)' 
+    : 'rgba(255, 255, 255, 0.4)'};
+  border: 1px solid ${props => props.theme === 'dark' 
+    ? 'rgba(255, 255, 255, 0.1)' 
+    : 'rgba(255, 255, 255, 0.6)'};
+  border-radius: 1rem;
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
 `;
 
 const ClassName = styled.h3`
@@ -215,49 +251,89 @@ const ClassName = styled.h3`
 `;
 
 const ClassScore = styled.div`
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  color: ${props => {
+  background: ${props => {
     const score = parseFloat(props.score);
-    if (score >= 80) return props.theme === 'dark' ? '#4ade80' : '#10b981';
-    if (score >= 60) return props.theme === 'dark' ? '#facc15' : '#f59e0b';
-    return props.theme === 'dark' ? '#f87171' : '#ef4444';
+    if (score >= 8.0) {
+      return props.theme === 'dark' 
+        ? 'linear-gradient(135deg, #4ade80, #22c55e)' 
+        : 'linear-gradient(135deg, #10b981, #059669)';
+    } else if (score >= 6.0) {
+      return props.theme === 'dark' 
+        ? 'linear-gradient(135deg, #facc15, #f59e0b)' 
+        : 'linear-gradient(135deg, #f59e0b, #d97706)';
+    }
+    return props.theme === 'dark' 
+      ? 'linear-gradient(135deg, #f87171, #ef4444)' 
+      : 'linear-gradient(135deg, #ef4444, #dc2626)';
   }};
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: ${props => props.theme === 'dark' 
+    ? '0 2px 8px rgba(255, 255, 255, 0.1)' 
+    : '0 2px 8px rgba(0, 0, 0, 0.1)'};
 `;
 
 const ExamsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  position: relative;
+  z-index: 1;
 `;
 
-const ExamItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'};
+const ScoreInfoCard = styled.div`
+  padding: 1.5rem;
+  background: ${props => props.theme === 'dark' 
+    ? 'rgba(0, 0, 0, 0.2)' 
+    : 'rgba(255, 255, 255, 0.6)'};
+  border: 1px solid ${props => props.theme === 'dark' 
+    ? 'rgba(255, 255, 255, 0.1)' 
+    : 'rgba(255, 255, 255, 0.8)'};
+  border-radius: 1rem;
+  backdrop-filter: blur(15px);
   
-  &:hover {
-    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
+  .main-score {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    text-align: center;
   }
-`;
-
-const ExamName = styled.div`
-  font-size: 0.95rem;
-  color: var(--text-primary);
-`;
-
-const ExamScore = styled.div`
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: ${props => {
-    const score = parseFloat(props.score);
-    if (score >= 80) return props.theme === 'dark' ? '#4ade80' : '#10b981';
-    if (score >= 60) return props.theme === 'dark' ? '#facc15' : '#f59e0b';
-    return props.theme === 'dark' ? '#f87171' : '#ef4444';
-  }};
+  
+  .score-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  .score-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: ${props => props.theme === 'dark' 
+      ? 'rgba(255, 255, 255, 0.05)' 
+      : 'rgba(255, 255, 255, 0.3)'};
+    border-radius: 0.75rem;
+    border: 1px solid ${props => props.theme === 'dark' 
+      ? 'rgba(255, 255, 255, 0.1)' 
+      : 'rgba(255, 255, 255, 0.5)'};
+  }
+  
+  .score-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
+    margin-bottom: 0.25rem;
+  }
+  
+  .score-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 `;
 
 const NoResultsContainer = styled.div`
@@ -301,6 +377,43 @@ const LoadingContainer = styled.div`
   color: var(--text-secondary);
 `;
 
+const ClassNameLoading = styled.div`
+  width: 120px;
+  height: 20px;
+  background: linear-gradient(90deg, 
+    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'} 25%, 
+    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'} 50%, 
+    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'} 75%
+  );
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: loading 1.5s infinite;
+  
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+`;
+
+const ClassResultsTitle = styled.h2`
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 2rem 0 1rem 0;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'}, transparent);
+    border-radius: 2px;
+  }
+`;
+
 function ResultsPage() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
@@ -310,6 +423,7 @@ function ResultsPage() {
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [classNames, setClassNames] = useState({}); // Store class names by classId
 
   // Fetch results when component mounts
   useEffect(() => {
@@ -323,9 +437,18 @@ function ResultsPage() {
       try {
         setLoading(true);
         const response = await statisticsService.getStudentScoreByClasses(user.id);
-        console.log('Student results data:', response.data);
+        console.log('🔍 Full API response:', response.data);
+        console.log('🔍 Response structure:', JSON.stringify(response.data, null, 2));
+        console.log('🔍 ClassResults array:', response.data.classResults);
         setResults(response.data);
         setError(null);
+        
+        // Fetch class names for all classes
+        if (response.data.classResults && response.data.classResults.length > 0) {
+          const classIds = response.data.classResults.map(classResult => classResult.classId);
+          console.log('🔍 Fetching names for class IDs:', classIds);
+          await fetchClassNames(classIds);
+        }
       } catch (err) {
         console.error('Error fetching results:', err);
         setError('Failed to load your results. Please try again later.');
@@ -337,6 +460,47 @@ function ResultsPage() {
 
     fetchResults();
   }, [user]);
+
+  // Fetch class names by class IDs
+  const fetchClassNames = async (classIds) => {
+    const newClassNames = {};
+    
+    try {
+      // Thay vì gọi getClassById cho từng class (bị permission denied),
+      // ta sẽ gọi getStudentClasses một lần để lấy tất cả classes của student
+      console.log('🔍 Fetching all student classes to get class names...');
+      const response = await classService.getStudentClasses(user.id, 0, 100); // Large size to get all classes
+      
+      if (response.data && response.data.content) {
+        // Map class data by classId
+        response.data.content.forEach(classData => {
+          if (classIds.includes(classData.id)) {
+            newClassNames[classData.id] = classData.name || `Class ${classData.id}`;
+            console.log(`📚 Found class name for ${classData.id}:`, classData.name);
+          }
+        });
+      }
+      
+      // Set fallback names for classes not found
+      classIds.forEach(classId => {
+        if (!newClassNames[classId]) {
+          newClassNames[classId] = `Class ${classId}`;
+          console.log(`📚 Using fallback name for class ${classId}`);
+        }
+      });
+      
+      setClassNames(prev => ({ ...prev, ...newClassNames }));
+      console.log('📚 All class names updated:', newClassNames);
+    } catch (err) {
+      console.error('❌ Error fetching class names:', err);
+      // Set fallback names for all classes
+      const fallbackNames = {};
+      classIds.forEach(classId => {
+        fallbackNames[classId] = `Class ${classId}`;
+      });
+      setClassNames(prev => ({ ...prev, ...fallbackNames }));
+    }
+  };
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -369,31 +533,31 @@ function ResultsPage() {
 
   // Calculate average score across all classes
   const calculateOverallAverage = () => {
-    if (!results || !results.classScores || results.classScores.length === 0) {
+    if (!results || !results.classResults || results.classResults.length === 0) {
       return 0;
     }
     
-    const totalScore = results.classScores.reduce((sum, classResult) => sum + classResult.averageScore, 0);
-    return (totalScore / results.classScores.length).toFixed(1);
+    const totalScore = results.classResults.reduce((sum, classResult) => sum + classResult.averageScore, 0);
+    return (totalScore / results.classResults.length).toFixed(1);
   };
 
   // Count total classes
   const getTotalClasses = () => {
-    if (!results || !results.classScores) {
+    if (!results || !results.classResults) {
       return 0;
     }
-    return results.classScores.length;
+    return results.classResults.length;
   };
 
-  // Count total exams
+  // Count total exams (backend chỉ trả average score của class, không có exam details)
   const getTotalExams = () => {
-    if (!results || !results.classScores) {
+    if (!results || !results.classResults) {
       return 0;
     }
     
-    return results.classScores.reduce((total, classResult) => {
-      return total + (classResult.examScores ? classResult.examScores.length : 0);
-    }, 0);
+    // Backend chỉ trả average score của class, không có individual exam scores
+    // Tạm thời hiển thị số classes có điểm
+    return results.classResults.length;
   };
 
   // Function to get icon for menu items
@@ -478,7 +642,7 @@ function ResultsPage() {
             <NoResultsText>Error Loading Results</NoResultsText>
             <NoResultsSubtext>{error}</NoResultsSubtext>
           </NoResultsContainer>
-        ) : !results || !results.classScores || results.classScores.length === 0 ? (
+        ) : !results || !results.classResults || results.classResults.length === 0 ? (
           <NoResultsContainer>
             <NoResultsIcon theme={theme}>📊</NoResultsIcon>
             <NoResultsText>No Results Available</NoResultsText>
@@ -488,7 +652,7 @@ function ResultsPage() {
           <>
             <StatsContainer>
               <StatCard theme={theme}>
-                <StatValue theme={theme}>{calculateOverallAverage()}%</StatValue>
+                <StatValue theme={theme}>{calculateOverallAverage()} điểm</StatValue>
                 <StatLabel>Overall Average</StatLabel>
               </StatCard>
               
@@ -499,37 +663,46 @@ function ResultsPage() {
               
               <StatCard theme={theme}>
                 <StatValue theme={theme}>{getTotalExams()}</StatValue>
-                <StatLabel>Total Exams</StatLabel>
+                <StatLabel>Classes with Scores</StatLabel>
               </StatCard>
             </StatsContainer>
             
-            <h2>Class Results</h2>
+            <ClassResultsTitle theme={theme}>Class Results</ClassResultsTitle>
             
             <ClassResultsContainer>
-              {results.classScores.map((classResult, index) => (
+              {results.classResults.map((classResult, index) => (
                 <ClassResultCard key={index} theme={theme}>
                   <ClassHeader>
-                    <ClassName>{classResult.className || `Class ${index + 1}`}</ClassName>
-                    <ClassScore theme={theme} score={classResult.averageScore}>
-                      {classResult.averageScore.toFixed(1)}%
-                    </ClassScore>
+                    {classNames[classResult.classId] ? (
+                      <ClassName>{classNames[classResult.classId]}</ClassName>
+                    ) : (
+                      <ClassNameLoading theme={theme} />
+                    )}
+                    {/* <ClassScore theme={theme} score={classResult.averageScore}>
+                      {classResult.averageScore.toFixed(1)} 
+                    </ClassScore> */}
                   </ClassHeader>
                   
                   <ExamsList>
-                    {classResult.examScores && classResult.examScores.length > 0 ? (
-                      classResult.examScores.map((exam, examIndex) => (
-                        <ExamItem key={examIndex} theme={theme}>
-                          <ExamName>{exam.examName || `Exam ${examIndex + 1}`}</ExamName>
-                          <ExamScore theme={theme} score={exam.score}>
-                            {exam.score.toFixed(1)}%
-                          </ExamScore>
-                        </ExamItem>
-                      ))
-                    ) : (
-                      <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                        No exam results for this class
+                    <ScoreInfoCard theme={theme}>
+                      <div className="main-score">
+                        Average Score: {classResult.averageScore.toFixed(1)} 
                       </div>
-                    )}
+                      <div className="score-breakdown">
+                        <div className="score-item">
+                          <div className="score-value">
+                            {classResult.averageScoreIn10?.toFixed(1) || 'N/A'}
+                          </div>
+                          <div className="score-label">10-point scale</div>
+                        </div>
+                        <div className="score-item">
+                          <div className="score-value">
+                            {classResult.averageScoreIn4?.toFixed(1) || 'N/A'}
+                          </div>
+                          <div className="score-label">4-point scale</div>
+                        </div>
+                      </div>
+                    </ScoreInfoCard>
                   </ExamsList>
                 </ClassResultCard>
               ))}
