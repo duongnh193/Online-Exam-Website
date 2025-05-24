@@ -865,7 +865,7 @@ function LecturerDashboardPage() {
           setModalTitle('My Exams List');
           // If user is a lecturer, fetch exams for this lecturer
           if (user && user.id) {
-            response = await examService.getExamsByTeacher(user.id, currentPage, pageSize);
+            response = await examService.getAllExamsByLecturer(user.id, currentPage, pageSize);
           }
           break;
         case 'classes':

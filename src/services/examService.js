@@ -522,6 +522,130 @@ class ExamService {
       throw error;
     });
   }
+
+  getAllExamsByLecturer(lecturerId, page = 0, size = 10) {
+    // Validate lecturer ID
+    if (!lecturerId || lecturerId === 0 || lecturerId === '0') {
+      console.error('getAllExamsByLecturer: Invalid lecturer ID provided:', lecturerId);
+      return Promise.reject(new Error('Invalid lecturer ID provided'));
+    }
+
+    logAuthState();
+    const url = `${API_URL}/teacher/${lecturerId}/all?page=${page}&size=${size}`;
+    const headers = authHeader();
+    
+    console.log(`Fetching all exams by lecturer ID: ${lecturerId}, page: ${page}, size: ${size}`);
+    logApiCall('GET', url, headers);
+    
+    return axios.get(url, { 
+      headers,
+      timeout: 15000 // Increased timeout for potentially larger responses
+    })
+    .then(response => {
+      console.log('Lecturer exams fetched successfully:', response.data);
+      
+      // Transform data to ensure title is properly set
+      let processedResponse = { ...response };
+      let responseData = response.data;
+      
+      if (!responseData) {
+        console.warn('Empty response data from API');
+        return {
+          ...response,
+          data: { content: [] }
+        };
+      }
+      
+      // Handle paginated response
+      if (responseData && responseData.content) {
+        const examCount = responseData.content.length;
+        console.log(`Received ${examCount} exams for lecturer (paginated)`);
+        
+        // Process each exam
+        if (examCount > 0) {
+          const processedContent = responseData.content.map(exam => {
+            // Calculate the correct status based on time
+            const calculatedStatus = calculateExamStatus(exam);
+            
+            return {
+              ...exam,
+              id: exam.id || 0,
+              title: exam.title || `Exam #${exam.id || 0}`,
+              // Use the calculated status instead of existing one
+              status: calculatedStatus,
+              questions: Array.isArray(exam.questions) ? exam.questions : []
+            };
+          });
+          
+          processedResponse.data = {
+            ...responseData,
+            content: processedContent
+          };
+        }
+      } 
+      // Handle array response
+      else if (Array.isArray(responseData)) {
+        const examCount = responseData.length;
+        console.log(`Received ${examCount} exams for lecturer (array)`);
+        
+        if (examCount > 0) {
+          const processedArray = responseData.map(exam => {
+            // Calculate the correct status based on time
+            const calculatedStatus = calculateExamStatus(exam);
+            
+            return {
+              ...exam,
+              id: exam.id || 0,
+              title: exam.title || `Exam #${exam.id || 0}`,
+              // Use the calculated status
+              status: calculatedStatus,
+              questions: Array.isArray(exam.questions) ? exam.questions : []
+            };
+          });
+          
+          processedResponse.data = {
+            content: processedArray,
+            totalElements: processedArray.length,
+            totalPages: 1,
+            size: processedArray.length,
+            number: 0
+          };
+        }
+      }
+      
+      return processedResponse;
+    })
+    .catch(error => {
+      console.error('Error fetching lecturer exams:', error.response?.data || error.message);
+      
+      // Provide more detailed error logging
+      if (error.response) {
+        console.error('Error status:', error.response.status);
+        console.error('Error details:', error.response.data);
+      } else if (error.request) {
+        console.error('No response received from server');
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      
+      // Return empty result on error to prevent UI crashes
+      return {
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: page,
+          size: size,
+          empty: true
+        }
+      };
+    });
+  }
+
+  // Alias for getAllExamsByLecturer for backward compatibility
+  getExamsByTeacher(lecturerId, page = 0, size = 10) {
+    return this.getAllExamsByLecturer(lecturerId, page, size);
+  }
 }
 
 export default new ExamService(); 

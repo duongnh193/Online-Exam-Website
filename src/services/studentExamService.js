@@ -47,29 +47,38 @@ class StudentExamService {
       console.log('Exam started successfully:', response.status);
       console.log('Response data structure:', JSON.stringify(response.data, null, 2));
       
-      // Extracting time remaining from response
-      let timeRemainingMinutes = null;
-      if (response.data && response.data.minuteRemaining) {
-        timeRemainingMinutes = response.data.minuteRemaining;
-        console.log(`Time remaining from server: ${timeRemainingMinutes} minutes`);
+      // Handle time remaining data
+      let timeRemainingSeconds = null;
+      if (response.data.secondRemaining !== undefined && response.data.secondRemaining !== null) {
+        timeRemainingSeconds = response.data.secondRemaining;
+        console.log(`Time remaining from server: ${timeRemainingSeconds} seconds`);
       }
       
-      // Log the studentExam ID directly for debugging
+      // Store session information  
       if (response.data && response.data.studentExam && response.data.studentExam.id) {
         console.log('Student Exam ID:', response.data.studentExam.id);
         console.log('First question:', response.data.nextQuestion);
         console.log('Is last question:', response.data.lastQuestion);
         console.log('Current question index:', response.data.studentExam.currentQuestion);
+        console.log('Time remaining (seconds):', timeRemainingSeconds);
         
-        // Save current question index to localStorage for resuming
+        const examSessionData = {
+          studentExamId: response.data.studentExam.id,
+          examId: examId,
+          timeRemaining: timeRemainingSeconds,
+          startTime: Date.now()
+        };
+        localStorage.setItem('examSession', JSON.stringify(examSessionData));
+        localStorage.setItem('currentStudentExamId', response.data.studentExam.id);
+        
+        // Also save current question index if available
         if (response.data.studentExam.currentQuestion !== undefined && response.data.studentExam.currentQuestion !== null) {
           localStorage.setItem(`exam_current_question_${response.data.studentExam.id}`, 
             response.data.studentExam.currentQuestion);
         }
         
         // If we have time remaining info, save it for resuming
-        if (timeRemainingMinutes !== null) {
-          const timeRemainingSeconds = timeRemainingMinutes * 60;
+        if (timeRemainingSeconds !== null) {
           localStorage.setItem(`exam_time_remaining_${response.data.studentExam.id}`, 
             timeRemainingSeconds.toString());
           localStorage.setItem(`exam_time_last_updated_${response.data.studentExam.id}`, 
@@ -97,8 +106,7 @@ class StudentExamService {
         }
         
         // If we have time remaining info, save it for resuming
-        if (timeRemainingMinutes !== null) {
-          const timeRemainingSeconds = timeRemainingMinutes * 60;
+        if (timeRemainingSeconds !== null) {
           localStorage.setItem(`exam_time_remaining_${studentExamId}`, 
             timeRemainingSeconds.toString());
           localStorage.setItem(`exam_time_last_updated_${studentExamId}`, 

@@ -431,14 +431,19 @@ function TakeExamPage() {
                     const currentIndex = responseData.studentExam.currentQuestion;
                     setCurrentQuestionIndex(currentIndex);
                     console.log(`Current question index: ${currentIndex}`);
+                    
+                    // Cập nhật localStorage với thông tin currentQuestion từ backend
+                    if (storedStudentExamId) {
+                      localStorage.setItem(`exam_current_question_${storedStudentExamId}`, currentIndex.toString());
+                      console.log(`🔄 Resume: Updated localStorage currentQuestion from backend: ${currentIndex}`);
+                    }
                   }
                   
                   // Set time remaining if available
-                  if (responseData.minuteRemaining !== undefined && responseData.minuteRemaining !== null) {
-                    const remainingTimeSeconds = responseData.minuteRemaining * 60;
-                    setTimeRemaining(remainingTimeSeconds);
+                  if (responseData.secondRemaining !== undefined && responseData.secondRemaining !== null) {
+                    setTimeRemaining(responseData.secondRemaining);
                     setTimeExpirationChecked(true);
-                    console.log(`Time remaining: ${responseData.minuteRemaining} minutes (${remainingTimeSeconds} seconds)`);
+                    console.log(`Time remaining: ${responseData.secondRemaining} seconds`);
                   }
                   
                   // Ensure we have all available questions 
@@ -454,8 +459,8 @@ function TakeExamPage() {
                         id: q.id,
                         text: q.title || q.text,
                         type: q.type,
-                        // Kiểm tra nhiều trường ảnh có thể có
-                        imageUrl: q.imageUrl || q.image || q.img || q.imagePath || q.imageUri || null,
+                        // Ưu tiên field image mới từ backend
+                        imageUrl: q.image || q.imageUrl || q.img || q.imagePath || q.imageUri || null,
                         options: q.choices?.map(choice => {
                           if (typeof choice === 'string') {
                             return { id: choice, text: choice };
@@ -479,11 +484,8 @@ function TakeExamPage() {
                     const questionData = responseData.nextQuestion;
                     console.log('Current question data from API:', questionData);
                     console.log('Image fields in question data:', {
-                      imageUrl: questionData.imageUrl,
                       image: questionData.image,
-                      img: questionData.img,
-                      imagePath: questionData.imagePath,
-                      imageUri: questionData.imageUri,
+                      
                     });
                     
                     // Map the question data to our format
@@ -491,8 +493,8 @@ function TakeExamPage() {
                       id: questionData.id,
                       text: questionData.title,
                       type: questionData.type,
-                      // Kiểm tra nhiều trường ảnh có thể có
-                      imageUrl: questionData.imageUrl || questionData.image || questionData.img || questionData.imagePath || questionData.imageUri || null,
+                      // Kiểm tra field image mới từ backend response
+                      imageUrl: questionData.image || questionData.imageUrl || questionData.img || questionData.imagePath || questionData.imageUri || null,
                       options: questionData.choices?.map(choice => {
                         // Handle different possible choice formats
                         if (typeof choice === 'string') {
@@ -508,7 +510,8 @@ function TakeExamPage() {
                       }) || []
                     };
                     
-                    console.log('Processed question:', mappedQuestion);
+                    console.log('Processed question with image URL:', mappedQuestion.imageUrl);
+                    console.log('Full processed question:', mappedQuestion);
                     
                     // Kiểm tra xem nextQuestion đã có trong allQuestions chưa
                     // Nếu chưa có, thêm vào allQuestions
@@ -524,26 +527,30 @@ function TakeExamPage() {
                     
                     // Sử dụng tất cả các câu hỏi đã thu thập
                     setQuestions(allQuestions);
+                    console.log('🔄 Resume: Set questions array with length:', allQuestions.length);
+                    console.log('🔄 Resume: Questions IDs:', allQuestions.map(q => q.id));
                     
-                    // Đảm bảo currentQuestionIndex được cập nhật để khớp với câu hỏi hiện tại từ API
-                    if (responseData.studentExam?.currentQuestion !== undefined) {
-                      // Nếu API trả về một currentQuestion cụ thể, nhưng câu hỏi hiện tại
-                      // không khớp với những gì chúng ta mong đợi, điều chỉnh lại
-                      const expectedCurrentQID = responseData.studentExam?.exam?.questions?.[responseData.studentExam.currentQuestion]?.id;
-                      const actualCurrentQID = responseData.nextQuestion?.id;
+                    // IMPORTANT: Set currentQuestionIndex based on actual position in our questions array
+                    // Not from backend's currentQuestion field, as it may not match our array structure
+                    if (responseData.nextQuestion && allQuestions.length > 0) {
+                      const actualCurrentQID = responseData.nextQuestion.id;
+                      const actualIndex = allQuestions.findIndex(q => q.id === actualCurrentQID);
                       
-                      if (expectedCurrentQID && actualCurrentQID && expectedCurrentQID !== actualCurrentQID) {
-                        console.warn(`Current question index mismatch detected!`);
-                        console.warn(`Expected question ID at index ${responseData.studentExam.currentQuestion}: ${expectedCurrentQID}`);
-                        console.warn(`Actual next question ID from API: ${actualCurrentQID}`);
-                        
-                        // Tìm index thực tế của câu hỏi trong mảng questions của chúng ta
-                        const actualIndex = allQuestions.findIndex(q => q.id === actualCurrentQID);
-                        if (actualIndex !== -1) {
-                          console.log(`Adjusting currentQuestionIndex from ${responseData.studentExam.currentQuestion} to ${actualIndex}`);
-                          setCurrentQuestionIndex(actualIndex);
-                        }
+                      if (actualIndex !== -1) {
+                        console.log('🔄 Resume: Setting currentQuestionIndex to actual position:', {
+                          questionId: actualCurrentQID,
+                          actualIndex: actualIndex,
+                          backendIndex: responseData.studentExam?.currentQuestion,
+                          questionsLength: allQuestions.length
+                        });
+                        setCurrentQuestionIndex(actualIndex);
+                      } else {
+                        console.warn('🔄 Resume: nextQuestion not found in allQuestions, defaulting to last index');
+                        setCurrentQuestionIndex(allQuestions.length - 1);
                       }
+                    } else {
+                      console.log('🔄 Resume: No nextQuestion or empty questions array, setting index to 0');
+                      setCurrentQuestionIndex(0);
                     }
                     
                     setLoading(false);
@@ -826,6 +833,13 @@ function TakeExamPage() {
           setTotalQuestions(count);
         }
         
+        // Update currentQuestion in localStorage from backend response
+        if (responseData.studentExam?.currentQuestion !== undefined && studentExamId) {
+          const backendCurrentQuestion = responseData.studentExam.currentQuestion;
+          localStorage.setItem(`exam_current_question_${studentExamId}`, backendCurrentQuestion.toString());
+          console.log(`🔄 Updated localStorage currentQuestion from backend: ${backendCurrentQuestion}`);
+        }
+        
         // Handle no next question case first
         if (!responseData.nextQuestion || !responseData.nextQuestion.id) {
           if (isLastQuestion) {
@@ -843,6 +857,8 @@ function TakeExamPage() {
           id: responseData.nextQuestion.id,
           text: responseData.nextQuestion.title,
           type: responseData.nextQuestion.type,
+          // Ưu tiên field image mới từ backend
+          imageUrl: responseData.nextQuestion.image || responseData.nextQuestion.imageUrl || responseData.nextQuestion.img || responseData.nextQuestion.imagePath || responseData.nextQuestion.imageUri || null,
           options: responseData.nextQuestion.choices?.map(choice => {
             if (typeof choice === 'string') {
               return { id: choice, text: choice };
@@ -857,11 +873,53 @@ function TakeExamPage() {
           }) || []
         };
         
-        // Add the next question to our list 
-        setQuestions(prev => [...prev, nextQuestion]);
+        console.log('Next question image from submitAnswer:', {
+          originalImage: responseData.nextQuestion.image,
+          processedImageUrl: nextQuestion.imageUrl,
+          questionId: nextQuestion.id
+        });
         
-        // Automatically advance to the next question
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        // Add the next question to our list and update index
+        setQuestions(prev => {
+          // Check if question already exists
+          const existingIndex = prev.findIndex(q => q.id === nextQuestion.id);
+          
+          let updatedQuestions;
+          if (existingIndex !== -1) {
+            // Update existing question
+            updatedQuestions = [...prev];
+            updatedQuestions[existingIndex] = nextQuestion;
+            console.log('🔄 Questions Updated (replaced):', {
+              index: existingIndex,
+              questionId: nextQuestion.id,
+              totalLength: updatedQuestions.length
+            });
+          } else {
+            // Add new question
+            updatedQuestions = [...prev, nextQuestion];
+            console.log('🔄 Questions Updated (added):', {
+              previousLength: prev.length,
+              newLength: updatedQuestions.length,
+              newQuestionId: nextQuestion.id,
+              newQuestionText: nextQuestion.text?.substring(0, 50)
+            });
+          }
+          
+          return updatedQuestions;
+        });
+        
+        // Use functional update to ensure we get the latest currentQuestionIndex
+        setCurrentQuestionIndex(prevIndex => {
+          const newIndex = prevIndex + 1;
+          console.log('🔄 Index Update:', {
+            from: prevIndex,
+            to: newIndex,
+            nextQuestionId: nextQuestion.id,
+            nextQuestionText: nextQuestion.text?.substring(0, 50),
+            questionsAfterUpdate: 'Will be updated after questions state updates'
+          });
+          return newIndex;
+        });
       }
     } catch (error) {
       console.error('Error submitting answer:', error);
@@ -948,8 +1006,17 @@ function TakeExamPage() {
       <h2>Quiz Completed</h2>
       
       <ScoreDisplay theme={theme}>
-        {Math.round(examResult.score)}%
+        {examResult.score.toFixed(1)} 
       </ScoreDisplay>
+      
+      {/* <div style={{ 
+        textAlign: 'center', 
+        fontSize: '0.9rem', 
+        color: 'var(--text-secondary)',
+        marginBottom: '1rem'
+      }}>
+        Tính điểm: ({examResult.correctAnswers} câu đúng × 10) ÷ {examResult.totalQuestions} câu = {examResult.score.toFixed(1)} điểm
+      </div> */}
               
         <ResultDetails>
           <div>
@@ -1048,6 +1115,18 @@ function TakeExamPage() {
   const currentQuestion = questions.length > 0 
     ? (questions[currentQuestionIndex] || questions[0]) 
     : null;
+  
+  // DEBUG: Log current state for troubleshooting
+  console.log('🐛 RENDER STATE DEBUG:', {
+    currentQuestionIndex,
+    questionsLength: questions.length,
+    currentQuestionId: currentQuestion?.id,
+    currentQuestionText: currentQuestion?.text?.substring(0, 50),
+    currentQuestionImageUrl: currentQuestion?.imageUrl,
+    serverLastQuestionFlag,
+    loading,
+    questionsIds: questions.map(q => q.id)
+  });
   
   // SIMPLIFIED: Just use the server flag for last question detection
   // Based on backend logic, the server will set lastQuestion=true when reaching the last question
@@ -1253,6 +1332,13 @@ function TakeExamPage() {
         };
         
         console.log('Final exam result being set:', result);
+        console.log('📊 Score Calculation Info:', {
+          correctAnswers: result.correctAnswers,
+          totalQuestions: result.totalQuestions,
+          rawScore: result.score,
+          scoreDisplay: `${result.score.toFixed(1)} điểm`,
+          calculationMethod: '(correctAnswers * 10.0) / totalQuestions'
+        });
         
         setExamResult(result);
         setShowResults(true);
@@ -1322,9 +1408,39 @@ function TakeExamPage() {
         {currentQuestion ? (
           <QuizContent>
             <QuestionInfo>
-              {serverLastQuestionFlag 
-                ? `Question ${currentQuestionIndex + 1} (Last question)` 
-                : `Question ${currentQuestionIndex + 1}`}
+              {(() => {
+                // Lấy thông tin currentQuestion từ backend (đã lưu trong localStorage)
+                const examSessionId = studentExamId || localStorage.getItem('currentStudentExamId');
+                const backendQuestionIndex = localStorage.getItem(`exam_current_question_${examSessionId}`);
+                
+                let questionNumber = currentQuestionIndex + 1; // fallback mặc định
+                
+                if (backendQuestionIndex !== null && !isNaN(parseInt(backendQuestionIndex))) {
+                  // Sử dụng thông tin từ backend làm nguồn tin chính xác nhất
+                  questionNumber = parseInt(backendQuestionIndex) + 1;
+                } else if (questions.length > 0 && currentQuestion) {
+                  // Fallback: tính từ position trong mảng questions
+                  const actualPosition = questions.findIndex(q => q.id === currentQuestion.id);
+                  if (actualPosition !== -1) {
+                    questionNumber = actualPosition + 1;
+                  }
+                }
+                
+                // Debug log để kiểm tra tính toán
+                console.log('🔢 Question Number Calculation:', {
+                  currentQuestionIndex,
+                  backendQuestionIndex,
+                  currentQuestionId: currentQuestion?.id,
+                  questionsLength: questions.length,
+                  calculatedNumber: questionNumber,
+                  source: backendQuestionIndex !== null ? 'backend' : 'frontend',
+                  questionsIds: questions.map(q => q.id)
+                });
+                
+                return serverLastQuestionFlag 
+                  ? `Question ${questionNumber} (Last question)` 
+                  : `Question ${questionNumber}`;
+              })()}
             </QuestionInfo>
             
             <Instructions>
@@ -1363,7 +1479,6 @@ function TakeExamPage() {
         )}
       </MainContent>
       
-      {/* Thêm modal xác nhận nộp bài thi */}
       <ConfirmationModal
         isOpen={showSubmitConfirmation}
         onClose={() => setShowSubmitConfirmation(false)}
