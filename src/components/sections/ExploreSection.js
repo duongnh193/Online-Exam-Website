@@ -3,6 +3,13 @@ import { Box, Container, Typography, Grid, Paper, Button } from '@mui/material';
 import { motion } from 'framer-motion';
 import { NEUTRAL, THEME } from '../../theme/colors';
 
+// Import subject icons
+import mathIcon from '../../assets/subject-icons/math.svg';
+import englishIcon from '../../assets/subject-icons/english.svg';
+import scienceIcon from '../../assets/subject-icons/science.svg';
+import physicsIcon from '../../assets/subject-icons/physics.svg';
+import generalIcon from '../../assets/subject-icons/general.svg';
+
 // Subject card component
 const SubjectCard = ({ title, description, iconSrc, bgcolor = NEUTRAL.color200 }) => (
   <motion.div
@@ -69,31 +76,31 @@ const ExploreSection = () => {
     {
       title: 'Math',
       description: 'Sky was cloudless and of a deep dark blue spectacle before us was indeed.',
-      iconSrc: '/static/subject-icons/math.svg', 
+      iconSrc: mathIcon, 
       bgcolor: '#FDF2E9' // Light beige for Math
     },
     {
       title: 'English',
       description: 'Even the all-powerful Pointing has no control about the blind texts.',
-      iconSrc: '/static/subject-icons/english.svg',
+      iconSrc: englishIcon,
       bgcolor: '#EBF5FB' // Light blue for English
     },
     {
       title: 'Science',
       description: 'Unorthographic life One day however a small line of blind text.',
-      iconSrc: '/static/subject-icons/science.svg',
+      iconSrc: scienceIcon,
       bgcolor: '#F4ECF7' // Light purple for Science
     },
     {
       title: 'Physics',
       description: 'However a small line of blind text by the name.',
-      iconSrc: '/static/subject-icons/physics.svg', 
+      iconSrc: physicsIcon, 
       bgcolor: '#FEF9E7' // Light yellow for Physics
     },
     {
       title: 'General Knowledge',
       description: 'Text by the name of Lorem Ipsum decided to leave for the far World of Grammar.',
-      iconSrc: '/static/subject-icons/general.svg',
+      iconSrc: generalIcon,
       bgcolor: '#E8F8F5' // Light mint for General Knowledge
     }
   ];
