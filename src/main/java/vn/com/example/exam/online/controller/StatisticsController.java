@@ -53,13 +53,13 @@ public class StatisticsController {
         return statisticsService.getExamScoreStatistics(examId);
     }
 
-    //GET /api/v1/statistics/student-scores/{classId}?page=0&size=10&sortBy=studentName&direction=asc
+    //GET /api/v1/statistics/student-scores/{classId}?page=0&size=10&sortBy=student.username&direction=asc
     @GetMapping("/student-scores/{classId}")
     public Page<StudentExamScoreResponse> getStudentScores(
             @PathVariable Long classId,
             @RequestParam(defaultValue = Constants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = Constants.DEFAULT_SIZE) int size,
-            @RequestParam(defaultValue = "studentName") String sortBy,
+            @RequestParam(defaultValue = "student.username") String sortBy,
             @RequestParam(defaultValue = "asc") String direction) {
 
         Sort sort = Sort.by(Sort.Order.by(sortBy));

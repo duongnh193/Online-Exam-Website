@@ -163,6 +163,7 @@ public class StatisticsService {
 
             classResults.add(new ClassResultDto(
                     clazz.getId(),
+                    clazz.getName(),
                     avgScore,
                     avgScore,
                     calculateScoreIn4(avgScore)

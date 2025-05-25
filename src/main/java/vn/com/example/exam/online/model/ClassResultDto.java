@@ -12,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ClassResultDto {
     Long classId;
+    String className;
     Double averageScore;
     Double averageScoreIn10;
     Double averageScoreIn4;
