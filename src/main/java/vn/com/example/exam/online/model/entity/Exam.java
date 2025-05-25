@@ -42,6 +42,9 @@ public class Exam {
     @ManyToOne
     @JoinColumn(name = "user_id")
     User creator;
+    @ManyToOne
+    @JoinColumn(name = "teacher_id")
+    User teacher;
     String title;
     Integer duration;
     LocalDateTime startAt;

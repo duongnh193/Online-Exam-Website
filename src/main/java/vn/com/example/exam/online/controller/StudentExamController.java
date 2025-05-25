@@ -23,7 +23,6 @@ public class StudentExamController {
     private final StudentExamService studentExamService;
 
     @GetMapping("/{studentExamId}")
-    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<StudentExamResultResponse> getStudentExam(@PathVariable String studentExamId) {
         return ResponseEntity.ok(studentExamService.getResult(studentExamId));
     }

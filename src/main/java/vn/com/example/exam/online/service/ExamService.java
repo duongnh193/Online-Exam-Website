@@ -32,7 +32,7 @@ public class ExamService {
         User creator = userService.getUserByUsername(username);
         Class clazz = classService.getById(createExamRequest.getClassId());
         Exam exam = CreateExam2ExamMapper.INSTANCE.map(createExamRequest);
-        exam.setCreator(creator).setClassEntity(clazz);
+        exam.setCreator(creator).setClassEntity(clazz).setTeacher(clazz.getTeacher());
         return Exam2ExamResponseMapper.INSTANCE.map(examRepository.save(exam));
     }
 
@@ -55,7 +55,7 @@ public class ExamService {
     }
 
     public Page<ExamResponse> getExamsByTeacher(Long teacherId, Pageable pageable) {
-        return examRepository.findByCreatorId(teacherId, pageable).map(Exam2ExamResponseMapper.INSTANCE::map);
+        return examRepository.findByTeacherId(teacherId, pageable).map(Exam2ExamResponseMapper.INSTANCE::map);
     }
 
     public Exam getById(Long examId) {

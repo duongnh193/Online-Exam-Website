@@ -20,6 +20,7 @@ public class ExamResponse {
     Long id;
     Long classId;
     Long userId;
+    Long teacherId;
     String title;
     Integer duration;
     LocalDateTime startAt;

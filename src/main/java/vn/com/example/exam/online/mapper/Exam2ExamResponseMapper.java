@@ -13,6 +13,7 @@ public interface Exam2ExamResponseMapper extends DefaultMapper<Exam, ExamRespons
     @Override
     @Mapping(source = "classEntity.id", target = "classId")
     @Mapping(source = "creator.id", target = "userId")
+    @Mapping(source = "teacher.id", target = "teacherId")
     @Mapping(expression = "java(source.getQuestions().size())", target = "totalQuestions")
     ExamResponse map(Exam source);
 }

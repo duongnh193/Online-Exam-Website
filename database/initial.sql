@@ -52,6 +52,7 @@ CREATE TABLE exam
     id        BIGINT AUTO_INCREMENT PRIMARY KEY,
     class_id  BIGINT       NOT NULL,
     user_id   BIGINT       NOT NULL,
+    teacher_id BIGINT       NOT NULL,
     title     VARCHAR(255) NOT NULL,
     duration  INT          NOT NULL,
     start_at  DATETIME     NOT NULL,
@@ -63,6 +64,7 @@ CREATE TABLE exam
     update_by BIGINT,
     FOREIGN KEY (class_id) REFERENCES class (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES user (id) ON DELETE CASCADE,
     FOREIGN KEY (update_by) REFERENCES user (id) ON DELETE SET NULL
 );
 
