@@ -577,6 +577,18 @@ function ResultsPage() {
     return location.pathname.startsWith(path);
   };
 
+  // Function to get letter grade from 4-point scale score
+  const getLetterGrade = (score4) => {
+    if (score4 >= 3.5) return 'A';
+    if (score4 >= 3.0) return 'B+';
+    if (score4 >= 2.5) return 'B';
+    if (score4 >= 2.0) return 'C+';
+    if (score4 >= 1.5) return 'C';
+    if (score4 >= 1.0) return 'D+';
+    if (score4 >= 0.5) return 'D';
+    return 'F';
+  };
+
   // Format percentage score with color
   const formatScoreWithColor = (score) => {
     const numScore = parseFloat(score);
@@ -652,7 +664,7 @@ function ResultsPage() {
           <>
             <StatsContainer>
               <StatCard theme={theme}>
-                <StatValue theme={theme}>{calculateOverallAverage()} điểm</StatValue>
+                <StatValue theme={theme}>{calculateOverallAverage()}</StatValue>
                 <StatLabel>Overall Average</StatLabel>
               </StatCard>
               
@@ -678,15 +690,39 @@ function ResultsPage() {
                     ) : (
                       <ClassNameLoading theme={theme} />
                     )}
-                    {/* <ClassScore theme={theme} score={classResult.averageScore}>
-                      {classResult.averageScore.toFixed(1)} 
-                    </ClassScore> */}
+                    <ClassScore theme={theme} score={classResult.averageScore}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {/* <span>{classResult.averageScore.toFixed(1)} điểm</span> */}
+                        <span style={{ 
+                          // backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '1.8rem',
+                          fontWeight: '700',
+                          fontFamily: 'monospace'
+                        }}>
+                          {getLetterGrade(classResult.averageScoreIn4)}
+                        </span>
+                      </div>
+                    </ClassScore>
                   </ClassHeader>
                   
                   <ExamsList>
                     <ScoreInfoCard theme={theme}>
                       <div className="main-score">
                         Average Score: {classResult.averageScore.toFixed(1)} 
+                        {/* <span style={{ 
+                          marginLeft: '0.5rem',
+                          backgroundColor: 'rgba(106, 0, 255, 0.1)',
+                          color: '#6a00ff',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.8rem',
+                          fontWeight: '700',
+                          fontFamily: 'monospace'
+                        }}>
+                          {getLetterGrade(classResult.averageScoreIn4 || 0)}
+                        </span> */}
                       </div>
                       <div className="score-breakdown">
                         <div className="score-item">

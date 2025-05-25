@@ -310,6 +310,83 @@ const StatChartContainer = styled.div`
   width: 100%;
 `;
 
+const TableContainer = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--card-bg);
+`;
+
+const TableHeader = styled.thead`
+  background-color: ${props => props.theme === 'dark' ? '#3a3a3a' : '#f8f9fa'};
+`;
+
+const TableHeaderCell = styled.th`
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
+  font-size: 0.9rem;
+`;
+
+const TableBody = styled.tbody``;
+
+const TableRow = styled.tr`
+  &:nth-child(even) {
+    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'};
+  }
+  
+  &:hover {
+    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+  }
+`;
+
+const TableCell = styled.td`
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+`;
+
+const ScoreCell = styled(TableCell)`
+  font-weight: 600;
+  color: ${props => {
+    if (props.score >= 8) return '#10b981'; // Green for excellent
+    if (props.score >= 6.5) return '#f59e0b'; // Yellow for good
+    if (props.score >= 5) return '#ef4444'; // Red for average
+    return '#6b7280'; // Gray for poor
+  }};
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+`;
+
+const EmptyStateIcon = styled.div`
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+`;
+
+const EmptyStateText = styled.div`
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+`;
+
+const EmptyStateSubtext = styled.div`
+  font-size: 0.9rem;
+  opacity: 0.7;
+`;
+
 const COLORS = ['#6a00ff', '#ff2e8e', '#00c16e', '#f5a623'];
 
 function ReportPage() {
@@ -499,19 +576,37 @@ function ReportPage() {
         // Sử dụng API thống kê điểm sinh viên
         const studentScoresResponse = await dashboardService.getStudentScoresInClass(classId);
         console.log('Student scores API response:', studentScoresResponse);
+        console.log('Student scores content:', studentScoresResponse?.content);
         
         if (studentScoresResponse && studentScoresResponse.content) {
-          // Lấy dữ liệu từ API và định dạng để hiển thị trong biểu đồ
-          const studentScoresData = studentScoresResponse.content.map(score => ({
-            studentId: score.studentId,
-            studentName: score.studentName || `Student #${score.studentId}`,
-            avgScore: score.avgScore || 0,
-            avgScoreIn10: score.avgScoreIn10 || 0,
-            avgScoreIn4: score.avgScoreIn4 || 0
-          }));
+          // Log raw data for debugging
+          console.log('Raw student scores from API:', studentScoresResponse.content);
           
+          // Lấy dữ liệu từ API và định dạng để hiển thị trong biểu đồ
+          const studentScoresData = studentScoresResponse.content.map((score, index) => {
+            console.log(`Processing student ${index}:`, score);
+            
+            // Handle different possible field names from API
+            const avgScore = score.averageScore ?? score.avgScore ?? 0;
+            const avgScoreIn10 = score.averageScoreIn10 ?? score.avgScoreIn10 ?? avgScore;
+            const avgScoreIn4 = score.averageScoreIn4 ?? score.avgScoreIn4 ?? (avgScore * 0.4);
+            
+            const processedStudent = {
+              studentId: score.studentId,
+              studentName: score.studentName || `Student #${score.studentId}`,
+              avgScore: avgScore,
+              avgScoreIn10: avgScoreIn10,
+              avgScoreIn4: avgScoreIn4
+            };
+            
+            console.log(`Processed student ${index}:`, processedStudent);
+            return processedStudent;
+          });
+          
+          console.log('Processed student scores data:', studentScoresData);
           setStudentScores(studentScoresData);
         } else {
+          console.log('No student scores content found');
           setStudentScores([]);
         }
       } catch (studentsError) {
@@ -740,37 +835,143 @@ function ReportPage() {
       
       {loading ? (
         <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          Loading statistics...
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+            <div>Loading statistics...</div>
+          </div>
         </div>
       ) : error ? (
         <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'red' }}>
-          {error}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>❌</div>
+            <div>{error}</div>
+          </div>
         </div>
-      ) : (
+      ) : studentScores.length > 0 ? (
         <>
-          <StatChartContainer>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={getStudentScoreData()} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                <YAxis domain={[0, 10]} />
-                <Tooltip />
-                <Bar dataKey="scoreIn10" name="Score (scale 10)" fill="#ff2e8e" />
-                <Bar dataKey="scoreIn4" name="Score (scale 4)" fill="#6a00ff" />
-              </BarChart>
-            </ResponsiveContainer>
-          </StatChartContainer>
+          <TableContainer>
+            <Table>
+              <TableHeader theme={theme}>
+                <tr>
+                  <TableHeaderCell>#</TableHeaderCell>
+                  <TableHeaderCell>Student Name</TableHeaderCell>
+                  <TableHeaderCell>Student ID</TableHeaderCell>
+                  <TableHeaderCell>Average Score</TableHeaderCell>
+                  <TableHeaderCell>Score (Scale 10)</TableHeaderCell>
+                  <TableHeaderCell>Score (Scale 4)</TableHeaderCell>
+                  <TableHeaderCell>Grade</TableHeaderCell>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {studentScores.map((student, index) => {
+                  // Use the already processed values directly
+                  const avgScore = student.avgScore;
+                  const scoreIn10 = student.avgScoreIn10;
+                  const scoreIn4 = student.avgScoreIn4;
+                  
+                  // Grade mapping based on 4-point scale (Vietnamese system)
+                  const getGradeInfo = (score4) => {
+                    if (score4 >= 3.5) return { grade: 'A', color: '#10b981' }; // 3.5-4.0
+                    if (score4 >= 3.0) return { grade: 'B+', color: '#059669' }; // 3.0-3.4
+                    if (score4 >= 2.5) return { grade: 'B', color: '#f59e0b' }; // 2.5-2.9
+                    if (score4 >= 2.0) return { grade: 'C+', color: '#d97706' }; // 2.0-2.4
+                    if (score4 >= 1.5) return { grade: 'C', color: '#ef4444' }; // 1.5-1.9
+                    if (score4 >= 1.0) return { grade: 'D+', color: '#dc2626' }; // 1.0-1.4
+                    if (score4 >= 0.5) return { grade: 'D', color: '#991b1b' }; // 0.5-0.9
+                    return { grade: 'F', color: '#6b7280' }; // 0-0.4
+                  };
+                  
+                  const gradeInfo = getGradeInfo(scoreIn4);
+                  
+                  return (
+                    <TableRow key={student.studentId} theme={theme}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{student.studentName}</TableCell>
+                      <TableCell>{student.studentId}</TableCell>
+                      <ScoreCell score={avgScore}>{avgScore.toFixed(2)}</ScoreCell>
+                      <ScoreCell score={scoreIn10}>{scoreIn10.toFixed(2)}</ScoreCell>
+                      <ScoreCell score={scoreIn4}>{scoreIn4.toFixed(2)}</ScoreCell>
+                      <TableCell>
+                        <span style={{ 
+                          color: gradeInfo.color, 
+                          fontWeight: '700',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          backgroundColor: `${gradeInfo.color}20`,
+                          fontSize: '0.9rem',
+                          fontFamily: 'monospace'
+                        }}>
+                          {gradeInfo.grade}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
           
-          {studentScores.length > 0 ? (
-            <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#666' }}>
-              {`Showing scores for ${studentScores.length} students in selected class`}
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '1rem',
+            backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Showing {studentScores.length} students in selected class
             </div>
-          ) : (
-            <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#666' }}>
-              No student data available for this class
+            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '2px' }}></div>
+                <span>A (3.5-4.0)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#059669', borderRadius: '2px' }}></div>
+                <span>B+ (3.0-3.4)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#f59e0b', borderRadius: '2px' }}></div>
+                <span>B (2.5-2.9)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#d97706', borderRadius: '2px' }}></div>
+                <span>C+ (2.0-2.4)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#ef4444', borderRadius: '2px' }}></div>
+                <span>C (1.5-1.9)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#dc2626', borderRadius: '2px' }}></div>
+                <span>D+ (1.0-1.4)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#991b1b', borderRadius: '2px' }}></div>
+                <span>D (0.5-0.9)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '12px', height: '12px', backgroundColor: '#6b7280', borderRadius: '2px' }}></div>
+                <span>F (0-0.4)</span>
+              </div>
             </div>
-          )}
+          </div>
         </>
+      ) : (
+        <EmptyState>
+          <EmptyStateIcon>📊</EmptyStateIcon>
+          <EmptyStateText>No Student Data Available</EmptyStateText>
+          <EmptyStateSubtext>
+            {selectedClassId ? 
+              'No students found in this class or no exam results available.' : 
+              'Please select a class to view student statistics.'
+            }
+          </EmptyStateSubtext>
+        </EmptyState>
       )}
     </StatisticsCard>
   );

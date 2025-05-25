@@ -75,14 +75,14 @@ class StatisticsService {
   }
   
   // Lấy điểm của các học sinh trong một lớp
-  getStudentScores(classId, page = 0, size = 10, sortBy = 'studentName', direction = 'asc') {
+  getStudentScores(classId, page = 0, size = 10, direction = 'asc') {
     if (!classId) {
       console.error('getStudentScores: Invalid class ID');
       return Promise.reject(new Error('Invalid class ID'));
     }
     
     logAuthState();
-    const url = `${API_URL}/student-scores/${classId}?page=${page}&size=${size}&sortBy=${sortBy}&direction=${direction}`;
+    const url = `${API_URL}/student-scores/${classId}?page=${page}&size=${size}&direction=${direction}`;
     const headers = authHeader();
     
     logApiCall('GET', url, headers);
