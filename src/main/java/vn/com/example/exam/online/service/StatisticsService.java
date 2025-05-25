@@ -22,8 +22,10 @@ import vn.com.example.exam.online.repository.UserRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -118,18 +120,23 @@ public class StatisticsService {
         return new PageImpl<>(responses, pageRequest, studentExamsPage.getTotalElements());
     }
 
-    private Double calculateScoreIn4(Double avgScore) {
-        if (avgScore >= 8.5) {
-            return 4.0;
-        } else if (avgScore >= 7.0) {
-            return 3.0;
-        } else if (avgScore >= 5.5) {
-            return 2.0;
-        } else if (avgScore >= 4.0) {
-            return 1.0;
-        } else {
-            return 0.0;
-        }
+    private static final NavigableMap<Double, Double> SCORE_MAP = new TreeMap<>();
+
+    static {
+        SCORE_MAP.put(0.0, 0.0);
+        SCORE_MAP.put(4.0, 1.0);
+        SCORE_MAP.put(5.0, 1.5);
+        SCORE_MAP.put(5.5, 2.0);
+        SCORE_MAP.put(6.5, 2.5);
+        SCORE_MAP.put(7.0, 3.0);
+        SCORE_MAP.put(8.0, 3.5);
+        SCORE_MAP.put(8.5, 4.0);
+        SCORE_MAP.put(9.5, 4.0);
+    }
+
+    public static Double calculateScoreIn4(Double avgScore) {
+        if (avgScore == null) return 0.0;
+        return SCORE_MAP.floorEntry(avgScore).getValue();
     }
 
     public StudentScoreClassResultResponse getStudentScoreByClasses(Long studentId) {
