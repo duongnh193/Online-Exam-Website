@@ -1,0 +1,187 @@
+/* Custom styles for the landing page */
+.App {
+  text-align: center;
+}
+
+/* Smooth scrolling for the entire page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom button hover effects */
+.MuiButton-root {
+  transition: all 0.3s ease-in-out !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+}
+
+.MuiButton-root:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom paper hover effects */
+.MuiPaper-root {
+  transition: all 0.3s ease-in-out !important;
+}
+
+.MuiPaper-root:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom typography styles */
+.MuiTypography-h1,
+.MuiTypography-h2,
+.MuiTypography-h3,
+.MuiTypography-h4,
+.MuiTypography-h5,
+.MuiTypography-h6 {
+  font-weight: 700 !important;
+}
+
+/* Custom container padding */
+.MuiContainer-root {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+/* Custom icon styles */
+.MuiSvgIcon-root {
+  transition: all 0.3s ease-in-out !important;
+}
+
+.MuiSvgIcon-root:hover {
+  transform: scale(1.1);
+}
+
+/* Navigation bar styles */
+.MuiAppBar-root {
+  border-bottom: 1px solid #f0f0f0;
+  z-index: 1300 !important;
+}
+
+.MuiToolbar-root {
+  min-height: 70px !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+/* Navigation buttons */
+.MuiAppBar-root .MuiButton-root {
+  font-weight: 500 !important;
+  font-size: 1rem;
+  min-width: unset;
+  padding: 6px 8px;
+}
+
+.MuiAppBar-root .MuiButton-contained {
+  padding: 8px 24px;
+  background-color: #5138EE;
+}
+
+.MuiAppBar-root .MuiButton-outlined {
+  border-color: #5138EE;
+  color: #5138EE;
+}
+
+/* Logo styles */
+.logo-text {
+  color: #5138EE;
+  font-weight: 700;
+}
+
+/* Active navigation indicator */
+.nav-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #5138EE;
+  border-radius: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  
+  .MuiTypography-h2 {
+    font-size: 2.5rem !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiToolbar-root {
+    min-height: 60px !important;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 1s ease-in-out;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ensure modals appear above the navbar */
+.modal-backdrop {
+  z-index: 1400 !important;
+}
+
+.modal-open .modal {
+  z-index: 1500 !important;
+}
+
+/* Additional styling for consistent UI */
+.modal-open {
+  padding-right: 0 !important;
+  overflow: auto !important;
+}

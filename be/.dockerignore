@@ -1,0 +1,12 @@
+target/
+.mvn/
+*.iml
+.idea/
+.vscode/
+.git/
+*.log
+node_modules/
+.DS_Store
+*.md
+.gitignore
+.gitattributes 

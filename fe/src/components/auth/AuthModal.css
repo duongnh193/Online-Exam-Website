@@ -1,0 +1,230 @@
+.auth-modal {
+  z-index: 1500 !important;
+}
+
+.auth-modal .modal-dialog {
+  max-width: 420px;
+  margin: 1.75rem auto;
+}
+
+.auth-modal .modal-content {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  background: white;
+}
+
+.auth-modal .modal-body {
+  padding: 2rem !important;
+}
+
+.auth-input {
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 10px;
+  width: 100%;
+  font-size: 14px;
+}
+
+/* Select input styling */
+select.auth-input {
+  appearance: auto;
+  background-color: white;
+  height: 48px;
+  color: #333;
+}
+
+select.auth-input:focus {
+  border-color: #7E22CE;
+  box-shadow: 0 0 0 0.25rem rgba(126, 34, 206, 0.25);
+}
+
+/* Password field styles */
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 10;
+}
+
+.password-toggle:focus {
+  outline: none;
+}
+
+.password-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-button {
+  background-color: #7E22CE !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s !important;
+  width: 100%;
+}
+
+.auth-button:hover, .auth-button:focus {
+  background-color: #6B21A8 !important;
+}
+
+.forgot-link {
+  color: #5048E5;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #6B7280;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.divider span {
+  padding: 0 10px;
+  font-size: 0.85rem;
+}
+
+.social-login {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.social-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E5E7EB;
+  background: white;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.social-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.auth-link {
+  color: #7E22CE;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+/* OTP Modal Styles */
+.otp-container {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  justify-content: center;
+}
+
+.otp-inputs {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.otp-input {
+  width: 3.5rem !important;
+  height: 3.5rem !important;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 500;
+  border-radius: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  background-color: #f8fafc;
+}
+
+.otp-input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+.otp-resend {
+  color: #6366f1;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.otp-resend:not(.active) {
+  color: #94a3b8;
+  cursor: default;
+}
+
+.otp-resend.active:hover {
+  text-decoration: underline;
+}
+
+.otp-timer {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Reset Password Styles */
+.reset-password-title {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.reset-password-subtitle {
+  text-align: center;
+  color: #6B7280;
+  margin-bottom: 20px;
+}
+
+.reset-email-link {
+  color: #5048E5;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: block;
+  text-align: center;
+  margin: 10px 0 20px;
+}
+
+/* Register Styles */
+.register-greeting {
+  font-size: 0.9rem;
+  color: #6B7280;
+  text-align: center;
+  margin-bottom: 20px;
+} 
