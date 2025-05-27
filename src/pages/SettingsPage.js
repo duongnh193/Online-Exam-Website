@@ -2001,14 +2001,14 @@ function SettingsPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
+              {/* <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('payment')}</NavIcon>
             Payment
           </NavItem>
               <NavItem to="/users" className={isRouteActive('/users') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('users')}</NavIcon>
                 Users
-              </NavItem>
+              </NavItem> */}
             </>
           )}
         </SidebarMenu>

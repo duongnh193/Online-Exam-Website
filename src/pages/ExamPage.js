@@ -240,7 +240,7 @@ const ExamTable = styled.table`
 `;
 
 const TableHeader = styled.th`
-  text-align: left;
+  text-align: center;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
@@ -250,6 +250,14 @@ const TableHeader = styled.th`
   &:first-child {
     width: 40px;
     padding-right: 0;
+    text-align: center;
+  }
+  
+  /* Center align for numeric columns */
+  &:nth-child(3), /* Value */
+  &:nth-child(4), /* Question */
+  &:nth-child(5) { /* Time remains */
+    text-align: center;
   }
 `;
 
@@ -269,6 +277,14 @@ const TableCell = styled.td`
   font-size: 0.9rem;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
+  text-align: center;
+  
+  /* Center align for numeric columns */
+  &:nth-child(3), /* Value */
+  &:nth-child(4), /* Question */
+  &:nth-child(5) { /* Time remains */
+    text-align: center;
+  }
 `;
 
 const IndexCell = styled.td`
@@ -278,13 +294,14 @@ const IndexCell = styled.td`
   border-bottom: 1px solid var(--border-color);
   width: 40px;
   vertical-align: middle;
+  text-align: center;
 `;
 
 const ActionCell = styled.td`
   padding: 1rem 1.5rem;
   display: flex;
   gap: 12px;
-  justify-content: flex-end;
+  justify-content: center;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 `;
@@ -880,14 +897,14 @@ function ExamPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
+              {/* <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('payment')}</NavIcon>
                 Payment
               </NavItem>
               <NavItem to="/users" className={isRouteActive('/users') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('users')}</NavIcon>
                 Users
-              </NavItem>
+              </NavItem> */}
             </>
           )}
         </SidebarMenu>

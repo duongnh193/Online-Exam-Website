@@ -883,14 +883,14 @@ function ClassPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/payment">
+              {/* <NavItem to="/payment">
                 <NavIcon>{getMenuIcon('payment')}</NavIcon>
                 Payment
               </NavItem>
               <NavItem to="/users">
                 <NavIcon>{getMenuIcon('users')}</NavIcon>
                 Users
-              </NavItem>
+              </NavItem> */}
             </>
           ) : (
             // Lecturer navigation
