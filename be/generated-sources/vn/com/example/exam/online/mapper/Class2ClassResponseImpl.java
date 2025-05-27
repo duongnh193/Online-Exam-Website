@@ -7,7 +7,7 @@ import vn.com.example.exam.online.model.response.ClassResponse;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-05-26T00:07:28+0700",
+    date = "2025-05-28T03:14:27+0700",
     comments = "version: 1.6.3, compiler: javac, environment: Java 17.0.15 (Ubuntu)"
 )
 public class Class2ClassResponseImpl implements Class2ClassResponse {

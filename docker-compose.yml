@@ -6,9 +6,9 @@ services:
     image: mysql:8.0
     container_name: exam-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: exam_online
-      MYSQL_USER: root
+      MYSQL_USER: examuser
       MYSQL_PASSWORD: root
     ports:
       - "3307:3306"
@@ -56,7 +56,7 @@ services:
       dockerfile: Dockerfile
     container_name: exam-frontend
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - backend
     networks:

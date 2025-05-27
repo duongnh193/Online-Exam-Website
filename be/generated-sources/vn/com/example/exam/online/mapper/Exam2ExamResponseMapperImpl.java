@@ -8,7 +8,7 @@ import vn.com.example.exam.online.model.response.ExamResponse;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-05-26T00:07:27+0700",
+    date = "2025-05-28T03:14:27+0700",
     comments = "version: 1.6.3, compiler: javac, environment: Java 17.0.15 (Ubuntu)"
 )
 public class Exam2ExamResponseMapperImpl implements Exam2ExamResponseMapper {
