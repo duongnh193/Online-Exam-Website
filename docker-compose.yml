@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   # MySQL Database
@@ -8,8 +8,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: exam_online
-      MYSQL_USER: examuser
-      MYSQL_PASSWORD: exampassword
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
     ports:
       - "3307:3306"
     volumes:
@@ -33,7 +33,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/exam_online?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
+      SPRING_DATASOURCE_PASSWORD: root
     ports:
       - "8080:8080"
     depends_on:
