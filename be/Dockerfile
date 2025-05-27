@@ -1,5 +1,5 @@
 # Multi-stage build
-FROM maven:3.9.6-openjdk-17 AS build
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 # Set working directory
 WORKDIR /app
@@ -13,8 +13,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Runtime stage
-FROM openjdk:17-jre-slim
-
+FROM eclipse-temurin:17-jre
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
