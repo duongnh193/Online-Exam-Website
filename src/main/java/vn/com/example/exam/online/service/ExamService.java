@@ -18,6 +18,8 @@ import vn.com.example.exam.online.model.response.PasswordExamResponse;
 import vn.com.example.exam.online.repository.ExamRepository;
 import vn.com.example.exam.online.util.Constants;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ExamService {
@@ -26,6 +28,7 @@ public class ExamService {
     private final ClassService classService;
 
     public ExamResponse create(CreateExamRequest createExamRequest) {
+        validateTime(createExamRequest.getStartAt(), createExamRequest.getEndAt());
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
@@ -37,9 +40,22 @@ public class ExamService {
     }
 
     public ExamResponse update(CreateExamRequest createExamRequest, Long examId) {
+        validateTime(createExamRequest.getStartAt(), createExamRequest.getEndAt());
         Exam exam = getById(examId);
         CreateExam2ExamMapper.INSTANCE.mapTo(createExamRequest, exam);
         return Exam2ExamResponseMapper.INSTANCE.map(examRepository.save(exam));
+    }
+
+    private void validateTime(LocalDateTime startAt, LocalDateTime endAt) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (startAt.isBefore(now)) {
+            throw new IllegalArgumentException("startAt must be greater than or equal to the current time.");
+        }
+
+        if (endAt.isBefore(now)) {
+            throw new IllegalArgumentException("endAt must be greater than or equal to the current time.");
+        }
     }
 
     public ExamResponse getExamById(Long examId) {

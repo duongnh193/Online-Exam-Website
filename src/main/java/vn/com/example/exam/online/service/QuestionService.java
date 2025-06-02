@@ -39,6 +39,12 @@ public class QuestionService {
     public QuestionResponse create(CreateQuestionRequest createQuestionRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
+        if (createQuestionRequest.getType() != QuestionType.ESSAY) {
+            List<ChoiceDto> choices = createQuestionRequest.getChoices();
+            if (choices == null || choices.size() != 4) {
+                throw new IllegalArgumentException("Multiple-choice or single-choice questions must have exactly 4 choices.");
+            }
+        }
 
         User creator = userService.getUserByUsername(username);
         Exam exam = examService.getById(createQuestionRequest.getExamId());

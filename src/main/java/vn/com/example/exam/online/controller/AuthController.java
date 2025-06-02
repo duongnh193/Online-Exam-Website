@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.example.exam.online.model.request.LoginRequest;
-import vn.com.example.exam.online.model.request.ResetPasswordRequest;
 import vn.com.example.exam.online.model.request.SignupRequest;
 import vn.com.example.exam.online.model.response.JwtResponse;
 import vn.com.example.exam.online.model.response.UserResponse;
