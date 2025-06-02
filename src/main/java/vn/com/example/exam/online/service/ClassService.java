@@ -26,10 +26,7 @@ public class ClassService {
     private final UserService userService;
 
     public Class create(CreateClassRequest createClassRequest) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-
-        User teacher = userService.getUserByUsername(username);
+        User teacher = userService.getUserById(createClassRequest.getTeacherId());
         Class classEntity = CreateClassRequest2ClassMapper.INSTANCE.map(createClassRequest);
         classEntity.setCreateAt(OffsetDateTime.now())
                 .setTeacher(teacher);
@@ -37,7 +34,9 @@ public class ClassService {
     }
 
     public Class update(CreateClassRequest createClassRequest, Long classId) {
+        User teacher = userService.getUserById(createClassRequest.getTeacherId());
         Class classEntity = getById(classId);
+        classEntity.setTeacher(teacher);
         CreateClassRequest2ClassMapper.INSTANCE.mapTo(createClassRequest, classEntity);
         return classRepository.save(classEntity);
     }
