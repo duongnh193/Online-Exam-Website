@@ -46,4 +46,5 @@ public class StudentExam {
     @Enumerated(EnumType.STRING)
     StudentExamStatus status;
     Integer currentQuestion;
+    int switchTab;
 }

@@ -5,6 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.com.example.exam.online.mapper.StudentExam2StudentExamResultResponseMapper;
 import vn.com.example.exam.online.model.ExamResult;
+import vn.com.example.exam.online.model.QuestionDetail;
 import vn.com.example.exam.online.model.StudentExamStatus;
 import vn.com.example.exam.online.model.entity.Exam;
 import vn.com.example.exam.online.model.entity.ExamSubmission;
@@ -12,8 +13,10 @@ import vn.com.example.exam.online.model.entity.Question;
 import vn.com.example.exam.online.model.entity.StudentExam;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.response.QuestionExamResponse;
+import vn.com.example.exam.online.model.response.StudentExamDetailResponse;
 import vn.com.example.exam.online.model.response.StudentExamResponse;
 import vn.com.example.exam.online.model.response.StudentExamResultResponse;
+import vn.com.example.exam.online.model.response.StudentExamSimpleResponse;
 import vn.com.example.exam.online.repository.ExamRepository;
 import vn.com.example.exam.online.repository.ExamSubmissionRepository;
 import vn.com.example.exam.online.repository.QuestionRepository;
@@ -208,6 +211,48 @@ public class StudentExamService {
 
     private boolean isCurrentUserInClass(Long userId, Long classId) {
         return studentClassRepository.existsByStudentIdAndClassEntityId(userId, classId);
+    }
+
+    public void increaseSwitchTab(String studentExamId) {
+        var studentExam = studentExamRepository.findById(studentExamId).orElseThrow(()
+                -> new RuntimeException("Student exam not found"));
+        studentExam.setSwitchTab(studentExam.getSwitchTab() + 1);
+        studentExamRepository.save(studentExam);
+    }
+
+    public List<StudentExamSimpleResponse> getStudentExamsByExamId(Long examId) {
+        List<StudentExam> studentExams = studentExamRepository.findByExamId(examId);
+        return studentExams.stream().map(se -> new StudentExamSimpleResponse(
+                se.getId(),
+                se.getStudent().getId(),
+                se.getStudent().getFirstName() + " " + se.getStudent().getLastName(),
+                se.getStatus(),
+                se.getStartAt(),
+                se.getFinishAt(),
+                se.getScore()
+        )).toList();
+    }
+
+    public StudentExamDetailResponse getStudentExamDetail(String studentExamId) {
+        StudentExam studentExam = studentExamRepository.findById(studentExamId)
+                .orElseThrow(() -> new RuntimeException("Not found"));
+
+        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExamId);
+
+        List<QuestionDetail> details = submissions.stream().map(sub -> {
+            Question q = sub.getQuestion();
+            return new QuestionDetail(
+                    q.getId(),
+                    q.getTitle(),
+                    q.getType(),
+                    q.getChoices(),
+                    q.getAnswer(),
+                    sub.getAnswer(),
+                    sub.getIsCorrect()
+            );
+        }).toList();
+
+        return new StudentExamDetailResponse(studentExamId, studentExam.getSwitchTab(), details);
     }
 }
 

@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.com.example.exam.online.exception.ClassNotFoundException;
 import vn.com.example.exam.online.mapper.CreateClassRequest2ClassMapper;
+import vn.com.example.exam.online.model.RoleEnum;
 import vn.com.example.exam.online.model.entity.Class;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.request.CreateClassRequest;
@@ -34,7 +35,18 @@ public class ClassService {
     }
 
     public Class update(CreateClassRequest createClassRequest, Long classId) {
-        User teacher = userService.getUserById(createClassRequest.getTeacherId());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        User user = userService.getUserByUsername(username);
+        User teacher;
+        if (user.getRole() == RoleEnum.ROLE_ADMIN) {
+            if (createClassRequest.getTeacherId() == null) {
+                throw new RuntimeException("TeacherId must not be null");
+            }
+            teacher = userService.getUserById(createClassRequest.getTeacherId());
+        } else {
+            teacher = user;
+        }
         Class classEntity = getById(classId);
         classEntity.setTeacher(teacher);
         CreateClassRequest2ClassMapper.INSTANCE.mapTo(createClassRequest, classEntity);

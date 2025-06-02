@@ -23,7 +23,6 @@ public class CreateClassRequest {
     @Pattern(regexp = "^[\\p{L}\\d\\s]+$",
             message = "Only letters and spaces are allowed, special characters are not permitted.")
     String description;
-    @NotNull
     Long teacherId;
     String image;
 }
