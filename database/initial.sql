@@ -80,7 +80,7 @@ CREATE TABLE student_exam
     time      INT           DEFAULT NULL,
     current_question INT DEFAULT NULL,
     status    ENUM('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED') NOT NULL,
-    switch_tab INT,
+    switch_tab TEXT,
     FOREIGN KEY (exam_id) REFERENCES exam (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
 );

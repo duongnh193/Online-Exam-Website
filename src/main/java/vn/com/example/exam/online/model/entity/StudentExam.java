@@ -1,6 +1,7 @@
 package vn.com.example.exam.online.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,8 +17,11 @@ import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
 import vn.com.example.exam.online.model.StudentExamStatus;
+import vn.com.example.exam.online.util.OffsetDateTimeListConverter;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -46,5 +50,6 @@ public class StudentExam {
     @Enumerated(EnumType.STRING)
     StudentExamStatus status;
     Integer currentQuestion;
-    int switchTab;
+    @Convert(converter = OffsetDateTimeListConverter.class)
+    List<OffsetDateTime> switchTab = new ArrayList<>();
 }

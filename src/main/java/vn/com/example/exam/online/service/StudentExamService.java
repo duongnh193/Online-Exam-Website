@@ -216,7 +216,7 @@ public class StudentExamService {
     public void increaseSwitchTab(String studentExamId) {
         var studentExam = studentExamRepository.findById(studentExamId).orElseThrow(()
                 -> new RuntimeException("Student exam not found"));
-        studentExam.setSwitchTab(studentExam.getSwitchTab() + 1);
+        studentExam.getSwitchTab().add(OffsetDateTime.now());
         studentExamRepository.save(studentExam);
     }
 
