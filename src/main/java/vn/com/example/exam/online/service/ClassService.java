@@ -27,7 +27,8 @@ public class ClassService {
     private final UserService userService;
 
     public Class create(CreateClassRequest createClassRequest) {
-        User teacher = userService.getUserById(createClassRequest.getTeacherId());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User teacher = getTeacher(authentication, createClassRequest);
         Class classEntity = CreateClassRequest2ClassMapper.INSTANCE.map(createClassRequest);
         classEntity.setCreateAt(OffsetDateTime.now())
                 .setTeacher(teacher);
@@ -36,21 +37,24 @@ public class ClassService {
 
     public Class update(CreateClassRequest createClassRequest, Long classId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        User user = userService.getUserByUsername(username);
-        User teacher;
-        if (user.getRole() == RoleEnum.ROLE_ADMIN) {
-            if (createClassRequest.getTeacherId() == null) {
-                throw new RuntimeException("TeacherId must not be null");
-            }
-            teacher = userService.getUserById(createClassRequest.getTeacherId());
-        } else {
-            teacher = user;
-        }
+        User teacher = getTeacher(authentication, createClassRequest);
         Class classEntity = getById(classId);
         classEntity.setTeacher(teacher);
         CreateClassRequest2ClassMapper.INSTANCE.mapTo(createClassRequest, classEntity);
         return classRepository.save(classEntity);
+    }
+
+    private User getTeacher(Authentication authentication, CreateClassRequest createClassRequest) {
+        String username = authentication.getName();
+        User user = userService.getUserByUsername(username);
+        if (user.getRole() == RoleEnum.ROLE_ADMIN) {
+            if (createClassRequest.getTeacherId() == null) {
+                throw new RuntimeException("TeacherId must not be null");
+            }
+            return userService.getUserById(createClassRequest.getTeacherId());
+        } else {
+            return user;
+        }
     }
 
     public Class getById(Long classId) {
