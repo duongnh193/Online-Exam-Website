@@ -2,6 +2,8 @@ package vn.com.example.exam.online.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
@@ -11,7 +13,9 @@ import java.util.List;
 
 @Converter
 public class OffsetDateTimeListConverter implements AttributeConverter<List<OffsetDateTime>, String> {
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); ;
 
     @Override
     public String convertToDatabaseColumn(List<OffsetDateTime> attribute) {
