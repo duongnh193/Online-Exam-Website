@@ -248,6 +248,7 @@ class QuestionService {
     
     const headers = {
       ...authHeader(),
+      'Content-Type': 'multipart/form-data'
       // Let the browser set the content type for FormData
     };
     
