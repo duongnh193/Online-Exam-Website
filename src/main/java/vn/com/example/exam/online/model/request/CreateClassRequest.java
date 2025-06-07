@@ -16,7 +16,7 @@ import lombok.experimental.FieldDefaults;
 public class CreateClassRequest {
     @NotNull
     @Size(max = 255)
-    @Pattern(regexp = "^[\\p{L}\\s]+$",
+    @Pattern(regexp = "^[\\p{L}\\d\\s]+$",
             message = "Only letters and spaces are allowed, special characters are not permitted.")
     String name;
     @Size(max = 255)

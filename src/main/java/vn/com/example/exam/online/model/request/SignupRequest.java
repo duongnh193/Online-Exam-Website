@@ -18,7 +18,7 @@ import vn.com.example.exam.online.model.RoleEnum;
 public class SignupRequest {
     @NotNull
     @Size(max = 50)
-    @Pattern(regexp = "^[a-zA-Z]+$",
+    @Pattern(regexp = "^[a-zA-Z\\d]+$",
             message = "Username must contain only English letters without special characters or spaces.")
     String username;
     @NotNull
