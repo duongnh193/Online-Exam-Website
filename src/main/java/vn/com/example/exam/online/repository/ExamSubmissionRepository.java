@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ExamSubmissionRepository extends JpaRepository<ExamSubmission, Long> {
     List<ExamSubmission> findByStudentExamId(String studentExamId);
+    List<ExamSubmission> findByQuestionId(Long questionId);
 }

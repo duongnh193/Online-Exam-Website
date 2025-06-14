@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import vn.com.example.exam.online.model.request.CreateQuestionRequest;
+import vn.com.example.exam.online.model.response.AnswerStatResponse;
 import vn.com.example.exam.online.model.response.ExamResponse;
 import vn.com.example.exam.online.model.response.QuestionResponse;
 import vn.com.example.exam.online.service.QuestionService;
@@ -108,6 +109,12 @@ public class QuestionController {
     @PostMapping("/questions/import")
     public ResponseEntity<List<QuestionResponse>> importQuestions(@RequestParam("file") MultipartFile file, @RequestParam Long examId) {
         return ResponseEntity.ok(questionService.importFromCsv(file, examId));
+    }
+
+    @GetMapping("/statistics/{questionId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
+    public ResponseEntity<AnswerStatResponse> getQuestionStatistics(@PathVariable Long questionId) {
+        return ResponseEntity.ok(questionService.getAnswerStatisticsByQuestion(questionId));
     }
 
 }

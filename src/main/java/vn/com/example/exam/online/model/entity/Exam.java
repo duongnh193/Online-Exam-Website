@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
+import vn.com.example.exam.online.model.ExamReviewMode;
 import vn.com.example.exam.online.model.ExamStatus;
 
 import java.time.LocalDateTime;
@@ -54,4 +55,5 @@ public class Exam {
     ExamStatus status;
     @OneToMany(mappedBy = "exam")
     List<Question> questions = new ArrayList<>();
+    ExamReviewMode reviewMode;
 }

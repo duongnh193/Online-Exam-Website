@@ -15,11 +15,14 @@ import vn.com.example.exam.online.mapper.Question2QuestionResponseMapper;
 import vn.com.example.exam.online.model.ChoiceDto;
 import vn.com.example.exam.online.model.QuestionType;
 import vn.com.example.exam.online.model.entity.Exam;
+import vn.com.example.exam.online.model.entity.ExamSubmission;
 import vn.com.example.exam.online.model.entity.Question;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.request.CreateQuestionRequest;
 import vn.com.example.exam.online.model.request.QuestionCsvRecord;
+import vn.com.example.exam.online.model.response.AnswerStatResponse;
 import vn.com.example.exam.online.model.response.QuestionResponse;
+import vn.com.example.exam.online.repository.ExamSubmissionRepository;
 import vn.com.example.exam.online.repository.QuestionRepository;
 import vn.com.example.exam.online.util.Constants;
 
@@ -28,6 +31,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +40,7 @@ public class QuestionService {
     private final QuestionRepository questionRepository;
     private final UserService userService;
     private final ExamService examService;
+    private final ExamSubmissionRepository examSubmissionRepository;
 
     public QuestionResponse create(CreateQuestionRequest createQuestionRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -170,7 +176,28 @@ public class QuestionService {
         return new ArrayList<>();
     }
 
+    public AnswerStatResponse getAnswerStatisticsByQuestion(Long questionId) {
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Question not found"));
 
+        List<ExamSubmission> submissions = examSubmissionRepository.findByQuestionId(questionId);
 
+        Map<String, Long> stats = submissions.stream()
+                .filter(sub -> sub.getAnswer() != null)
+                .collect(Collectors.groupingBy(
+                        ExamSubmission::getAnswer,
+                        Collectors.counting()
+                ));
+
+        long total = stats.values().stream().mapToLong(Long::longValue).sum();
+
+        return new AnswerStatResponse(
+                question.getId(),
+                question.getTitle(),
+                question.getType(),
+                stats,
+                total
+        );
+    }
 
 }

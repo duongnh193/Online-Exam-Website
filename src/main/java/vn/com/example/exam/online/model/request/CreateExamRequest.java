@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import vn.com.example.exam.online.model.ExamReviewMode;
 import vn.com.example.exam.online.model.ExamStatus;
 
 import java.time.LocalDateTime;
@@ -39,4 +40,6 @@ public class CreateExamRequest {
     )
     String password;
     ExamStatus status;
+    @NotNull
+    ExamReviewMode reviewMode;
 }

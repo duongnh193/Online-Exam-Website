@@ -5,6 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.com.example.exam.online.mapper.StudentExam2StudentExamResultResponseMapper;
 import vn.com.example.exam.online.model.ExamResult;
+import vn.com.example.exam.online.model.ExamReviewMode;
 import vn.com.example.exam.online.model.QuestionDetail;
 import vn.com.example.exam.online.model.StudentExamStatus;
 import vn.com.example.exam.online.model.entity.Exam;
@@ -30,6 +31,9 @@ import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+
+import static vn.com.example.exam.online.model.ExamReviewMode.FULL;
+import static vn.com.example.exam.online.model.ExamReviewMode.INCORRECT_ONLY;
 
 @Service
 @RequiredArgsConstructor
@@ -254,6 +258,54 @@ public class StudentExamService {
 
         return new StudentExamDetailResponse(studentExamId, studentExam.getSwitchTab(), details);
     }
+
+    public StudentExamDetailResponse getStudentExamDetailById(String studentExamId) {
+        StudentExam studentExam = studentExamRepository.findById(studentExamId)
+                .orElseThrow(() -> new RuntimeException("StudentExam not found"));
+
+        if (studentExam.getStatus() != StudentExamStatus.COMPLETED) {
+            OffsetDateTime now = OffsetDateTime.now();
+            OffsetDateTime deadline = studentExam.getFinishAtEstimate();
+
+            if (deadline != null && now.isAfter(deadline)) {
+                studentExam.setStatus(StudentExamStatus.COMPLETED);
+                studentExamRepository.save(studentExam);
+            } else {
+                throw new RuntimeException("You have not completed the exam or it is not yet available for review.");
+            }
+        }
+
+        Exam exam = studentExam.getExam();
+        ExamReviewMode reviewMode = exam.getReviewMode();
+
+        if (reviewMode == ExamReviewMode.NONE) {
+            return new StudentExamDetailResponse(studentExamId, studentExam.getSwitchTab(), List.of());
+        }
+
+        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExamId);
+
+        List<QuestionDetail> details = submissions.stream()
+                .map(sub -> {
+                    Question q = sub.getQuestion();
+
+                    String correctAnswer = (reviewMode == ExamReviewMode.FULL) ? q.getAnswer() : null;
+
+                    return new QuestionDetail(
+                            q.getId(),
+                            q.getTitle(),
+                            q.getType(),
+                            q.getChoices(),
+                            correctAnswer,
+                            sub.getAnswer(),
+                            sub.getIsCorrect()
+                    );
+                })
+                .toList();
+
+        return new StudentExamDetailResponse(studentExamId, studentExam.getSwitchTab(), details);
+    }
+
+
 }
 
 

@@ -67,7 +67,6 @@ public class StudentExamController {
     }
 
     @GetMapping("/exam/{examId}")
-    @PreAuthorize("hasRole('LECTURER') or hasRole('ADMIN')")
     public ResponseEntity<List<StudentExamSimpleResponse>> getStudentExamsByExamId(@PathVariable Long examId) {
         return ResponseEntity.ok(studentExamService.getStudentExamsByExamId(examId));
     }
@@ -76,5 +75,11 @@ public class StudentExamController {
     @PreAuthorize("hasRole('LECTURER') or hasRole('ADMIN')")
     public ResponseEntity<StudentExamDetailResponse> getStudentExamDetail(@PathVariable String studentExamId) {
         return ResponseEntity.ok(studentExamService.getStudentExamDetail(studentExamId));
+    }
+
+    @GetMapping("/student/detail/{studentExamId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentExamDetailResponse> getStudentExamDetailForStudent(@PathVariable String studentExamId) {
+        return ResponseEntity.ok(studentExamService.getStudentExamDetailById(studentExamId));
     }
 }
