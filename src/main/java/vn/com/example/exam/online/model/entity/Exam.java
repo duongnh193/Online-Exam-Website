@@ -55,5 +55,6 @@ public class Exam {
     ExamStatus status;
     @OneToMany(mappedBy = "exam")
     List<Question> questions = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
     ExamReviewMode reviewMode;
 }
