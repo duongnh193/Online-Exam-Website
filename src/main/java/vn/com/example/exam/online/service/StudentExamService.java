@@ -135,7 +135,7 @@ public class StudentExamService {
         ExamSubmission submission = new ExamSubmission()
                 .setStudentExam(studentExam)
                 .setQuestion(question)
-                .setAnswer(answer)
+                .setAnswer(answer.trim())
                 .setIsCorrect(isCorrect);
         examSubmissionRepository.save(submission);
         List<Question> orderedQuestions = getOrderedQuestions(studentExam.getExam());
