@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
 import classService from '../services/classService';
 import examService from '../services/examService';
+import questionService from '../services/questionService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
@@ -389,6 +390,70 @@ const EmptyStateSubtext = styled.div`
 
 const COLORS = ['#6a00ff', '#ff2e8e', '#00c16e', '#f5a623'];
 
+// Add new styled components for question statistics
+const QuestionList = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+`;
+
+const QuestionCard = styled.div`
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid ${props => props.selected ? 'var(--primary-color)' : 'transparent'};
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-color);
+  }
+`;
+
+const QuestionTitle = styled.div`
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+`;
+
+const QuestionNumber = styled.div`
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+`;
+
+const AnswerStatsContainer = styled.div`
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+`;
+
+const AnswerStatItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const AnswerText = styled.div`
+  flex: 1;
+  color: var(--text-primary);
+`;
+
+const AnswerCount = styled.div`
+  font-weight: 600;
+  color: var(--primary-color);
+`;
+
 function ReportPage() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
@@ -404,6 +469,11 @@ function ReportPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [questionStats, setQuestionStats] = useState(null);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
     const loadReportData = async () => {
@@ -530,7 +600,7 @@ function ReportPage() {
     };
   }, []);
 
-  // Tải thông tin bài thi trong lớp học được chọn
+  // Sửa lại hàm loadExamsInClass
   const loadExamsInClass = async (classId) => {
     if (!classId) return;
     
@@ -564,11 +634,22 @@ function ReportPage() {
       
       // Nếu có bài thi, chọn bài thi đầu tiên và tải thống kê
       if (examsData.length > 0) {
-        setSelectedExamId(examsData[0].id);
-        loadExamStats(examsData[0].id);
+        const firstExamId = examsData[0].id;
+        setSelectedExamId(firstExamId);
+        loadExamStats(firstExamId);
+        
+        // Chỉ load questions mà không tự động chọn câu hỏi đầu tiên
+        loadQuestions(firstExamId).then(() => {
+          // Reset selected question và stats khi load questions mới
+          setSelectedQuestion(null);
+          setQuestionStats(null);
+        });
       } else {
         setSelectedExamId(null);
         setExamScoreStats(null);
+        setQuestions([]);
+        setSelectedQuestion(null);
+        setQuestionStats(null);
       }
       
       // Tải danh sách điểm của sinh viên trong lớp từ API
@@ -576,7 +657,6 @@ function ReportPage() {
         // Sử dụng API thống kê điểm sinh viên
         const studentScoresResponse = await dashboardService.getStudentScoresInClass(classId);
         console.log('Student scores API response:', studentScoresResponse);
-        console.log('Student scores content:', studentScoresResponse?.content);
         
         if (studentScoresResponse && studentScoresResponse.content) {
           // Log raw data for debugging
@@ -665,7 +745,7 @@ function ReportPage() {
     }
   };
   
-  // Xử lý khi người dùng chọn lớp học khác
+  // Sửa lại hàm handleClassChange để không reset activeTab
   const handleClassChange = (e) => {
     const classId = parseInt(e.target.value);
     setSelectedClassId(classId);
@@ -677,6 +757,9 @@ function ReportPage() {
     const examId = parseInt(e.target.value);
     setSelectedExamId(examId);
     loadExamStats(examId);
+    loadQuestions(examId);
+    setSelectedQuestion(null);
+    setQuestionStats(null);
   };
 
   // Dữ liệu biểu đồ thống kê điểm số
@@ -748,6 +831,49 @@ function ReportPage() {
       case 'signout': return '🚪';
       default: return '•';
     }
+  };
+
+  // Add new function to load questions when exam changes
+  const loadQuestions = async (examId) => {
+    if (!examId) return;
+    
+    try {
+      setLoadingQuestions(true);
+      const response = await questionService.getAllQuestionsInExam(examId);
+      
+      if (response.data && response.data.content) {
+        setQuestions(response.data.content);
+      } else {
+        setQuestions([]);
+      }
+    } catch (error) {
+      console.error('Error loading questions:', error);
+      setQuestions([]);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  // Add new function to load question statistics
+  const loadQuestionStats = async (questionId) => {
+    if (!questionId) return;
+    
+    try {
+      setLoadingStats(true);
+      const response = await questionService.getQuestionStatistics(questionId);
+      setQuestionStats(response.data);
+    } catch (error) {
+      console.error('Error loading question statistics:', error);
+      setQuestionStats(null);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  // Add new function to handle question selection
+  const handleQuestionSelect = (question) => {
+    setSelectedQuestion(question);
+    loadQuestionStats(question.id);
   };
 
   // Render exam statistics
@@ -976,6 +1102,119 @@ function ReportPage() {
     </StatisticsCard>
   );
 
+  // Add new render function for question statistics
+  const renderQuestionStatistics = () => (
+    <StatisticsCard>
+      <StatHeader>
+        <StatTitle>Question Answer Statistics</StatTitle>
+        <StatSelectContainer>
+          <StatSelect value={selectedExamId || ''} onChange={handleExamChange}>
+            <option value="">Select Exam</option>
+            {exams.map(exam => (
+              <option key={exam.id} value={exam.id}>{exam.name}</option>
+            ))}
+          </StatSelect>
+        </StatSelectContainer>
+      </StatHeader>
+
+      {loadingQuestions ? (
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          Loading questions...
+        </div>
+      ) : questions.length === 0 ? (
+        <EmptyState>
+          <EmptyStateIcon>❓</EmptyStateIcon>
+          <EmptyStateText>No Questions Available</EmptyStateText>
+          <EmptyStateSubtext>
+            {selectedExamId ? 
+              'No questions found in this exam.' : 
+              'Please select an exam to view questions.'
+            }
+          </EmptyStateSubtext>
+        </EmptyState>
+      ) : (
+        <>
+          <QuestionList>
+            {questions.map((question, index) => (
+              <QuestionCard 
+                key={question.id}
+                selected={selectedQuestion?.id === question.id}
+                onClick={() => handleQuestionSelect(question)}
+              >
+                <QuestionNumber>Question {index + 1}</QuestionNumber>
+                <QuestionTitle>{question.title}</QuestionTitle>
+              </QuestionCard>
+            ))}
+          </QuestionList>
+
+          {selectedQuestion && (
+            <AnswerStatsContainer>
+              <StatTitle style={{ marginBottom: '1rem' }}>
+                Statistics for Question {questions.findIndex(q => q.id === selectedQuestion.id) + 1}
+              </StatTitle>
+              
+              {loadingStats ? (
+                <div style={{ textAlign: 'center', padding: '1rem' }}>
+                  Loading statistics...
+                </div>
+              ) : questionStats ? (
+                <>
+                  {/* Log để debug */}
+                  {console.log('Question Stats:', questionStats)}
+                  
+                  {/* Kiểm tra và chuyển đổi answerStats thành mảng nếu cần */}
+                  {(() => {
+                    let statsArray = [];
+                    
+                    // Nếu answerStats là object, chuyển thành mảng
+                    if (questionStats.answerStats && typeof questionStats.answerStats === 'object') {
+                      if (Array.isArray(questionStats.answerStats)) {
+                        statsArray = questionStats.answerStats;
+                      } else {
+                        // Nếu là object, chuyển thành mảng các cặp key-value
+                        statsArray = Object.entries(questionStats.answerStats).map(([answer, count]) => ({
+                          answer,
+                          count
+                        }));
+                      }
+                    }
+                    
+                    return (
+                      <>
+                        {statsArray.length > 0 ? (
+                          <>
+                            {statsArray.map((stat, index) => (
+                              <AnswerStatItem key={index}>
+                                <AnswerText>{stat.answer || 'No answer'}</AnswerText>
+                                <AnswerCount>{stat.count || 0} students</AnswerCount>
+                              </AnswerStatItem>
+                            ))}
+                            <AnswerStatItem style={{ marginTop: '1rem', borderTop: '2px solid var(--border-color)' }}>
+                              <AnswerText>Total Students</AnswerText>
+                              <AnswerCount>{questionStats.totalStudents || statsArray.reduce((sum, stat) => sum + (stat.count || 0), 0)}</AnswerCount>
+                            </AnswerStatItem>
+                          </>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-secondary)' }}>
+                            No answer statistics available for this question
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-secondary)' }}>
+                  No statistics available for this question
+                </div>
+              )}
+            </AnswerStatsContainer>
+          )}
+        </>
+      )}
+    </StatisticsCard>
+  );
+
   return (
     <>
       <ThemeStyles />
@@ -1091,9 +1330,17 @@ function ReportPage() {
             >
               Student Scores
             </Tab>
+            <Tab 
+              active={activeTab === 'questionStats'} 
+              onClick={() => setActiveTab('questionStats')}
+            >
+              Question Statistics
+            </Tab>
           </TabContainer>
           
-          {activeTab === 'examScores' ? renderExamStatistics() : renderStudentScoreStatistics()}
+          {activeTab === 'examScores' ? renderExamStatistics() : 
+           activeTab === 'studentScores' ? renderStudentScoreStatistics() :
+           renderQuestionStatistics()}
         </MainContent>
         
         {/* Thêm modal xác nhận đăng xuất */}

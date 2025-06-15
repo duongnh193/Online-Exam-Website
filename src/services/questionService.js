@@ -287,6 +287,44 @@ class QuestionService {
         throw error;
       });
   }
+
+  // Get all questions in exam (without pagination)
+  getAllQuestionsInExam(examId) {
+    const url = `${API_URL}?examId=${examId}&page=0&size=1000`; // Use large size to get all questions
+    logApiCall('GET', url, authHeader());
+    
+    return axios.get(url, { 
+      headers: authHeader(),
+      timeout: 10000
+    })
+      .then(response => {
+        console.log('Questions fetched successfully:', response.data);
+        return response;
+      })
+      .catch(error => {
+        console.error('Error fetching questions:', error.response?.data || error.message);
+        throw error;
+      });
+  }
+
+  // Get question statistics by answer
+  getQuestionStatistics(questionId) {
+    const url = `${API_URL}/statistics/${questionId}`;
+    logApiCall('GET', url, authHeader());
+    
+    return axios.get(url, { 
+      headers: authHeader(),
+      timeout: 10000
+    })
+      .then(response => {
+        console.log('Question statistics fetched successfully:', response.data);
+        return response;
+      })
+      .catch(error => {
+        console.error('Error fetching question statistics:', error.response?.data || error.message);
+        throw error;
+      });
+  }
 }
 
 export default new QuestionService(); 
