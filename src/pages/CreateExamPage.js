@@ -392,6 +392,34 @@ const TrashIcon = () => (
   </svg>
 );
 
+function toDatetimeLocal(dt) {
+  if (!dt) return "";
+  const date = new Date(dt);
+  if (isNaN(date.getTime())) return "";
+
+  // Format to YYYY-MM-DDThh:mm for input display
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Convert from local datetime to UTC by adding 7 hours
+function fromLocalToUTC(dt) {
+  if (!dt) return null;
+  
+  // Create date object from local datetime string
+  const localDate = new Date(dt);
+  if (isNaN(localDate.getTime())) return null;
+  
+  // Add 7 hours to convert to UTC
+  const utcDate = new Date(localDate.getTime() + (7 * 60 * 60 * 1000));
+  return utcDate.toISOString();
+}
+
 function CreateExamPage() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
@@ -421,7 +449,8 @@ function CreateExamPage() {
     startAt: '',
     endAt: '',
     status: 'SCHEDULED',
-    password: '' // Add password field
+    password: '', // Add password field
+    reviewMode: 'NONE' // Add reviewMode field
   });
   
   const [createdExamId, setCreatedExamId] = useState(null);
@@ -481,21 +510,15 @@ function CreateExamPage() {
           const exam = response.data;
           console.log('Fetched exam data:', exam);
           
-          // Convert dates to the format expected by datetime-local input
-          const formatDateForInput = (dateString) => {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            return date.toISOString().slice(0, 16);
-          };
-          
           setExamData({
             title: exam.title || '',
             classId: exam.classId || '',
             duration: exam.duration || 60,
-            startAt: formatDateForInput(exam.startAt),
-            endAt: formatDateForInput(exam.endAt),
+            startAt: exam.startAt || '', // Keep UTC time from server
+            endAt: exam.endAt || '',     // Keep UTC time from server
             status: exam.status || 'SCHEDULED',
-            password: exam.password || ''
+            password: exam.password || '',
+            reviewMode: exam.reviewMode || 'NONE'
           });
           
           setLoading(false);
@@ -544,9 +567,17 @@ function CreateExamPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
+    // For datetime fields, just store the local time as is
+    if (name === 'startAt' || name === 'endAt') {
+      setExamData(prev => ({ 
+        ...prev, 
+        [name]: value 
+      }));
+      return;
+    }
+    
     // Special validation for password
     if (name === 'password') {
-      // Password is now required
       if (!value || value.trim() === '') {
         setPasswordError('Password is required');
       } else if (value.length < 4) {
@@ -621,26 +652,23 @@ function CreateExamPage() {
         ...examData,
         classId: Number(examData.classId),
         duration: Number(examData.duration),
-        // Include password (now required)
-        password: examData.password.trim()
+        // Convert datetime fields to UTC by adding 7 hours
+        startAt: fromLocalToUTC(examData.startAt),
+        endAt: fromLocalToUTC(examData.endAt),
+        password: examData.password.trim(),
+        reviewMode: examData.reviewMode || 'NONE'
       };
-      
-      // Format dates to ISO strings if needed
-      if (formattedData.startAt && !(formattedData.startAt instanceof Date)) {
-        formattedData.startAt = new Date(formattedData.startAt).toISOString();
-      }
-      
-      if (formattedData.endAt && !(formattedData.endAt instanceof Date)) {
-        formattedData.endAt = new Date(formattedData.endAt).toISOString();
-      }
-      
-      // Ensure status is one of the valid values
-      if (!['SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED'].includes(formattedData.status)) {
-        formattedData.status = 'SCHEDULED';
-      }
       
       // Log the data being sent to the API
       console.log('Submitting exam data:', formattedData);
+      console.log('Original local times:', {
+        startAt: examData.startAt,
+        endAt: examData.endAt
+      });
+      console.log('Converted UTC times:', {
+        startAt: formattedData.startAt,
+        endAt: formattedData.endAt
+      });
       
       let response;
       
@@ -1413,7 +1441,7 @@ function CreateExamPage() {
                     id="startAt"
                     name="startAt"
                     type="datetime-local"
-                    value={examData.startAt}
+                    value={toDatetimeLocal(examData.startAt)}
                     onChange={handleChange}
                     required
                   />
@@ -1425,7 +1453,7 @@ function CreateExamPage() {
                     id="endAt"
                     name="endAt"
                     type="datetime-local"
-                    value={examData.endAt}
+                    value={toDatetimeLocal(examData.endAt)}
                     onChange={handleChange}
                     required
                   />
@@ -1518,6 +1546,29 @@ function CreateExamPage() {
                 <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
                   Students will need to enter this password to access the exam.
                 </div>
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="reviewMode">Review Mode</Label>
+                <Select 
+                  id="reviewMode"
+                  name="reviewMode"
+                  value={examData.reviewMode || 'NONE'}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="NONE">No Review</option>
+                  <option value="INCORRECT_ONLY">Review Incorrect Answers Only</option>
+                  <option value="FULL">Full Review</option>
+                </Select>
+                {/* <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
+                  Controls what students can review after completing the exam:
+                  <ul style={{ margin: '0.3rem 0 0 1.2rem', padding: 0 }}>
+                    <li><strong>No Review:</strong> Students cannot review their answers</li>
+                    <li><strong>Review Incorrect Only:</strong> Students can only review questions they answered incorrectly</li>
+                    <li><strong>Full Review:</strong> Students can review all questions and their answers</li>
+                  </ul>
+                </div> */}
               </FormGroup>
               
               {error && <ErrorMessage>{error}</ErrorMessage>}

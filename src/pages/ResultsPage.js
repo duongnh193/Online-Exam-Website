@@ -6,6 +6,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import statisticsService from '../services/statisticsService';
 import classService from '../services/classService';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import studentExamService from '../services/studentExamService';
+import examService from '../services/examService';
+import { toast } from 'react-hot-toast';
+import { Spinner, Button } from 'react-bootstrap';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -414,6 +418,94 @@ const ClassResultsTitle = styled.h2`
   }
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContainer = styled.div`
+  background-color: var(--bg-primary);
+  padding: 2rem;
+  border-radius: 0.5rem;
+  max-width: 80%;
+  max-height: 80%;
+  overflow: auto;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-primary);
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+`;
+
+const ModalContent = styled.div`
+  // Add any additional styles for the modal content
+`;
+
+const LargeModalContainer = styled(ModalContainer)`
+  width: 50vw;
+  max-width: 50vw !important;
+  min-width: 400px;
+  padding: 3rem 2.5rem 2.5rem 2.5rem !important;
+  border-radius: 2rem !important;
+  box-shadow: 0 12px 48px rgba(106,0,255,0.12), 0 4px 16px rgba(0,0,0,0.08);
+  background: #fff;
+  @media (max-width: 900px) {
+    max-width: 95vw !important;
+    min-width: unset;
+    padding: 1.2rem 0.5rem 1.2rem 0.5rem !important;
+    border-radius: 1.2rem !important;
+  }
+`;
+
+const ExamCard = styled.div`
+  padding: 1.5rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 1.2rem;
+  background: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(106,0,255,0.04);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1rem;
+  &:hover {
+    background: #ecebff;
+    box-shadow: 0 4px 16px rgba(106,0,255,0.10);
+    border-color: #6a00ff;
+  }
+`;
+
+const QuestionBlock = styled.div`
+  margin-bottom: 2.5rem;
+  padding: 2rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 1.2rem;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(106,0,255,0.04);
+`;
+
 function ResultsPage() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
@@ -424,6 +516,13 @@ function ResultsPage() {
   const [results, setResults] = useState(null);
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   const [classNames, setClassNames] = useState({}); // Store class names by classId
+  const [showExamDetailModal, setShowExamDetailModal] = useState(false);
+  const [selectedClassResult, setSelectedClassResult] = useState(null);
+  const [examDetails, setExamDetails] = useState(null);
+  const [examDetailsLoading, setExamDetailsLoading] = useState(false);
+  const [selectedExam, setSelectedExam] = useState(null);
+  const [examDetailLoading, setExamDetailLoading] = useState(false);
+  const [examDetail, setExamDetail] = useState(null);
 
   // Fetch results when component mounts
   useEffect(() => {
@@ -605,6 +704,57 @@ function ResultsPage() {
     return <span style={{ color }}>{numScore.toFixed(1)}%</span>;
   };
 
+  // Function to handle viewing exam details
+  const handleViewExamDetails = async (classResult) => {
+    try {
+      setSelectedClassResult(classResult);
+      setExamDetailsLoading(true);
+      setShowExamDetailModal(true);
+      
+      // Fetch exams for this class
+      const response = await examService.getExamsByClass(classResult.classId);
+      if (response.data && response.data.content) {
+        setExamDetails(response.data.content);
+      } else {
+        setExamDetails([]);
+      }
+    } catch (error) {
+      console.error('Error fetching exam details:', error);
+      toast.error('Failed to load exam details');
+    } finally {
+      setExamDetailsLoading(false);
+    }
+  };
+
+  const handleSelectExam = async (exam) => {
+    try {
+      setSelectedExam(exam);
+      setExamDetailLoading(true);
+      setExamDetail(null);
+
+      // Get exam details with student answers using studentId and examId
+      const response = await studentExamService.getStudentExamDetailForStudent(user.id, exam.id);
+      console.log('Exam detail response:', response.data);
+
+      if (response.data) {
+        setExamDetail(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching exam details:', error);
+      toast.error('Failed to load exam details');
+      setSelectedExam(null);
+    } finally {
+      setExamDetailLoading(false);
+    }
+  };
+
+  const closeExamDetailModal = () => {
+    setShowExamDetailModal(false);
+    setSelectedClassResult(null);
+    setExamDetails(null);
+    setSelectedExam(null);
+  };
+
   return (
     <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
       <Sidebar theme={theme}>
@@ -683,7 +833,12 @@ function ResultsPage() {
             
             <ClassResultsContainer>
               {results.classResults.map((classResult, index) => (
-                <ClassResultCard key={index} theme={theme}>
+                <ClassResultCard 
+                  key={index} 
+                  theme={theme}
+                  onClick={() => handleViewExamDetails(classResult)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <ClassHeader>
                     {classNames[classResult.classId] ? (
                       <ClassName>{classNames[classResult.classId]}</ClassName>
@@ -754,6 +909,168 @@ function ResultsPage() {
         onConfirm={handleConfirmLogout}
         message="Are you sure you want to logout?"
       />
+
+      {/* Exam Detail Modal */}
+      {showExamDetailModal && (
+        <ModalOverlay>
+          <LargeModalContainer>
+            <ModalHeader>
+              <ModalTitle>
+                {selectedExam ? `Exam: ${selectedExam.title}` : 'Select Exam'}
+              </ModalTitle>
+              <CloseButton onClick={closeExamDetailModal}>&times;</CloseButton>
+            </ModalHeader>
+            <ModalContent>
+              {examDetailsLoading ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </Spinner>
+                </div>
+              ) : !selectedExam ? (
+                // Show list of exams
+                <div>
+                  {examDetails && examDetails.length > 0 ? (
+                    <div style={{ display: 'grid', gap: '18px' }}>
+                      {examDetails.map((exam) => (
+                        <ExamCard
+                          key={exam.id}
+                          onClick={() => handleSelectExam(exam)}
+                        >
+                          <h3 style={{ margin: '0 0 10px 0', fontWeight: 700 }}>{exam.title}</h3>
+                          <div style={{ display: 'flex', gap: '20px', color: '#666', fontSize: '1rem' }}>
+                            <span>Duration: {exam.duration} minutes</span>
+                            <span>Status: {exam.status}</span>
+                            <span>Review Mode: {exam.reviewMode}</span>
+                          </div>
+                        </ExamCard>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      No exams found for this class
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Show exam details based on review mode
+                <div>
+                  {examDetailLoading ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <Spinner animation="border" role="status">
+                        <span className="visually-hidden">Loading exam details...</span>
+                      </Spinner>
+                    </div>
+                  ) : examDetail ? (
+                    <div>
+                      {selectedExam.reviewMode === 'NONE' ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#dc3545' }}>
+                          <h4>Access Denied</h4>
+                          <p>You don't have permission to review this exam.</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <h2 style={{ marginBottom: '30px', fontWeight: 700 }}>{selectedExam.title}</h2>
+                          {examDetail.questions && examDetail.questions.map((question, index) => (
+                            <QuestionBlock key={question.questionId}>
+                              <div style={{ fontWeight: 600, marginBottom: '1rem', color: '#6a00ff', fontSize: '1.1rem' }}>
+                                <span style={{ background: '#ecebff', color: '#6a00ff', borderRadius: '50%', padding: '0.4rem 1rem', marginRight: '1rem', fontWeight: 700 }}>{index + 1}</span>
+                                {question.title}
+                                {/* <span style={{ marginLeft: 16, fontSize: '0.95rem', color: '#888', fontWeight: 400 }}>
+                                  [{question.type === 'SINGLE_CHOICE' ? 'Single Choice' : question.type === 'MULTIPLE_CHOICE' ? 'Multiple Choice' : 'Essay'}]
+                                </span> */}
+                              </div>
+                              <div style={{ marginLeft: '20px' }}>
+                                {question.type === 'SINGLE_CHOICE' && question.choices && question.choices.map((choice) => (
+                                  <div key={choice.optionKey} style={{ marginBottom: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                      <input
+                                        type="radio"
+                                        checked={question.studentAnswer === choice.optionValue}
+                                        readOnly
+                                      />
+                                      <span>{choice.optionKey}. {choice.optionValue}</span>
+                                      {/* {question.answer !== null && question.answer === choice.optionValue && (
+                                        <span style={{ color: '#28a745', marginLeft: '10px' }}>✓ Correct Answer</span>
+                                      )} */}
+                                    </div>
+                                  </div>
+                                ))}
+                                {question.type === 'MULTIPLE_CHOICE' && question.choices && question.choices.map((choice) => {
+                                  let studentAnswers = [];
+                                  if (Array.isArray(question.studentAnswer)) {
+                                    studentAnswers = question.studentAnswer;
+                                  } else if (typeof question.studentAnswer === 'string') {
+                                    studentAnswers = question.studentAnswer.split(',').map(s => s.trim());
+                                  }
+                                  const correctAnswers = Array.isArray(question.answer) ? question.answer : [];
+                                  return (
+                                    <div key={choice.optionKey} style={{ marginBottom: '10px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={studentAnswers.includes(choice.optionValue)}
+                                          readOnly
+                                        />
+                                        <span>{choice.optionKey}. {choice.optionValue}</span>
+                                        {question.answer !== null && correctAnswers.includes(choice.optionValue) && (
+                                          <span style={{ color: '#28a745', marginLeft: '10px' }}>✓ Correct Answer</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {question.type === 'ESSAY' && (
+                                  <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+                                    <div style={{ fontWeight: 500, color: '#1976d2' }}>Your answer:</div>
+                                    <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '1rem', marginTop: 4, minHeight: 60 }}>
+                                      {question.studentAnswer || <span style={{ color: '#aaa' }}>No answer</span>}
+                                    </div>
+                                    {/* {question.answer !== null && question.answer !== undefined && (
+                                      <div style={{ marginTop: '10px', color: '#1976d2', fontWeight: 500 }}>
+                                        <strong>Correct answer:</strong> {question.answer}
+                                      </div>
+                                    )} */}
+                                  </div>
+                                )}
+                                <div style={{ marginTop: '10px', color: question.isCorrect ? '#28a745' : '#dc3545', fontWeight: 600 }}>
+                                  {question.studentAnswer
+                                    ? question.isCorrect
+                                      ? '✓ Correct'
+                                      : '✗ Incorrect'
+                                    : 'No answer'}
+                                </div>
+                                {question.answer !== null && question.answer !== undefined && (
+                                  <div style={{ marginTop: '5px', color: '#1976d2', fontWeight: 500 }}>
+                                    <strong>Correct answer:</strong> {Array.isArray(question.answer) ? question.answer.join(', ') : question.answer}
+                                  </div>
+                                )}
+                              </div>
+                            </QuestionBlock>
+                          ))}
+                          <div style={{ marginTop: '20px', textAlign: 'right' }}>
+                            <Button variant="secondary" onClick={() => setSelectedExam(null)}>
+                              Back to Exam List
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#dc3545' }}>
+                      <h4>Error</h4>
+                      <p>Failed to load exam details. Please try again.</p>
+                      <Button variant="secondary" onClick={() => setSelectedExam(null)} style={{ marginTop: '10px' }}>
+                        Back to Exam List
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ModalContent>
+          </LargeModalContainer>
+        </ModalOverlay>
+      )}
     </PageContainer>
   );
 }

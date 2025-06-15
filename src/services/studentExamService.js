@@ -614,6 +614,38 @@ class StudentExamService {
       throw error;
     });
   }
+
+  // Get student exam details for student view
+  getStudentExamDetailForStudent(studentId, examId) {
+    if (!studentId || !examId) {
+      console.error('getStudentExamDetailForStudent: Missing studentId or examId');
+      return Promise.reject(new Error('Missing student ID or exam ID'));
+    }
+
+    const studentExamId = `${studentId}-${examId}`;
+    const headers = authHeader();
+    const url = `${API_URL}/student/detail/${studentExamId}`;
+    
+    console.log(`Fetching student exam details for studentExamId: ${studentExamId}`);
+    logApiCall('GET', url, headers);
+    
+    return axios.get(url, {
+      headers,
+      timeout: 10000
+    })
+    .then(response => {
+      console.log('Student exam details fetched:', response.status);
+      console.log('Student exam details data:', response.data);
+      return response;
+    })
+    .catch(error => {
+      console.error('Failed to fetch student exam details:', error.response?.status || error.message);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+      }
+      throw error;
+    });
+  }
 }
 
 export default new StudentExamService(); 

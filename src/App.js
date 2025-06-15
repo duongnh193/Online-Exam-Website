@@ -8,6 +8,7 @@ import './styles/scroll.css';
 import { AuthProvider } from './hooks/useAuth';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <AuthProvider>
           <ThemeProvider>
             <div className="App">
+              <Toaster position="top-right" />
               <AppRoutes />
             </div>
           </ThemeProvider>

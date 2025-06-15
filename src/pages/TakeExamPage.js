@@ -439,7 +439,7 @@ function TakeExamPage() {
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(0); // Track total questions
+  const [totalQuestions, setTotalQuestions] = useState(null);
   const [answers, setAnswers] = useState({});
   const [multipleChoiceAnswers, setMultipleChoiceAnswers] = useState({});
   const [essayAnswers, setEssayAnswers] = useState({});
@@ -447,17 +447,29 @@ function TakeExamPage() {
   const [studentExamId, setStudentExamId] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [examResult, setExamResult] = useState(null);
-  const [serverLastQuestionFlag, setServerLastQuestionFlag] = useState(false); // Add state for server's last question flag
+  const [serverLastQuestionFlag, setServerLastQuestionFlag] = useState(false);
   const [resumingExam, setResumingExam] = useState(false);
   const [timeExpirationChecked, setTimeExpirationChecked] = useState(false);
-  // Thêm state cho modal xác nhận nộp bài
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
-  // Thêm state để track khi exam đã completed
   const [examCompleted, setExamCompleted] = useState(false);
-  // State cho tab switch detection
   const [lastTabSwitchTime, setLastTabSwitchTime] = useState(null);
+
+  useEffect(() => {
+    if (!examId) return;
+    examService.getExamById(examId)
+      .then(res => {
+        if (res.data && typeof res.data.totalQuestions === 'number') {
+          setTotalQuestions(res.data.totalQuestions);
+        } else {
+          setTotalQuestions(null);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch exam for total questions:', err);
+        setTotalQuestions(null);
+      });
+  }, [examId]);
   
-  // Get the studentExamId and first question from localStorage on mount
   useEffect(() => {
     const storedStudentExamId = localStorage.getItem('currentStudentExamId');
     
@@ -465,81 +477,66 @@ function TakeExamPage() {
       console.log('Retrieved student exam ID from localStorage:', storedStudentExamId);
       setStudentExamId(storedStudentExamId);
       
-      // Initialize serverLastQuestionFlag as false for new sessions
       setServerLastQuestionFlag(false);
       
-      // Try to resume the exam directly without status checks
       const resumeExam = async () => {
         try {
           setResumingExam(true);
           setLoading(true);
           
-          // Extract examId from studentExamId to ensure we're using the correct format
           const actualExamId = examId || storedStudentExamId.split('-')[1];
           console.log('Actual exam ID for password retrieval:', actualExamId);
           
           try {
             console.log('Retrieving password from backend API...');
-            // Get password from backend
             const password = await examService.getExamPassword(actualExamId);
             console.log('Password retrieved successfully from backend');
             
             if (password) {
               try {
                 console.log(`Attempting to resume exam ${examId} with retrieved password`);
-                // Call the start API with the password from backend - backend handles all state checks
                 const startResponse = await studentExamService.startExam(examId, password);
                 
-                // Process the response data for resuming
                 if (startResponse && startResponse.data) {
                   const responseData = startResponse.data;
                   console.log('API response data:', responseData);
                   
-                  // Extract all needed data from the response
                   const isLastQuestion = responseData.lastQuestion === true;
                   setServerLastQuestionFlag(isLastQuestion);
                   
-                  // Set total questions count if available
                   if (responseData.studentExam?.exam?.questions?.length) {
                     const totalQuestionsCount = responseData.studentExam.exam.questions.length;
                     setTotalQuestions(totalQuestionsCount);
                     console.log(`Total questions count: ${totalQuestionsCount}`);
                   }
                   
-                  // Set current question index if available
                   if (responseData.studentExam?.currentQuestion !== undefined) {
                     const currentIndex = responseData.studentExam.currentQuestion;
                     setCurrentQuestionIndex(currentIndex);
                     console.log(`Current question index: ${currentIndex}`);
                     
-                    // Cập nhật localStorage với thông tin currentQuestion từ backend
                     if (storedStudentExamId) {
                       localStorage.setItem(`exam_current_question_${storedStudentExamId}`, currentIndex.toString());
                       console.log(`🔄 Resume: Updated localStorage currentQuestion from backend: ${currentIndex}`);
                     }
                   }
                   
-                  // Set time remaining if available
                   if (responseData.secondRemaining !== undefined && responseData.secondRemaining !== null) {
                     setTimeRemaining(responseData.secondRemaining);
                     setTimeExpirationChecked(true);
                     console.log(`Time remaining: ${responseData.secondRemaining} seconds`);
                   }
                   
-                  // Ensure we have all available questions 
                   const allQuestions = [];
                   
-                  // If the API response contains the exam's questions array, use it to initialize
                   if (responseData.studentExam?.exam?.questions && Array.isArray(responseData.studentExam.exam.questions)) {
                     console.log('All questions from API:', responseData.studentExam.exam.questions);
                     
-                    // Process and add all questions to our local state
                     responseData.studentExam.exam.questions.forEach((q, index) => {
                       const questionData = {
                         id: q.id,
                         text: q.title || q.text,
                         type: q.type,
-                        // Ưu tiên field image mới từ backend
                         imageUrl: q.image || q.imageUrl || q.img || q.imagePath || q.imageUri || null,
                         options: q.choices?.map(choice => {
                           if (typeof choice === 'string') {
@@ -559,7 +556,6 @@ function TakeExamPage() {
                     });
                   }
                   
-                  // Then ensure the nextQuestion from API is properly processed
                   if (responseData.nextQuestion) {
                     const questionData = responseData.nextQuestion;
                     console.log('Current question data from API:', questionData);
@@ -568,15 +564,12 @@ function TakeExamPage() {
                       
                     });
                     
-                    // Map the question data to our format
                     const mappedQuestion = {
                       id: questionData.id,
                       text: questionData.title,
                       type: questionData.type,
-                      // Kiểm tra field image mới từ backend response
                       imageUrl: questionData.image || questionData.imageUrl || questionData.img || questionData.imagePath || questionData.imageUri || null,
                       options: questionData.choices?.map(choice => {
-                        // Handle different possible choice formats
                         if (typeof choice === 'string') {
                           return { id: choice, text: choice };
                         } else if (typeof choice === 'object') {
@@ -593,25 +586,19 @@ function TakeExamPage() {
                     console.log('Processed question with image URL:', mappedQuestion.imageUrl);
                     console.log('Full processed question:', mappedQuestion);
                     
-                    // Kiểm tra xem nextQuestion đã có trong allQuestions chưa
-                    // Nếu chưa có, thêm vào allQuestions
                     const existingIndex = allQuestions.findIndex(q => q.id === mappedQuestion.id);
                     if (existingIndex === -1) {
                       allQuestions.push(mappedQuestion);
                       console.log(`Added nextQuestion with ID ${mappedQuestion.id} to questions array`);
                     } else {
-                      // Nếu đã có, cập nhật thông tin mới nhất từ API
                       allQuestions[existingIndex] = mappedQuestion;
                       console.log(`Updated existing question with ID ${mappedQuestion.id}`);
                     }
                     
-                    // Sử dụng tất cả các câu hỏi đã thu thập
                     setQuestions(allQuestions);
                     console.log('🔄 Resume: Set questions array with length:', allQuestions.length);
                     console.log('🔄 Resume: Questions IDs:', allQuestions.map(q => q.id));
                     
-                    // IMPORTANT: Set currentQuestionIndex based on actual position in our questions array
-                    // Not from backend's currentQuestion field, as it may not match our array structure
                     if (responseData.nextQuestion && allQuestions.length > 0) {
                       const actualCurrentQID = responseData.nextQuestion.id;
                       const actualIndex = allQuestions.findIndex(q => q.id === actualCurrentQID);
@@ -635,8 +622,6 @@ function TakeExamPage() {
                     
                     setLoading(false);
                   } else if (isLastQuestion) {
-                    // If there's no next question and it's the last question,
-                    // show a message to submit the exam
                     setError('You have reached the last question. Please submit your exam.');
                     setLoading(false);
                   } else {
@@ -670,11 +655,9 @@ function TakeExamPage() {
         }
       };
       
-      // Helper function to handle any errors in the resume process
       const handleResumeError = (err) => {
         console.error('Resume error details:', err.response?.data || err.message);
         
-        // Handle specific error types
         if (err.completed) {
           setError('This exam has already been completed or the time has expired.');
         } else if (err.response?.data?.message) {
@@ -686,7 +669,6 @@ function TakeExamPage() {
         setLoading(false);
       };
       
-      // Start the resume process
       resumeExam();
     } else {
       setError('No active exam session found. Please start the exam again.');
@@ -694,7 +676,6 @@ function TakeExamPage() {
     }
   }, [examId]);
   
-  // Timer effect for countdown and auto-submit
   useEffect(() => {
     if (timeRemaining === null || loading || timeRemaining <= 0) return;
     
@@ -702,12 +683,10 @@ function TakeExamPage() {
       setTimeRemaining(prevTime => {
         if (prevTime <= 1) {
           clearInterval(timer);
-          // Auto-submit when time runs out
           handleSubmitExam();
           return 0;
         }
         
-        // Save current time remaining every 30 seconds
         if (prevTime % 30 === 0 && studentExamId) {
           localStorage.setItem(`exam_time_remaining_${studentExamId}`, prevTime.toString());
           localStorage.setItem(`exam_time_last_updated_${studentExamId}`, Date.now().toString());
@@ -720,17 +699,14 @@ function TakeExamPage() {
     return () => clearInterval(timer);
   }, [timeRemaining, loading, studentExamId]);
 
-  // Tab switch detection effect
   useEffect(() => {
     if (!studentExamId || showResults || examCompleted || loading) return;
 
     let isTabActive = true;
 
-    // Hàm xử lý khi phát hiện chuyển tab
     const handleTabSwitch = async () => {
       console.log('🚨 Tab switch detected - calling checkTab API immediately');
 
-      // Gọi API ngay lập tức
       try {
         await studentExamService.checkTab(studentExamId);
         console.log('✅ Tab switch recorded successfully');
@@ -739,7 +715,6 @@ function TakeExamPage() {
       }
     };
 
-    // Page Visibility API - phương pháp chính để phát hiện chuyển tab
     const handleVisibilityChange = () => {
       const isHidden = document.hidden || document.visibilityState === 'hidden';
       
@@ -747,7 +722,6 @@ function TakeExamPage() {
         console.log('👁️ Page became hidden - tab switch detected');
         isTabActive = false;
         
-        // Gọi API ngay lập tức
         handleTabSwitch();
       } else if (!isHidden && !isTabActive) {
         console.log('👁️ Page became visible again');
@@ -755,13 +729,11 @@ function TakeExamPage() {
       }
     };
 
-    // Window focus/blur events - phương pháp hỗ trợ
     const handleWindowBlur = () => {
       if (isTabActive) {
         console.log('🔄 Window lost focus - tab switch detected');
         isTabActive = false;
         
-        // Gọi API ngay lập tức
         handleTabSwitch();
       }
     };
@@ -771,12 +743,10 @@ function TakeExamPage() {
       isTabActive = true;
     };
 
-    // Thêm event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
 
-    // Cleanup function
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
@@ -798,20 +768,15 @@ function TakeExamPage() {
     }
   };
 
-  // Handle single choice selection
   const handleSingleChoiceSelect = (questionId, optionId) => {
-    // Kiểm tra questionId và optionId tồn tại
     if (!questionId || !optionId) return;
     
-    // Tìm câu hỏi hiện tại
     const currentQuestion = questions.find(q => q.id === questionId);
     if (!currentQuestion) return;
     
-    // Tìm lựa chọn được chọn để lấy nội dung thực tế
     const selectedOption = currentQuestion.options?.find(opt => opt.id === optionId);
     if (!selectedOption) return;
     
-    // Lưu cả ID và text của lựa chọn
     setAnswers({
       ...answers,
       [questionId]: {
@@ -821,29 +786,21 @@ function TakeExamPage() {
     });
   };
   
-  // Handle multiple choice selection
   const handleMultipleChoiceSelect = (questionId, optionId) => {
-    // Kiểm tra questionId và optionId tồn tại
     if (!questionId || !optionId) return;
     
-    // Tìm câu hỏi hiện tại
     const currentQuestion = questions.find(q => q.id === questionId);
     if (!currentQuestion) return;
     
     const currentSelections = multipleChoiceAnswers[questionId] || [];
     let updatedSelections;
     
-    // Kiểm tra xem optionId đã được chọn chưa
     if (currentSelections.some(item => item.id === optionId)) {
-      // Xóa lựa chọn nếu đã được chọn
       updatedSelections = currentSelections.filter(item => item.id !== optionId);
     } else {
-      // Thêm lựa chọn nếu chưa được chọn
-      // Tìm lựa chọn để lấy nội dung text
       const selectedOption = currentQuestion.options?.find(opt => opt.id === optionId);
       if (!selectedOption) return;
       
-      // Thêm cả ID và text
       updatedSelections = [
         ...currentSelections,
         {
@@ -859,7 +816,6 @@ function TakeExamPage() {
     });
   };
   
-  // Handle essay input
   const handleEssayChange = (questionId, text) => {
     setEssayAnswers({
       ...essayAnswers,
@@ -867,7 +823,6 @@ function TakeExamPage() {
     });
   };
   
-  // Submit single choice answers
   const submitSingleChoiceAnswer = (questionId) => {
     const selectedOption = answers[questionId];
     if (!selectedOption) {
@@ -877,20 +832,15 @@ function TakeExamPage() {
     
     console.log(`Submitting single choice answer - Question ${questionId}, Selected option:`, selectedOption);
     
-    // Gửi nội dung câu trả lời thực tế thay vì chỉ ID
     const answerContent = selectedOption.text;
     
-    // For the last question, we need to save the answer first, then submit the exam
     if (serverLastQuestionFlag) {
-      // First save the answer to the server
       submitAnswer(questionId, answerContent, true);
     } else {
-      // Not the last question - submit the answer and proceed to next
       submitAnswer(questionId, answerContent);
     }
   };
   
-  // Submit multiple choice answers
   const submitMultipleChoiceAnswer = (questionId) => {
     const selections = multipleChoiceAnswers[questionId] || [];
     if (selections.length === 0) {
@@ -898,24 +848,18 @@ function TakeExamPage() {
       return;
     }
     
-    // Lấy danh sách nội dung câu trả lời
     const answerContents = selections.map(option => option.text);
     
-    // Join các nội dung câu trả lời bằng dấu phẩy
     const answer = answerContents.join(', ');
     console.log(`Submitting multiple choice answer - Question ${questionId}, Selected options:`, answer);
     
-    // For the last question, we need to save the answer first, then submit the exam
     if (serverLastQuestionFlag) {
-      // First save the answer to the server
       submitAnswer(questionId, answer, true);
     } else {
-      // Not the last question - submit the answer and proceed to next
       submitAnswer(questionId, answer);
     }
   };
   
-  // Submit essay answer
   const submitEssayAnswer = (questionId) => {
     const text = essayAnswers[questionId] || '';
     if (!text.trim()) {
@@ -925,22 +869,16 @@ function TakeExamPage() {
     
     console.log(`Submitting essay answer - Question ${questionId}, Text length: ${text.length} chars`);
     
-    // For the last question, we need to save the answer first, then submit the exam
     if (serverLastQuestionFlag) {
-      // First save the answer to the server
       submitAnswer(questionId, text, true);
     } else {
-      // Not the last question - submit the answer and proceed to next
       submitAnswer(questionId, text);
     }
   };
   
-  // Submit answer to the API and move to next question if available
   const submitAnswer = async (questionId, answer, isLastQuestion = false) => {
-    if (loading) return; // Prevent multiple submissions
+    if (loading) return;
     
-    // Check if we're in the process of submitting the entire exam
-    // If yes, don't submit this individual answer to prevent duplication
     if (localStorage.getItem(`exam_submitting_${studentExamId}`) === 'true') {
       console.log('Exam is being submitted, skipping individual answer submission');
       return;
@@ -949,7 +887,6 @@ function TakeExamPage() {
     setLoading(true);
     
     try {
-      // Log rõ ràng các thông tin
       console.log(`--- SUBMITTING ANSWER DETAILS ---`);
       console.log(`Question ID: ${questionId}`);
       console.log(`Answer value: ${answer}`);
@@ -959,57 +896,47 @@ function TakeExamPage() {
       const response = await studentExamService.submitAnswer(studentExamId, questionId, answer);
       console.log('Answer submitted successfully', response.data);
       
-      // The response contains the next question or indicates it's the last one
       if (response && response.data) {
         const responseData = response.data;
         
-        // Get lastQuestion flag directly from API response - this is the ONLY source of truth
         const isLastQuestion = responseData.lastQuestion === true;
         console.log('Server response lastQuestion flag:', isLastQuestion);
         
-        // Update our flag based ONLY on server response
         setServerLastQuestionFlag(isLastQuestion);
         
-        // Set examCompleted state when it's the last question and we've just answered it
         if (isLastQuestion) {
           console.log('🎉 Exam completed! Setting examCompleted to true');
           setExamCompleted(true);
           setLoading(false);
-          return; // Stop processing further
+          return;
         }
         
-        // Set total questions if available from server response
         if (responseData.studentExam?.exam?.questions?.length) {
           const count = responseData.studentExam.exam.questions.length;
           console.log(`Setting total questions count: ${count}`);
           setTotalQuestions(count);
         }
         
-        // Update currentQuestion in localStorage from backend response
         if (responseData.studentExam?.currentQuestion !== undefined && studentExamId) {
           const backendCurrentQuestion = responseData.studentExam.currentQuestion;
           localStorage.setItem(`exam_current_question_${studentExamId}`, backendCurrentQuestion.toString());
           console.log(`🔄 Updated localStorage currentQuestion from backend: ${backendCurrentQuestion}`);
         }
         
-        // Handle no next question case first
         if (!responseData.nextQuestion || !responseData.nextQuestion.id) {
           if (isLastQuestion) {
             console.log('No next question, and server confirms this is the last question');
           } else {
             console.warn('No next question but lastQuestion is false - unexpected state');
           }
-          // We need to stop processing here since there's no next question to load
           setLoading(false);
           return;
         }
         
-        // Process next question
         const nextQuestion = {
           id: responseData.nextQuestion.id,
           text: responseData.nextQuestion.title,
           type: responseData.nextQuestion.type,
-          // Ưu tiên field image mới từ backend
           imageUrl: responseData.nextQuestion.image || responseData.nextQuestion.imageUrl || responseData.nextQuestion.img || responseData.nextQuestion.imagePath || responseData.nextQuestion.imageUri || null,
           options: responseData.nextQuestion.choices?.map(choice => {
             if (typeof choice === 'string') {
@@ -1031,14 +958,11 @@ function TakeExamPage() {
           questionId: nextQuestion.id
         });
         
-        // Add the next question to our list and update index
         setQuestions(prev => {
-          // Check if question already exists
           const existingIndex = prev.findIndex(q => q.id === nextQuestion.id);
           
           let updatedQuestions;
           if (existingIndex !== -1) {
-            // Update existing question
             updatedQuestions = [...prev];
             updatedQuestions[existingIndex] = nextQuestion;
             console.log('🔄 Questions Updated (replaced):', {
@@ -1047,7 +971,6 @@ function TakeExamPage() {
               totalLength: updatedQuestions.length
             });
           } else {
-            // Add new question
             updatedQuestions = [...prev, nextQuestion];
             console.log('🔄 Questions Updated (added):', {
               previousLength: prev.length,
@@ -1060,7 +983,6 @@ function TakeExamPage() {
           return updatedQuestions;
         });
         
-        // Use functional update to ensure we get the latest currentQuestionIndex
         setCurrentQuestionIndex(prevIndex => {
           const newIndex = prevIndex + 1;
           console.log('🔄 Index Update:', {
@@ -1081,27 +1003,22 @@ function TakeExamPage() {
     }
   };
   
-  // Add an event handler to save the exam if the user navigates away
   useEffect(() => {
     const handleBeforeUnload = (event) => {
       if (studentExamId && !showResults) {
-        // Submit the exam automatically
         try {
-          // Use synchronous method for beforeunload event
           const syncRequest = new XMLHttpRequest();
           const url = `http://localhost:8080/api/v1/student-exams/submit?studentExamId=${encodeURIComponent(studentExamId)}`;
           
-          // Get auth headers
           let authToken = localStorage.getItem('token');
           
-          syncRequest.open('POST', url, false); // false makes it synchronous
+          syncRequest.open('POST', url, false);
           if (authToken) {
             syncRequest.setRequestHeader('Authorization', `Bearer ${authToken}`);
           }
           syncRequest.setRequestHeader('Content-Type', 'application/json');
           syncRequest.send();
           
-          // Also update local storage to mark this exam as completed
           const examIdParts = studentExamId.split('-');
           if (examIdParts.length > 1) {
             const examId = examIdParts[1];
@@ -1114,7 +1031,6 @@ function TakeExamPage() {
         }
       }
       
-      // Modern browsers require setting a return value to show confirmation dialog
       event.preventDefault();
       event.returnValue = 'You have unsaved exam progress. Are you sure you want to leave?';
     };
@@ -1128,7 +1044,6 @@ function TakeExamPage() {
     };
   }, [studentExamId, showResults]);
 
-  // Get user's initial for avatar
   const getUserInitial = () => {
     if (user && user.username) {
       return user.username.charAt(0).toUpperCase();
@@ -1136,7 +1051,6 @@ function TakeExamPage() {
     return 'S';
   };
   
-  // Get user's full name or username
   const getUserName = () => {
     if (user) {
       const firstName = user.firstName || '';
@@ -1149,35 +1063,27 @@ function TakeExamPage() {
     return 'Student';
   };
 
-  // Handle exam submission
   const handleSubmitExam = () => {
     if (!studentExamId) {
       setError('No active exam session found');
       return;
     }
     
-    // Hiển thị modal xác nhận thay vì dùng window.confirm
     setShowSubmitConfirmation(true);
   };
   
-  // Handle confirmed submission
   const handleConfirmSubmit = async () => {
     try {
       setLoading(true);
       
-      // Add a flag to track if we're about to submit the exam
-      // This will be used to prevent duplicate saving of the last answer
       localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
       
       console.log('Submitting entire exam to server...', 'Current student exam ID:', studentExamId);
-      // Submit the exam and get the result
       const response = await studentExamService.submitExam(studentExamId);
       console.log('Exam submitted successfully:', response.data);
       
-      // Debug log - Chi tiết về data trả về
       console.log('Raw response data:', JSON.stringify(response.data, null, 2));
       
-      // Kiểm tra cấu trúc response
       if (response.data.answers) {
         console.log('Answer details:', response.data.answers);
       }
@@ -1193,7 +1099,6 @@ function TakeExamPage() {
       }
       
       if (response.data) {
-        // Store the exam result
         const result = {
           correctAnswers: response.data.correctAnswers || 0,
           wrongAnswers: response.data.wrongAnswers || 0,
@@ -1214,7 +1119,6 @@ function TakeExamPage() {
         setExamResult(result);
         setShowResults(true);
         
-        // Clear the current exam session from localStorage
         localStorage.removeItem('currentStudentExamId');
         localStorage.removeItem('examSession');
         localStorage.removeItem(`exam_submitting_${studentExamId}`);
@@ -1224,10 +1128,8 @@ function TakeExamPage() {
     } catch (err) {
       console.error('Error submitting exam:', err);
       
-      // Remove the submitting flag when there's an error
       localStorage.removeItem(`exam_submitting_${studentExamId}`);
       
-      // Chi tiết lỗi
       if (err.response) {
         console.error('Error response:', err.response.data);
         console.error('Error status:', err.response.status);
@@ -1247,27 +1149,17 @@ function TakeExamPage() {
     }
   };
 
-  // Results screen component
   const ExamResultsScreen = () => {
     if (!examResult) return null;
     
-      return (
-    <ResultContainer theme={theme}>
-      <h2>Quiz Completed</h2>
-      
-      <ScoreDisplay theme={theme}>
-        {examResult.score.toFixed(1)} 
-      </ScoreDisplay>
-      
-      {/* <div style={{ 
-        textAlign: 'center', 
-        fontSize: '0.9rem', 
-        color: 'var(--text-secondary)',
-        marginBottom: '1rem'
-      }}>
-        Tính điểm: ({examResult.correctAnswers} câu đúng × 10) ÷ {examResult.totalQuestions} câu = {examResult.score.toFixed(1)} điểm
-      </div> */}
-              
+    return (
+      <ResultContainer theme={theme}>
+        <h2>Quiz Completed</h2>
+        
+        <ScoreDisplay theme={theme}>
+          {examResult.score.toFixed(1)} 
+        </ScoreDisplay>
+        
         <ResultDetails>
           <div>
             <span>{examResult.correctAnswers}</span>
@@ -1322,7 +1214,6 @@ function TakeExamPage() {
     );
   };
   
-  // Completion screen component
   const ExamCompletionScreen = () => {
     return (
       <CompletionContainer theme={theme}>
@@ -1339,7 +1230,6 @@ function TakeExamPage() {
     );
   };
   
-  // Show loading screen
   if (loading) {
     return (
       <LoadingContainer>
@@ -1348,7 +1238,6 @@ function TakeExamPage() {
     );
   }
   
-  // Show error screen
   if (error) {
     return (
       <ErrorContainer theme={theme}>
@@ -1361,15 +1250,12 @@ function TakeExamPage() {
     );
   }
   
-  // Show results screen
   if (showResults) {
     return <ExamResultsScreen />;
   }
 
-  // Calculate timeRunningOut before using it
-  const timeRunningOut = timeRemaining !== null && timeRemaining < 300; // Less than 5 minutes
+  const timeRunningOut = timeRemaining !== null && timeRemaining < 300;
 
-  // Show completion screen when exam is completed but not yet submitted
   if (examCompleted) {
     return (
       <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
@@ -1410,7 +1296,6 @@ function TakeExamPage() {
     );
   }
   
-  // No questions loaded
   if (questions.length === 0) {
     return (
       <ErrorContainer theme={theme}>
@@ -1427,7 +1312,6 @@ function TakeExamPage() {
     ? (questions[currentQuestionIndex] || questions[0]) 
     : null;
   
-  // DEBUG: Log current state for troubleshooting
   console.log('🐛 RENDER STATE DEBUG:', {
     currentQuestionIndex,
     questionsLength: questions.length,
@@ -1439,13 +1323,8 @@ function TakeExamPage() {
     questionsIds: questions.map(q => q.id)
   });
   
-  // SIMPLIFIED: Just use the server flag for last question detection
-  // Based on backend logic, the server will set lastQuestion=true when reaching the last question
   const isLastQuestion = serverLastQuestionFlag;
   
-  // console.log('Current question index:', currentQuestionIndex, 'Total questions:', totalQuestions, 'Is last question (from server):', isLastQuestion);
-  
-  // Render different question types
   const renderQuestionInput = () => {
     if (!currentQuestion) return null;
     
@@ -1616,42 +1495,24 @@ function TakeExamPage() {
             </TimerDisplay>
           </QuizHeader>
           
-          {/* Kiểm tra currentQuestion tồn tại trước khi cố render nội dung */}
           {currentQuestion ? (
             <QuizContent>
               <QuestionInfo>
                 {(() => {
-                  // Lấy thông tin currentQuestion từ backend (đã lưu trong localStorage)
                   const examSessionId = studentExamId || localStorage.getItem('currentStudentExamId');
                   const backendQuestionIndex = localStorage.getItem(`exam_current_question_${examSessionId}`);
-                  
-                  let questionNumber = currentQuestionIndex + 1; // fallback mặc định
-                  
+                  let questionNumber = currentQuestionIndex + 1;
                   if (backendQuestionIndex !== null && !isNaN(parseInt(backendQuestionIndex))) {
-                    // Sử dụng thông tin từ backend làm nguồn tin chính xác nhất
                     questionNumber = parseInt(backendQuestionIndex) + 1;
                   } else if (questions.length > 0 && currentQuestion) {
-                    // Fallback: tính từ position trong mảng questions
                     const actualPosition = questions.findIndex(q => q.id === currentQuestion.id);
                     if (actualPosition !== -1) {
                       questionNumber = actualPosition + 1;
                     }
                   }
-                  
-                  // Debug log để kiểm tra tính toán
-                  console.log('🔢 Question Number Calculation:', {
-                    currentQuestionIndex,
-                    backendQuestionIndex,
-                    currentQuestionId: currentQuestion?.id,
-                    questionsLength: questions.length,
-                    calculatedNumber: questionNumber,
-                    source: backendQuestionIndex !== null ? 'backend' : 'frontend',
-                    questionsIds: questions.map(q => q.id)
-                  });
-                  
-                  return serverLastQuestionFlag 
-                    ? `Question ${questionNumber} (Last question)` 
-                    : `Question ${questionNumber}`;
+                  return serverLastQuestionFlag
+                    ? `Question ${questionNumber}${typeof totalQuestions === 'number' && totalQuestions > 0 ? '/' + totalQuestions : ''} (Last question)`
+                    : `Question ${questionNumber}${typeof totalQuestions === 'number' && totalQuestions > 0 ? '/' + totalQuestions : ''}`;
                 })()}
               </QuestionInfo>
               
