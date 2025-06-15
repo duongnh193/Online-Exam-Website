@@ -30,6 +30,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -190,15 +191,16 @@ public class QuestionService {
                     .collect(Collectors.toMap(ChoiceDto::getOptionValue, ChoiceDto::getOptionKey));
 
             stats = submissions.stream()
-                    .filter(sub -> sub.getAnswer() != null)
-                    .map(sub -> valueToKey.getOrDefault(sub.getAnswer(), "UNKNOWN"))
+                    .filter(sub -> sub.getAnswer() != null && !sub.getAnswer().isBlank())
+                    .flatMap(sub -> Arrays.stream(sub.getAnswer().split(",")))
+                    .map(String::trim)
+                    .map(value -> valueToKey.getOrDefault(value, "UNKNOWN"))
                     .collect(Collectors.groupingBy(
                             Function.identity(),
                             Collectors.counting()
                     ));
 
             question.getChoices().forEach(choice -> stats.putIfAbsent(choice.getOptionKey(), 0L));
-
         } else {
             stats = submissions.stream()
                     .filter(sub -> sub.getAnswer() != null && !sub.getAnswer().isBlank())
@@ -218,5 +220,4 @@ public class QuestionService {
                 total
         );
     }
-
 }
