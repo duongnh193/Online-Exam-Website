@@ -75,7 +75,7 @@ public class ExamController {
             responseCode = "200",
             description = "HTTP Status 200 OK")
     @GetMapping("/{examId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
+    // @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
     public ResponseEntity<ExamResponse> getExamById(@PathVariable Long examId) {
         return ResponseEntity.ok(examService.getExamById(examId));
     }
