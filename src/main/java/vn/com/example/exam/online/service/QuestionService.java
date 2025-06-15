@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -182,14 +183,32 @@ public class QuestionService {
 
         List<ExamSubmission> submissions = examSubmissionRepository.findByQuestionId(questionId);
 
-        Map<String, Long> stats = submissions.stream()
-                .filter(sub -> sub.getAnswer() != null)
-                .collect(Collectors.groupingBy(
-                        ExamSubmission::getAnswer,
-                        Collectors.counting()
-                ));
+        Map<String, Long> stats;
 
-        long total = stats.values().stream().mapToLong(Long::longValue).sum();
+        if (question.getType() == QuestionType.SINGLE_CHOICE || question.getType() == QuestionType.MULTIPLE_CHOICE) {
+            Map<String, String> valueToKey = question.getChoices().stream()
+                    .collect(Collectors.toMap(ChoiceDto::getOptionValue, ChoiceDto::getOptionKey));
+
+            stats = submissions.stream()
+                    .filter(sub -> sub.getAnswer() != null)
+                    .map(sub -> valueToKey.getOrDefault(sub.getAnswer(), "UNKNOWN"))
+                    .collect(Collectors.groupingBy(
+                            Function.identity(),
+                            Collectors.counting()
+                    ));
+
+            question.getChoices().forEach(choice -> stats.putIfAbsent(choice.getOptionKey(), 0L));
+
+        } else {
+            stats = submissions.stream()
+                    .filter(sub -> sub.getAnswer() != null && !sub.getAnswer().isBlank())
+                    .collect(Collectors.groupingBy(
+                            ExamSubmission::getAnswer,
+                            Collectors.counting()
+                    ));
+        }
+
+        long total = submissions.stream().filter(sub -> sub.getAnswer() != null).count();
 
         return new AnswerStatResponse(
                 question.getId(),
