@@ -42,7 +42,7 @@ public class StatisticsService {
     }
 
     public Long countExamByTeacherId(Long teacherId) {
-        return examRepository.countByCreatorId(teacherId);
+        return examRepository.countByTeacherId(teacherId);
     }
 
 
