@@ -7,6 +7,7 @@ import vn.com.example.exam.online.mapper.StudentExam2StudentExamResultResponseMa
 import vn.com.example.exam.online.model.ExamResult;
 import vn.com.example.exam.online.model.ExamReviewMode;
 import vn.com.example.exam.online.model.QuestionDetail;
+import vn.com.example.exam.online.model.QuestionType;
 import vn.com.example.exam.online.model.StudentExamStatus;
 import vn.com.example.exam.online.model.entity.Exam;
 import vn.com.example.exam.online.model.entity.ExamSubmission;
@@ -28,6 +29,7 @@ import vn.com.example.exam.online.repository.UserRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -186,6 +188,22 @@ public class StudentExamService {
 
         String correctAnswer = question.getAnswer().trim();
         String userAnswer = answer.trim();
+
+        if (question.getType() == QuestionType.MULTIPLE_CHOICE) {
+            List<String> correctList = Arrays.stream(correctAnswer.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .sorted()
+                    .toList();
+
+            List<String> userList = Arrays.stream(userAnswer.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .sorted()
+                    .toList();
+
+            return correctList.equals(userList);
+        }
 
         return correctAnswer.equalsIgnoreCase(userAnswer);
     }
