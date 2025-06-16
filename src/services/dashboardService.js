@@ -123,6 +123,32 @@ const dashboardService = {
       return Promise.resolve(mockLecturerCount);
     }
   },
+
+  // Get all classes
+  getTotalClasses: async (teacherId) => {
+    try {
+      // Sử dụng API thống kê
+      const response = await axios.get(`${STATS_API_URL}/total-classes`, { headers: authHeader() });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching total classes:', error);
+      // Fallback to mock data if API fails
+      return Promise.resolve(mockClassCount);
+    }
+  },
+
+  // Get all exams
+  getTotalExams: async (teacherId) => {
+    try {
+      // Sử dụng API thống kê
+      const response = await axios.get(`${STATS_API_URL}/total-exam`, { headers: authHeader() });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching total exams:', error);
+      // Fallback to mock data if API fails
+      return Promise.resolve(mockExamCount);
+    }
+  },
   
   // Lấy tổng số bài thi trong một lớp từ API thống kê
   getExamsInClass: async (classId) => {

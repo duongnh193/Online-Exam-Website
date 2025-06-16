@@ -730,9 +730,9 @@ function AdminDashboardPage() {
     const loadDashboardData = async () => {
       try {
         const studentCountData = await dashboardService.getStudentCount();
-        const classCountData = await dashboardService.getClassCount();
+        const classCountData = await dashboardService.getTotalClasses();
         const lecturerCountData = await dashboardService.getLecturerCount();
-        const examCountData = await dashboardService.getExamCount();
+        const examCountData = await dashboardService.getTotalExams();
         
         setStudentCount(studentCountData);
         setClassCount(classCountData);
