@@ -62,7 +62,7 @@ public class ExamController {
             responseCode = "200",
             description = "HTTP Status 200 OK")
     @DeleteMapping("/{examId}")
-    @PreAuthorize("hasRole('ADMIN') or @classService.isCurrentUserTeacherOfClass(#createExamRequest.getClassId())")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
     public ResponseEntity<Void> delete(@PathVariable Long examId) {
         examService.delete(examId);
         return ResponseEntity.ok().build();
