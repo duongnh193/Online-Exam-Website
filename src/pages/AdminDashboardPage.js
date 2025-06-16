@@ -729,18 +729,14 @@ function AdminDashboardPage() {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        // Lấy dữ liệu thống kê từ các API
         const studentCountData = await dashboardService.getStudentCount();
         const classCountData = await dashboardService.getClassCount();
         const lecturerCountData = await dashboardService.getLecturerCount();
+        const examCountData = await dashboardService.getExamCount();
         
-        // Cập nhật state với dữ liệu từ API
         setStudentCount(studentCountData);
         setClassCount(classCountData);
         setLecturerCount(lecturerCountData);
-        
-        // Vẫn giữ examCount như cũ vì không có API riêng
-        const examCountData = await dashboardService.getExamCount();
         setExamCount(examCountData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);

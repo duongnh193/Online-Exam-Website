@@ -672,8 +672,10 @@ function LecturerDashboardPage() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const [sortOption, setSortOption] = useState('recent');
-  const [examCount, setExamCount] = useState(0);
-  const [classCount, setClassCount] = useState(0);
+  const [examCount, setExamCount] = useState(null);
+  const [classCount, setClassCount] = useState(null);
+  const [examChartData, setExamChartData] = useState([]);
+  const [classChartData, setClassChartData] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [updating2FA, setUpdating2FA] = useState(false);
@@ -694,17 +696,41 @@ function LecturerDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const pageSize = 10;
+
   
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
         // Load exam count
-        const examCountData = await dashboardService.getExamCount();
+        const examCountData = await dashboardService.getExamCount(user.id);
         setExamCount(examCountData);
+        // console.log('Exam count data:', examCountData);
         
-        // Lấy tổng số lớp học từ API
-        const classCountData = await dashboardService.getClassCount();
+        const classCountData = await dashboardService.getClassCount(user.id);
         setClassCount(classCountData);
+        // console.log('Class count data:', classCountData);
+
+        // Load exam chart data
+        const examChartResponse = await dashboardService.getExamChartData(user.id);
+        if (examChartResponse && examChartResponse.data) {
+          const examData = examChartResponse.data.map(item => ({
+            name: item.month,
+            count: item.count
+          }));
+          setExamChartData(examData);
+          // console.log('Exam chart data:', examData);
+        }
+
+        // Load class chart data
+        const classChartResponse = await dashboardService.getClassChartData(user.id);
+        if (classChartResponse && classChartResponse.data) {
+          const classData = classChartResponse.data.map(item => ({
+            name: item.month,
+            count: item.count
+          }));
+          setClassChartData(classData);
+          // console.log('Class chart data:', classData);
+        }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       }
@@ -1363,7 +1389,7 @@ function LecturerDashboardPage() {
           <CardsContainer>
             <Card>
               <CardHeader>My Exams</CardHeader>
-              <CardValue>{examCount || 4}</CardValue>
+              <CardValue>{loading ? 'Loading...' : examCount ?? 0}</CardValue>
               <StatButton onClick={() => handleOpenModal('exams')} />
               <ChartContainer>
                 <ResponsiveContainer width="100%" height="100%">
@@ -1385,7 +1411,7 @@ function LecturerDashboardPage() {
             
             <Card>
               <CardHeader>My Classes</CardHeader>
-              <CardValue>{classCount || 5}</CardValue>
+              <CardValue>{loading ? 'Loading...' : classCount ?? 0}</CardValue>
               <StatButton onClick={() => handleOpenModal('classes')} />
               <ChartContainer>
                 <ResponsiveContainer width="100%" height="100%">

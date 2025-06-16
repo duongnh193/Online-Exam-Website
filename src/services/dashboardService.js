@@ -73,10 +73,10 @@ const mockNotifications = [
 // Service methods
 const dashboardService = {
   // Lấy tổng số bài thi
-  getExamCount: async () => {
+  getExamCount: async (teacherId) => {
     try {
       // Sử dụng API thống kê mới
-      const response = await axios.get(`${STATS_API_URL}/total-exam`, { headers: authHeader() });
+      const response = await axios.get(`${STATS_API_URL}/count/exam/${teacherId}`, { headers: authHeader() });
       return response.data;
     } catch (error) {
       console.error('Error fetching exam count:', error);
@@ -99,10 +99,10 @@ const dashboardService = {
   },
   
   // Lấy tổng số lớp học từ API thống kê
-  getClassCount: async () => {
+  getClassCount: async (teacherId) => {
     try {
       // Sử dụng API thống kê
-      const response = await axios.get(`${STATS_API_URL}/total-classes`, { headers: authHeader() });
+      const response = await axios.get(`${STATS_API_URL}/count/class/${teacherId}`, { headers: authHeader() });
       return response.data;
     } catch (error) {
       console.error('Error fetching class count:', error);
