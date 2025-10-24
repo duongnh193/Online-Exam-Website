@@ -1,8 +1,9 @@
 import axios from 'axios';
 import authHeader from './authHeader';
+import { buildApiUrl } from './apiConfig';
 
 // API URL for student exam operations
-const API_URL = 'http://localhost:8080/api/v1/student-exams';
+const API_URL = buildApiUrl('/v1/student-exams');
 
 // Helper for logging API calls
 const logApiCall = (method, url, headers, body = null) => {

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { authHeader, logApiCall, logAuthState } from '../utils/authUtils';
+import { buildApiUrl } from './apiConfig';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1/statistics';
+const API_URL = buildApiUrl('/v1/statistics');
 
 class StatisticsService {
   // Lấy tổng số lớp

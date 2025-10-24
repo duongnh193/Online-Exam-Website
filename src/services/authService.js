@@ -1,8 +1,9 @@
 import axios from 'axios';
 import mockUserService from './mockUserService';
+import { buildApiUrl } from './apiConfig';
 
-// Use consistent API URL format with leading slash for proxy
-const API_URL = 'http://localhost:8080/api/v1/auth';
+const AUTH_URL = buildApiUrl('/v1/auth');
+const USERS_URL = buildApiUrl('/v1/users');
 
 // Helper to get dashboard route based on user role
 const getDashboardByRole = (role) => {
@@ -111,10 +112,10 @@ const authService = {
   // Register a new user
   register: async (userData) => {
     console.log('Registering user:', userData);
-    logRequest('POST', `${API_URL}/signup`, userData);
+    logRequest('POST', `${AUTH_URL}/signup`, userData);
     
     try {
-      const response = await axios.post(`${API_URL}/signup`, {
+      const response = await axios.post(`${AUTH_URL}/signup`, {
         username: userData.username,
         password: userData.password,
         email: userData.email,
@@ -138,7 +139,7 @@ const authService = {
     try {
       // Try to login with the API first
       try {
-        const response = await axios.post(`${API_URL}/login`, {
+        const response = await axios.post(`${AUTH_URL}/login`, {
           usernameOrEmail: credentials.username,
           password: credentials.password
         });
@@ -182,7 +183,7 @@ const authService = {
         try {
           // Fetch complete user data to ensure we have twoFactor status
           console.log('Fetching complete user data...');
-          const userResponse = await axios.get(`http://localhost:8080/api/v1/users/${user.id}`, {
+          const userResponse = await axios.get(`${USERS_URL}/${user.id}`, {
             headers: {
               'Authorization': `${response.data.tokenType || 'Bearer'} ${token}`
             },
@@ -315,7 +316,7 @@ const authService = {
       throw new Error('OTP code is required');
     }
     
-    logRequest('POST', `${API_URL}/verify-otp`, { usernameOrEmail, otp: verifyData.otp });
+    logRequest('POST', `${AUTH_URL}/verify-otp`, { usernameOrEmail, otp: verifyData.otp });
     console.log('Verifying OTP for:', usernameOrEmail);
     
     try {
@@ -326,7 +327,7 @@ const authService = {
       };
       
       const response = await axios.post(
-        `${API_URL}/verify-otp?otp=${encodeURIComponent(verifyData.otp)}`,
+        `${AUTH_URL}/verify-otp?otp=${encodeURIComponent(verifyData.otp)}`,
         loginRequest
       );
       
@@ -351,7 +352,7 @@ const authService = {
         
         // Try to get full user data
         try {
-          const userResponse = await axios.get(`http://localhost:8080/api/v1/users/${user.id}`, {
+          const userResponse = await axios.get(`${USERS_URL}/${user.id}`, {
             headers: {
               'Authorization': `${response.data.tokenType || 'Bearer'} ${token}`
             },
@@ -444,7 +445,7 @@ const authService = {
     
     if (token) {
       try {
-        const response = await axios.get(`${API_URL}/me`, {
+        const response = await axios.get(`${AUTH_URL}/me`, {
           headers: {
             'Authorization': `${localStorage.getItem('token_type') || 'Bearer'} ${token}`
           }
@@ -475,12 +476,12 @@ const authService = {
         throw new Error('User information not available');
       }
       
-      logRequest('PUT', `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=true`);
+      logRequest('PUT', `${USERS_URL}/${userData.id}/2fa?twoFA=true`);
       console.log('Enabling 2FA for user ID:', userData.id);
       
       // Use the UserController endpoint directly, as it's more reliable
       const response = await axios.put(
-        `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=true`, 
+        `${USERS_URL}/${userData.id}/2fa?twoFA=true`, 
         {},
         {
           headers: {
@@ -537,12 +538,12 @@ const authService = {
         throw new Error('User information not available');
       }
       
-      logRequest('PUT', `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=false`);
+      logRequest('PUT', `${USERS_URL}/${userData.id}/2fa?twoFA=false`);
       console.log('Disabling 2FA for user ID:', userData.id);
       
       // Use the UserController endpoint directly, as it's more reliable
       const response = await axios.put(
-        `http://localhost:8080/api/v1/users/${userData.id}/2fa?twoFA=false`, 
+        `${USERS_URL}/${userData.id}/2fa?twoFA=false`, 
         {},
         {
           headers: {
@@ -646,12 +647,12 @@ const authService = {
       throw new Error('Username or email is required');
     }
     
-    logRequest('POST', `${API_URL}/resend-otp`);
+    logRequest('POST', `${AUTH_URL}/resend-otp`);
     console.log('Resending OTP for:', usernameOrEmail);
     
     try {
       // Match the backend endpoint which expects 'usernameOrEmail' as a request param
-      const response = await axios.post(`${API_URL}/resend-otp?usernameOrEmail=${encodeURIComponent(usernameOrEmail)}`);
+      const response = await axios.post(`${AUTH_URL}/resend-otp?usernameOrEmail=${encodeURIComponent(usernameOrEmail)}`);
       console.log('Resend OTP response:', response);
       return response.data;
     } catch (error) {
@@ -672,12 +673,12 @@ const authService = {
       throw new Error('Email or username is required');
     }
     
-    logRequest('POST', `${API_URL}/reset-password`);
+    logRequest('POST', `${AUTH_URL}/reset-password`);
     console.log('Requesting password reset for:', userIdentifier);
     
     try {
       // Match the backend endpoint which expects 'emailOrUsername' as a request param
-      const response = await axios.post(`${API_URL}/reset-password?emailOrUsername=${encodeURIComponent(userIdentifier)}`);
+      const response = await axios.post(`${AUTH_URL}/reset-password?emailOrUsername=${encodeURIComponent(userIdentifier)}`);
       console.log('Password reset response:', response);
       return response.data;
     } catch (error) {
@@ -708,7 +709,7 @@ const authService = {
     
     try {
       // Use the full backend URL instead of relative path
-      const backendUrl = 'http://localhost:8080/api/v1/users';
+      const backendUrl = USERS_URL;
       const endpoint = `${backendUrl}/${userData.id}/password`;
       
       logRequest('PUT', endpoint);

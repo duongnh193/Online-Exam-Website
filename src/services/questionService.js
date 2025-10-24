@@ -1,8 +1,8 @@
 import axios from 'axios';
 import authHeader from './authHeader';
+import { buildApiUrl } from './apiConfig';
 
-// API URL
-const API_URL = 'http://localhost:8080/api/v1/questions';
+const API_URL = buildApiUrl('/v1/questions');
 
 // Helper for logging API calls in development
 const logApiCall = (method, url, headers, body = null) => {

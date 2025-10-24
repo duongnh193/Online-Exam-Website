@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { buildApiUrl } from './apiConfig';
 
 // Use relative path for API URL to work with the proxy
-const API_URL = 'http://localhost:8080/api/v1/users';
+const API_URL = buildApiUrl('/v1/users');
 
 // Configuration for mock data fallbacks
 const config = {

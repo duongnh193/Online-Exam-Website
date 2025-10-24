@@ -1,11 +1,12 @@
 import axios from 'axios';
 import authHeader from './authHeader';
+import API_BASE, { buildApiUrl } from './apiConfig';
 
-// Use environment variable or fall back to default - matching pattern from other services
-const API_URL = process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}/v1/classes` : 'http://localhost:8080/api/v1/classes';
+const API_URL = buildApiUrl('/v1/classes');
 console.log('🌐 ClassService API_URL:', API_URL);
 console.log('🌐 Environment variables:', {
-  REACT_APP_API_URL: process.env.REACT_APP_API_URL
+  REACT_APP_API_URL: process.env.REACT_APP_API_URL,
+  API_BASE
 });
 
 // Helper function to log API requests

@@ -1,8 +1,9 @@
 import axios from 'axios';
 import authHeader from './authHeader';
+import { buildApiUrl } from './apiConfig';
 
-// API URL - ensure correct API path
-const API_URL = 'http://localhost:8080/api/v1/exams';
+const API_URL = buildApiUrl('/v1/exams');
+const QUESTIONS_URL = buildApiUrl('/v1/questions');
 
 // Helper for logging API calls in development
 const logApiCall = (method, url, headers, body = null) => {
@@ -361,7 +362,7 @@ class ExamService {
       return Promise.resolve(0); // Return 0 for invalid IDs
     }
 
-    const url = `http://localhost:8080/api/v1/questions?examId=${examId}&page=0&size=1`;
+    const url = `${QUESTIONS_URL}?examId=${examId}&page=0&size=1`;
     const headers = authHeader();
     
     console.log(`Fetching question count for exam ID: ${examId}`);
