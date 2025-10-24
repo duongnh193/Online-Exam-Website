@@ -1,26 +1,29 @@
-HELP.md
+# === Maven build ===
 target/
-!.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 generated-sources/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
+# === IDE files ===
+# IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+# VS Code
+.vscode/
+
+# STS / Eclipse
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -30,5 +33,25 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+# === System / temporary files ===
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# === OS-specific ===
+# macOS Finder
+.DS_Store
+# Windows
+desktop.ini
+
+# === Docker / container-related ===
+*.env
+.env.*
+.dockerignore
+docker-compose.override.yml
+
+# === Others ===
+HELP.md
+
