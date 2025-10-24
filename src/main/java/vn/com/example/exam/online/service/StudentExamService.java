@@ -7,6 +7,7 @@ import vn.com.example.exam.online.mapper.StudentExam2StudentExamResultResponseMa
 import vn.com.example.exam.online.model.ExamResult;
 import vn.com.example.exam.online.model.ExamReviewMode;
 import vn.com.example.exam.online.model.QuestionDetail;
+import vn.com.example.exam.online.model.QuestionType;
 import vn.com.example.exam.online.model.StudentExamStatus;
 import vn.com.example.exam.online.model.entity.Exam;
 import vn.com.example.exam.online.model.entity.ExamSubmission;
