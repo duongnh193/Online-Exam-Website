@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { 
   AppBar, 
   Toolbar, 
-  Container, 
   Box, 
   Typography, 
   Button, 
@@ -12,11 +11,13 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { keyframes } from '@emotion/react';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Link as ScrollLink, scroller } from 'react-scroll';
 import LoginModal from '../auth/LoginModal';
 import RegisterModal from '../auth/RegisterModal';
 import ResetPasswordModal from '../auth/ResetPasswordModal';
+import logoImage from '../../assets/images/my_logo.png';
 
 const Navbar = () => {
   const muiTheme = useTheme();
@@ -95,94 +96,131 @@ const Navbar = () => {
     { name: 'Contact', value: 'contact', target: 'contact-section' },
     { name: 'Resource', value: 'resource', target: 'resource-section' }
   ];
+  const marqueePhrases = [
+    'Empower every learner',
+    'Discover inspiring lessons',
+    'Fuel your academic journey',
+    'Master exams with confidence',
+    'Unlock new skills daily'
+  ];
+  const marqueeAnimation = keyframes`
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  `;
 
   return (
     <>
-      <AppBar position="sticky" color="primary">
-        <Container maxWidth="lg">
-          <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
+      <AppBar position="sticky" color="primary" sx={{ boxShadow: 'none' }}>
+        <Box sx={{ width: '100%' }}>
+          <Toolbar
+            sx={{
+              px: 0,
+              height: { xs: 70, sm: 100 },
+              minHeight: 'unset',
+              justifyContent: 'flex-start',
+              width: '100%',
+              display: 'flex'
+            }}
+          >
             {/* Logo */}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  gap: '4px'
+            <Box
+              sx={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                px: 0,
+                flexShrink: 0
+              }}
+            >
+              <Box
+                component="img"
+                src={logoImage}
+                alt="Brand logo"
+                sx={{
+                  height: '100%',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  display: 'block'
                 }}
-              >
-                <Box sx={{ display: 'flex', flexDirection: 'row' }}>
-                  <Box 
-                    sx={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%', 
-                      bgcolor: 'secondary.main',
-                      mx: '1px'
-                    }} 
-                  />
-                  <Box 
-                    sx={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%', 
-                      bgcolor: 'secondary.main',
-                      mx: '1px'
-                    }} 
-                  />
-                  <Box 
-                    sx={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%', 
-                      bgcolor: 'secondary.main',
-                      mx: '1px'
-                    }} 
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'row' }}>
-                  <Box 
-                    sx={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%', 
-                      bgcolor: 'secondary.main',
-                      mx: '1px'
-                    }} 
-                  />
-                  <Box 
-                    sx={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%', 
-                      bgcolor: 'secondary.main',
-                      mx: '1px'
-                    }} 
-                  />
-                  <Box 
-                    sx={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      borderRadius: '50%', 
-                      bgcolor: 'secondary.main',
-                      mx: '1px'
-                    }} 
-                  />
-                </Box>
-              </Box>
-              <Typography 
-                variant="h6" 
-                component="div" 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  color: 'secondary.main',
-                  ml: 1,
-                  fontSize: '1.5rem'
-                }}
-              >
-                logo
-              </Typography>
+              />
             </Box>
-            
+
+            {/* Marquee */}
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
+                overflow: 'hidden',
+                color: 'secondary.main',
+                fontWeight: 600,
+                fontSize: '1rem',
+                letterSpacing: 1.5,
+                mx: 3,
+                pointerEvents: 'none'
+              }}
+            >
+              <Box
+                component="span"
+                sx={{
+                  whiteSpace: 'nowrap',
+                  animation: `${marqueeAnimation} 24s linear infinite`,
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+              >
+                {[0, 1].map((setIndex) => (
+                  <Box
+                    key={setIndex}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      mr: 6
+                    }}
+                  >
+                    {marqueePhrases.map((phrase, idx) => (
+                      <Box
+                        key={`${setIndex}-${idx}`}
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          mr: 6
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={logoImage}
+                          alt="Scrolling brand logo"
+                          sx={{
+                            height: 44,
+                            width: 'auto',
+                            objectFit: 'contain',
+                            mr: 2,
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
+                          }}
+                        />
+                        <Typography
+                          component="span"
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: '1rem',
+                            letterSpacing: 1.5,
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          {phrase}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+
             {isMobile ? (
               <>
                 <IconButton
@@ -191,6 +229,7 @@ const Navbar = () => {
                   color="inherit"
                   aria-label="menu"
                   onClick={handleMenu}
+                  sx={{ ml: 'auto', mr: 1 }}
                 >
                   <MenuIcon />
                 </IconButton>
@@ -242,7 +281,15 @@ const Navbar = () => {
                 </Menu>
               </>
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  ml: 'auto',
+                  pr: { xs: 1, sm: 2 },
+                  flexShrink: 0
+                }}
+              >
                 {/* Navigation Links */}
                 <Box sx={{ display: 'flex', mr: 4 }}>
                   {navItems.map((item) => (
@@ -318,7 +365,7 @@ const Navbar = () => {
               </Box>
             )}
           </Toolbar>
-        </Container>
+        </Box>
       </AppBar>
 
       {/* Login Modal */}

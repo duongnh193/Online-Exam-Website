@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Container, Grid, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
-import heroImage from '../../assets/images/Bitmap-3.png';
+import '@dotlottie/player-component/dist/dotlottie-player';
 
 const HeroSection = () => {
+  const [isHovering, setIsHovering] = useState(false);
+  const hoverTransform = isHovering ? 'scale(1.12) rotate(2deg)' : 'scale(1.05)';
+
   return (
     <Box id="hero-section" sx={{ position: 'relative', overflow: 'hidden', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg">
@@ -61,16 +64,30 @@ const HeroSection = () => {
               transition={{ duration: 0.8 }}
             >
               <Box
-                component="img"
-                src={heroImage}
-                alt="Online Exam Platform"
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
                 sx={{
                   width: '100%',
                   maxWidth: 420,
-                  display: 'block',
                   margin: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  transition: 'transform 0.6s ease',
+                  transform: hoverTransform
                 }}
-              />
+              >
+                <Box
+                  component="dotlottie-player"
+                  src="https://lottie.host/280a2991-9326-41e1-ba98-b130f59a37fa/3tSlesOQoo.lottie"
+                  background="transparent"
+                  speed="1"
+                  loop="true"
+                  autoplay="true"
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </Box>
             </motion.div>
           </Grid>
         </Grid>
