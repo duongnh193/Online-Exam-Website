@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled, { createGlobalStyle } from 'styled-components';
-import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
@@ -10,692 +8,63 @@ import examService from '../services/examService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
-
-// Theme variables
-const ThemeStyles = createGlobalStyle`
-  .light-theme {
-    --bg-primary: #f8f9fa;
-    --bg-secondary: #ffffff;
-    --bg-sidebar: #6a00ff;
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --border-color: #eeeeee;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    --highlight-color: #6a00ff;
-  }
-  
-  .dark-theme {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2a2a2a;
-    --bg-sidebar: #3a3a3a;
-    --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border-color: #444444;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    --highlight-color: #8d47ff;
-  }
-`;
-
-// Styled Components
-const DashboardContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  transition: background-color 0.3s ease;
-`;
-
-const Sidebar = styled.aside`
-  width: 180px;
-  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
-  position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border-radius: 0 20px 20px 0;
-  transition: background-color 0.3s ease;
-`;
-
-const Logo = styled.div`
-  font-size: 1.25rem;
-  font-weight: 600;
-  padding: 2rem 1.5rem;
-  display: flex;
-  align-items: center;
-  
-  &::before {
-    content: "⦿⦿⦿";
-    letter-spacing: 2px;
-    font-size: 10px;
-    margin-right: 8px;
-    color: white;
-  }
-`;
-
-const SidebarMenu = styled.div`
-  flex: 1;
-  margin-top: 1rem;
-`;
-
-const NavItem = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
-  text-decoration: none;
-  font-size: 0.9rem;
-  
-  &.active {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  &:hover {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: white;
-  }
-`;
-
-const NavIcon = styled.span`
-  margin-right: 12px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  opacity: 0.9;
-`;
-
-const BottomMenu = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-  margin-left: 180px;
-  padding: 2rem;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-`;
-
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2.5rem;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-`;
-
-const NotificationIcon = styled.div`
-  width: 24px;
-  height: 24px;
-  position: relative;
-  cursor: pointer;
-  
-  &::before {
-    content: '🔔';
-    font-size: 18px;
-  }
-`;
-
-const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #6a00ff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-`;
-
-const DropdownContainer = styled.div`
-  position: relative;
-`;
-
-const Dropdown = styled.div`
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
-  width: 180px;
-  z-index: 100;
-  overflow: hidden;
-`;
-
-const DropdownItem = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: var(--bg-primary);
-  }
-`;
-
-const PageTitle = styled.div`
-  h1 {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin: 0;
-    color: var(--text-primary);
-  }
-  
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-  }
-`;
-
-const SortDropdown = styled.select`
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 0.875rem;
-  color: #666;
-  cursor: pointer;
-  outline: none;
-`;
-
-const CardsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-`;
-
-const CardRow = styled.div`
-  display: flex;
-  gap: 1.5rem;
-`;
-
-const Card = styled.div`
-  background-color: var(--bg-secondary);
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  box-shadow: var(--card-shadow);
-  flex: 1;
-  min-width: 250px;
-  position: relative;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-`;
-
-const CardHeader = styled.div`
-  font-size: 1rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-`;
-
-const CardValue = styled.div`
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  color: ${props => props.color || 'var(--text-primary)'};
-`;
-
-const ChartContainer = styled.div`
-  height: 120px;
-  margin-top: 1rem;
-`;
-
-const StatButton = styled.div`
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: #e0e0e0;
-    transform: scale(1.1);
-  }
-  
-  &::before {
-    content: '📊';
-    font-size: 14px;
-    opacity: 0.8;
-  }
-`;
-
-// Thêm Modal và các components liên quan
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  opacity: 0;
-  animation: fadeIn 0.3s forwards;
-  
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-`;
-
-const ModalContainer = styled.div`
-  background-color: var(--bg-secondary);
-  border-radius: 1.25rem;
-  width: 85%;
-  max-width: 1000px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--card-shadow);
-  padding: 1.75rem;
-  transform: translateY(20px);
-  animation: slideUp 0.3s forwards;
-  transition: background-color 0.3s ease;
-  
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0.8; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  
-  /* Scrollbar styling */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: var(--bg-primary);
-    border-radius: 10px;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: #b8b8b8;
-    border-radius: 10px;
-  }
-  
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--highlight-color);
-  }
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
-`;
-
-const ModalTitle = styled.h2`
-  font-size: 1.5rem;
-  color: var(--text-primary);
-  margin: 0;
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #666;
-  cursor: pointer;
-  
-  &:hover {
-    color: #333;
-  }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin-top: 1rem;
-`;
-
-const TableHeader = styled.th`
-  text-align: left;
-  padding: 1rem;
-  background-color: var(--bg-primary);
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.9rem;
-  border-bottom: 1px solid var(--border-color);
-  
-  &:first-child {
-    border-top-left-radius: 0.5rem;
-  }
-  
-  &:last-child {
-    border-top-right-radius: 0.5rem;
-  }
-`;
-
-const TableRow = styled.tr`
-  &:hover {
-    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'var(--bg-primary)'};
-  }
-  
-  &:last-child td {
-    border-bottom: none;
-  }
-`;
-
-const TableCell = styled.td`
-  padding: 1rem;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  border-bottom: 1px solid var(--border-color);
-`;
-
-const Pagination = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #eee;
-`;
-
-const PageInfo = styled.div`
-  font-size: 0.9rem;
-  color: #666;
-`;
-
-const PageButtons = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const PageButton = styled.button`
-  background-color: ${props => props.active ? '#6a00ff' : 'white'};
-  color: ${props => props.active ? 'white' : '#666'};
-  border: 1px solid ${props => props.active ? '#6a00ff' : '#ddd'};
-  border-radius: 0.25rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  opacity: ${props => props.disabled ? 0.5 : 1};
-  
-  &:hover {
-    background-color: ${props => props.active ? '#6a00ff' : '#f5f5f5'};
-  }
-`;
-
-const LoadingSpinner = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  
-  &::after {
-    content: '';
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #6a00ff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-
-const ErrorMessage = styled.div`
-  text-align: center;
-  padding: 2rem;
-  color: #ff3e3e;
-`;
-
-// Card and list view component styles
-const CardGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-`;
-
-const DataCard = styled.div`
-  background-color: var(--bg-secondary);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-  border-top: 4px solid 
-    ${props => {
-      switch(props.type) {
-        case 'student': return '#ff2e8e'; 
-        case 'lecturer': return '#f5a623';
-        case 'exam': return '#6a00ff';
-        case 'class': return '#00c16e';
-        default: return 'var(--highlight-color)';
-      }
-    }};
-  transition: transform 0.3s, box-shadow 0.3s;
-  
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const CardInfo = styled.div`
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  
-  strong {
-    color: var(--text-primary);
-    margin-right: 0.5rem;
-  }
-`;
-
-const CardActions = styled.div`
-  margin-top: 1rem;
-  display: flex;
-  justify-content: flex-end;
-`;
-
-const ActionButton = styled.button`
-  background-color: ${props => props.primary ? 'var(--highlight-color)' : 'var(--bg-secondary)'};
-  color: ${props => props.primary ? 'white' : 'var(--highlight-color)'};
-  border: 1px solid var(--highlight-color);
-  border-radius: 4px;
-  padding: ${props => props.size === 'small' ? '0.25rem 0.5rem' : '0.5rem 1rem'};
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: ${props => props.primary ? '#5000cc' : 'rgba(106, 0, 255, 0.1)'};
-  }
-`;
-
-const StatusBadge = styled.span`
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background-color: ${props => {
-    switch(props.status?.toLowerCase()) {
-      case 'ongoing': return '#fff2cc';
-      case 'completed': return '#d4f7e7';
-      case 'scheduled': return '#e8e5ff';
-      default: return '#f1f1f1';
-    }
-  }};
-  color: ${props => {
-    switch(props.status?.toLowerCase()) {
-      case 'ongoing': return '#f5a623';
-      case 'completed': return '#00c16e';
-      case 'scheduled': return '#6a00ff';
-      default: return '#888';
-    }
-  }};
-`;
-
-// Skeleton loading components
-const SkeletonCard = styled.div`
-  background-color: white;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-  animation: pulse 1.5s infinite ease-in-out;
-  
-  @keyframes pulse {
-    0% { opacity: 0.6; }
-    50% { opacity: 1; }
-    100% { opacity: 0.6; }
-  }
-`;
-
-const SkeletonLine = styled.div`
-  height: 12px;
-  width: ${props => props.width || '100%'};
-  background-color: #f0f0f0;
-  border-radius: 4px;
-  margin-bottom: 0.75rem;
-`;
-
-// Tab components for filtering
-const TabsContainer = styled.div`
-  display: flex;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #eee;
-  overflow-x: auto;
-  
-  &::-webkit-scrollbar {
-    height: 0;
-    display: none;
-  }
-`;
-
-const TabButton = styled.button`
-  background: none;
-  border: none;
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  color: ${props => props.active ? 'var(--highlight-color)' : 'var(--text-secondary)'};
-  font-weight: ${props => props.active ? 'bold' : 'normal'};
-  cursor: pointer;
-  position: relative;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background-color: ${props => props.active ? 'var(--highlight-color)' : 'transparent'};
-  }
-  
-  &:hover {
-    color: var(--highlight-color);
-  }
-`;
-
-// View toggle components
-const ViewToggle = styled.div`
-  display: flex;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  overflow: hidden;
-`;
-
-const ViewToggleButton = styled.button`
-  background-color: ${props => props.active ? 'var(--highlight-color)' : 'var(--bg-secondary)'};
-  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
-  border: none;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  
-  span {
-    margin-right: 0.25rem;
-  }
-  
-  &:hover {
-    background-color: ${props => props.active ? 'var(--highlight-color)' : 'var(--bg-primary)'};
-  }
-`;
-
-// Search components
-const SearchContainer = styled.div`
-  position: relative;
-  width: 300px;
-`;
-
-const SearchIcon = styled.div`
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-`;
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 0.9rem;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  
-  &:focus {
-    outline: none;
-    border-color: var(--highlight-color);
-    box-shadow: 0 0 0 3px rgba(106, 0, 255, 0.1);
-  }
-  
-  &::placeholder {
-    color: var(--text-secondary);
-  }
-`;
+import {
+  ThemeStyles,
+  DashboardContainer,
+  Sidebar,
+  Logo,
+  SidebarMenu,
+  NavItem,
+  NavIcon,
+  BottomMenu,
+  MainContent,
+  Header,
+  HeaderRight,
+  NotificationIcon,
+  UserAvatar,
+  DropdownContainer,
+  Dropdown,
+  DropdownItem,
+  PageTitle,
+  SortDropdown,
+  CardsContainer,
+  CardRow,
+  Card,
+  CardHeader,
+  CardValue,
+  ChartContainer,
+  StatButton,
+  ModalOverlay,
+  ModalContainer,
+  ModalHeader,
+  ModalTitle,
+  CloseButton,
+  Table,
+  TableHeader,
+  TableRow,
+  TableCell,
+  Pagination,
+  PageInfo,
+  PageButtons,
+  PageButton,
+  LoadingSpinner,
+  ErrorMessage,
+  CardGrid,
+  DataCard,
+  CardInfo,
+  CardActions,
+  ActionButton,
+  StatusBadge,
+  SkeletonCard,
+  SkeletonLine,
+  TabsContainer,
+  TabButton,
+  ViewToggle,
+  ViewToggleButton,
+  SearchContainer,
+  SearchIcon,
+  SearchInput
+} from '../components/dashboard/DashboardStyles';
 
 function AdminDashboardPage() {
   const { user, logout } = useAuth();
@@ -784,7 +153,6 @@ function AdminDashboardPage() {
   ];
   
   const handleLogout = () => {
-    console.log('AdminDashboardPage: Initiating logout process');
     // Make sure the dropdowns are closed
     setShowDropdown(false);
     
@@ -793,7 +161,6 @@ function AdminDashboardPage() {
   };
   
   const handleConfirmLogout = () => {
-    console.log('AdminDashboardPage: Executing logout after confirmation');
     logout();
     setShowLogoutConfirmation(false);
   };
@@ -881,26 +248,22 @@ function AdminDashboardPage() {
           
           // Nếu là classes, lấy thêm student count và teacher name cho mỗi class
           if (type === 'classes') {
-            console.log('📊 Fetching student counts and teacher names for classes...');
             const classesWithStudentCountAndTeacher = await Promise.all(
               processedClasses.map(async (cls) => {
                 try {
                   // Fetch student count
                   const studentCountResponse = await classService.getStudentCountForClass(cls.id);
                   const studentCount = studentCountResponse.data || 0;
-                  console.log(`Class ${cls.id} (${cls.name}): ${studentCount} students`);
                   
                   // Fetch teacher information using teacherId
                   let teacherName = 'Unknown Teacher';
                   if (cls.teacherId) {
                     try {
-                      console.log(`🧑‍🏫 Fetching teacher info for ID: ${cls.teacherId}`);
                       const teacherResponse = await userService.getUserById(cls.teacherId);
                       if (teacherResponse && teacherResponse.data) {
                         const teacher = teacherResponse.data;
                         // Ghép firstName và lastName, fallback to username nếu không có
                         teacherName = `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || teacher.username || 'Unknown Teacher';
-                        console.log(`Teacher ${cls.teacherId}: ${teacherName}`);
                       }
                     } catch (teacherError) {
                       console.error(`Error fetching teacher ${cls.teacherId}:`, teacherError);
@@ -935,26 +298,22 @@ function AdminDashboardPage() {
           
           // Nếu là classes, lấy thêm student count và teacher name cho mỗi class
           if (type === 'classes') {
-            console.log('📊 Fetching student counts and teacher names for classes (array response)...');
             const classesWithStudentCountAndTeacher = await Promise.all(
               processedData.map(async (cls) => {
                 try {
                   // Fetch student count
                   const studentCountResponse = await classService.getStudentCountForClass(cls.id);
                   const studentCount = studentCountResponse.data || 0;
-                  console.log(`Class ${cls.id} (${cls.name}): ${studentCount} students`);
                   
                   // Fetch teacher information using teacherId
                   let teacherName = 'Unknown Teacher';
                   if (cls.teacherId) {
                     try {
-                      console.log(`🧑‍🏫 Fetching teacher info for ID: ${cls.teacherId}`);
                       const teacherResponse = await userService.getUserById(cls.teacherId);
                       if (teacherResponse && teacherResponse.data) {
                         const teacher = teacherResponse.data;
                         // Ghép firstName và lastName, fallback to username nếu không có
                         teacherName = `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || teacher.username || 'Unknown Teacher';
-                        console.log(`Teacher ${cls.teacherId}: ${teacherName}`);
                       }
                     } catch (teacherError) {
                       console.error(`Error fetching teacher ${cls.teacherId}:`, teacherError);
@@ -1038,7 +397,6 @@ function AdminDashboardPage() {
           
           // Nếu là classes, lấy thêm student count và teacher name cho mỗi class
           if (modalType === 'classes') {
-            console.log('📊 Fetching student counts and teacher names for classes (page change)...');
             const classesWithStudentCountAndTeacher = await Promise.all(
               processedClasses.map(async (cls) => {
                 try {
@@ -1088,7 +446,6 @@ function AdminDashboardPage() {
           
           // Nếu là classes, lấy thêm student count và teacher name cho mỗi class
           if (modalType === 'classes') {
-            console.log('📊 Fetching student counts and teacher names for classes (page change - array)...');
             const classesWithStudentCountAndTeacher = await Promise.all(
               processedData.map(async (cls) => {
                 try {
@@ -1634,7 +991,7 @@ function AdminDashboardPage() {
         </Header>
         
         {/* Các card thống kê tổng quan */}
-        <CardsContainer>
+        <CardsContainer direction="column" marginBottom="1.5rem">
           <CardRow>
             {/* Hàng 1: Sinh viên và Giảng viên */}
             <Card>

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../hooks/useAuth';
 import studentExamService from '../services/studentExamService';
 import questionService from '../services/questionService';
 import examService from '../services/examService';
-import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 
@@ -13,65 +12,58 @@ import ConfirmationModal from '../components/common/ConfirmationModal';
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background-color: var(--bg-primary);
   transition: background-color 0.3s ease;
+  overflow-x: hidden;
 `;
 
 const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   background-color: var(--bg-secondary);
-  padding: 1rem 1.5rem;
+  padding: 1rem 2rem;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   transition: background-color 0.3s ease;
-`;
-
-const SearchContainer = styled.div`
-  display: flex;
-  align-items: center;
-  background-color: ${props => props.theme === 'dark' ? '#333' : 'var(--bg-primary)'};
-  border-radius: 20px;
-  padding: 0.5rem 1rem;
-  box-shadow: ${props => props.theme === 'dark' ? '0 1px 3px rgba(0, 0, 0, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.05)'};
-  width: 200px;
-  border: 1px solid ${props => props.theme === 'dark' ? '#444' : 'transparent'};
-`;
-
-const SearchInput = styled.input`
-  border: none;
-  background: none;
-  outline: none;
-  width: 100%;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  
-  &::placeholder {
-    color: #aaa;
-  }
-`;
-
-const SearchIcon = styled.span`
-  color: #aaa;
-  margin-right: 0.5rem;
-  font-size: 0.9rem;
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  align-items: center;
   gap: 1rem;
+  top: 0;
+  position: sticky;
+  z-index: 10;
+`;
+
+const ExamInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+`;
+
+const ExamTitle = styled.h1`
+  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  font-weight: 700;
+  margin: 0;
+  color: #6a7efc;
+  text-align: left;
+  width: 100%;
+`;
+
+const ExamMetaRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
 `;
 
 const SubmitQuizButton = styled.button`
   background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   color: white;
   border: none;
-  border-radius: 20px;
-  padding: 0.5rem 1.5rem;
-  font-size: 0.9rem;
-  font-weight: 500;
+  border-radius: 28px;
+  padding: 0.9rem 1.2rem;
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
   
   &:hover {
@@ -79,11 +71,18 @@ const SubmitQuizButton = styled.button`
   }
 `;
 
+const HeaderActions = styled.div`
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
 const UserProfile = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: var(--text-primary);
 `;
 
@@ -101,105 +100,327 @@ const UserAvatar = styled.div`
 
 const MainContent = styled.main`
   flex: 1;
-  padding: 1.5rem;
-  max-width: 1000px;
-  margin: 0 auto;
   width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
   color: var(--text-primary);
-`;
-
-const QuizHeader = styled.div`
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-  align-items: center;
-`;
-
-const QuizTitle = styled.h1`
-  font-size: 1.3rem;
-  font-weight: 500;
-  color: var(--text-primary);
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
 `;
 
 const TimerDisplay = styled.div`
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: ${props => props.timeRunningOut ? 
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.4rem;
+`;
+
+const TimerBubble = styled.div`
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: ${props => props.$timeRunningOut ? 
     (props.theme === 'dark' ? '#ff6666' : '#d32f2f') : 
     (props.theme === 'dark' ? '#ffffff' : '#333')};
-  background: ${props => props.theme === 'dark' ? '#333' : 'white'};
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.9)'};
+  padding: 0.6rem 1.5rem;
+  // border-radius: 999px;
   box-shadow: ${props => props.theme === 'dark' ? '0 1px 3px rgba(0, 0, 0, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.05)'};
+  // border: 1px solid ${props => props.theme === 'dark' ? '#444' : '#dfe3f4'};
+`;
+
+const TimerToggleButton = styled.button`
+  padding: 0.45rem 1.85rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid ${props => props.theme === 'dark' ? '#666' : '#c7ccdd'};
+  background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f6fc'};
+  color: inherit;
+  cursor: pointer;
+  
+  &:hover {
+    background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#e8ecfb'};
+  }
+`;
+
+const SectionDivider = styled.div`
+  width: 100%;
+  margin: 0;
+  height: 4px;
+  background: repeating-linear-gradient(
+    to right,
+    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.35)' : '#959bb8'},
+    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.35)' : '#959bb8'} 12px,
+    transparent 12px,
+    transparent 22px
+  );
+  border-radius: 999px;
+`;
+
+const BottomSection = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  align-items: stretch;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+`;
+
+const FooterContainer = styled.footer`
+  width: 100%;
+  margin: 0;
+  background: ${props => props.theme === 'dark' ? 'rgba(15, 18, 33, 0.9)' : '#eef1ff'};
+  border-top: 1px solid ${props => props.theme === 'dark' ? '#2e3350' : '#cdd1e4'};
+  border-radius: 0;
+  padding: 1.1rem clamp(1.5rem, 5vw, 4rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  box-sizing: border-box;
+`;
+
+const FooterUser = styled.div`
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  min-width: 0;
+  flex: 0 0 auto;
+`;
+
+const FooterProgressGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+`;
+
+const FooterProgressPill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+  background: ${props => props.theme === 'dark' ? '#1d213a' : '#1d223d'};
+  color: ${props => props.theme === 'dark' ? '#f7f6ff' : '#ffffff'};
+  box-shadow: ${props => props.theme === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(29, 34, 61, 0.25)'};
+`;
+
+const FooterNotice = styled.div`
+  font-size: 0.9rem;
+  color: ${props => props.theme === 'dark' ? '#cfd2ff' : '#5661a6'};
+  text-align: center;
+  max-width: 340px;
+`;
+
+const FooterActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+`;
+
+const FooterActionButton = styled.button`
+  padding: 1.05rem 2.5rem;
+  border-radius: 2.5rem;
+  border: none;
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  color: #ffffff;
+  background: ${props => props.variant === 'ghost'
+    ? (props.theme === 'dark' ? '#3a4165' : '#4f5fd4')
+    : (props.theme === 'dark' ? '#8d47ff' : '#6a7efc')};
+  box-shadow: ${props => props.theme === 'dark'
+    ? '0 4px 12px rgba(0, 0, 0, 0.35)'
+    : '0 4px 12px rgba(106, 126, 252, 0.25)'};
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${props => props.theme === 'dark'
+      ? '0 6px 16px rgba(0, 0, 0, 0.45)'
+      : '0 6px 16px rgba(106, 126, 252, 0.35)'};
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
 `;
 
 const QuizContent = styled.div`
   background-color: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: 0 0 1.25rem 1.25rem;
   box-shadow: var(--card-shadow);
-  padding: 1.5rem;
+  padding: clamp(1.5rem, 2vw, 2.25rem);
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+  margin: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  border-top: 3px dashed ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : '#cdd1e4'};
 `;
 
-const QuestionInfo = styled.div`
-  font-size: 0.9rem;
+const QuestionHeaderBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 0.9rem;
+  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.9)'};
+  border: 1px solid ${props => props.theme === 'dark' ? '#32374a' : '#dfe3f4'};
+  margin-bottom: 1.5rem;
+`;
+
+const QuestionBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const QuestionCounter = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 1rem;
+  border-radius: 0.85rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+  background: ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.2)' : 'rgba(106, 126, 252, 0.18)'};
+  color: ${props => props.theme === 'dark' ? '#d8c4ff' : '#4f5fd4'};
+`;
+
+const QuestionLabel = styled.div`
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+`;
+
+const QuestionMeta = styled.div`
+  font-size: 1.3rem;
+  fontWeight: 700;
   color: var(--text-secondary);
-  margin-bottom: 1rem;
-  font-weight: 500;
 `;
 
 const Instructions = styled.p`
-  font-size: 0.9rem;
+  font-size: 1.25rem;
+  font-weight: 800;
   color: var(--text-secondary);
   margin-bottom: 1.5rem;
 `;
 
 const QuestionContent = styled.div`
+  flex: 1;
   display: flex;
-  gap: 2rem;
-  
-  @media (max-width: 768px) {
+  align-items: stretch;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+
+  & > * {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  @media (max-width: 1024px) {
     flex-direction: column;
   }
 `;
 
 const QuestionImage = styled.div`
-  flex: 0 0 220px;
+  width: 100%;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  border: 1px solid ${props => props.theme === 'dark' ? '#2e3347' : '#FFFFFF'};
+  background: ${props => props.theme === 'dark' ? '#24273a' : '#FFFFFF'};
+  align-self: stretch;
+  display: ${props => props.hasImage ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  min-height: ${props => props.hasImage ? '200px' : '0'};
+  flex: 1 1 auto;
   
   img {
     width: 100%;
-    border-radius: 8px;
-    object-fit: cover;
-  }
-  
-  @media (max-width: 768px) {
-    flex: auto;
-    margin-bottom: 1rem;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
   }
 `;
 
 const QuestionText = styled.div`
-  font-size: 1.1rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   line-height: 1.5;
+`;
+
+const PromptPanel = styled.div`
+  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.98)'};
+  border-radius: 1rem;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  border: 1px solid ${props => props.theme === 'dark' ? '#2f3346' : '#e4e8f6'};
+  box-shadow: ${props => props.theme === 'dark' ? '0 8px 24px rgba(0, 0, 0, 0.35)' : '0 10px 30px rgba(106, 126, 252, 0.12)'};
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 0;
+  overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+  min-width: 280px;
+`;
+
+const AnswerPanel = styled.div`
+  background-color: ${props => props.theme === 'dark' ? 'rgba(11, 14, 26, 0.7)' : 'rgba(245, 247, 255, 0.85)'};
+  border-radius: 1rem;
+  border: 1px solid ${props => props.theme === 'dark' ? '#383d52' : '#d7dcf0'};
+  padding: clamp(1.25rem, 2vw, 2rem);
+  box-shadow: ${props => props.theme === 'dark' ? '0 8px 24px rgba(0, 0, 0, 0.35)' : '0 12px 34px rgba(106, 126, 252, 0.18)'};
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+  min-width: 280px;
 `;
 
 const AnswerOptions = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 `;
 
 const AnswerOption = styled.label`
   display: flex;
   align-items: flex-start;
-  padding: 0.7rem 1rem;
+  padding: 1.5rem 1.2rem;
   border: 1px solid ${props => props.selected ? 
     (props.theme === 'dark' ? '#8d47ff' : '#6a7efc') : 
     (props.theme === 'dark' ? '#444' : '#eee')};
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   background-color: ${props => props.selected ? 
     (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : 'rgba(106, 126, 252, 0.05)') : 
@@ -227,50 +448,114 @@ const CheckboxInput = styled.input`
 
 const EssayInput = styled.textarea`
   width: 100%;
-  min-height: 200px;
-  padding: 1rem;
-  border: 1px solid ${props => props.theme === 'dark' ? '#444' : '#eee'};
-  border-radius: 8px;
+  flex: 1 1 auto;
+  min-height: clamp(240px, 45vh, 520px);
+  padding: clamp(1rem, 1.5vw, 1.5rem);
+  border: 1px solid ${props => props.theme === 'dark' ? '#2f3346' : '#e4e8f6'};
+  border-radius: 1rem;
   font-family: inherit;
   font-size: 0.95rem;
   resize: vertical;
-  background-color: ${props => props.theme === 'dark' ? '#333' : 'white'};
+  background-color: ${props => props.theme === 'dark' ? 'rgba(17, 21, 36, 0.9)' : 'var(--bg-secondary)'};
   color: var(--text-primary);
+  box-shadow: inset 0 1px 3px ${props => props.theme === 'dark' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(106, 126, 252, 0.12)'};
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   
   &::placeholder {
-    color: ${props => props.theme === 'dark' ? '#aaa' : '#999'};
+    color: ${props => props.theme === 'dark' ? '#9aa1c6' : '#97a0c4'};
   }
   
   &:focus {
     outline: none;
     border-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
+    box-shadow: 0 0 0 3px ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.25)' : 'rgba(106, 126, 252, 0.25)'};
+    background-color: ${props => props.theme === 'dark' ? 'rgba(23, 28, 46, 0.95)' : 'var(--bg-secondary)'};
   }
 `;
 
 const OptionText = styled.div`
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
 `;
 
-const NavigationBar = styled.div`
+const Resizer = styled.div`
+  flex: 0 0 24px;
+  cursor: col-resize;
+  position: relative;
+  align-self: stretch;
   display: flex;
-  justify-content: flex-end;
-  margin-top: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0 0.25rem;
+  background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(79, 95, 212, 0.05)'};
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 70%;
+    border-radius: 3px;
+    background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : '#ccd2f5'};
+    box-shadow: ${props => props.theme === 'dark'
+      ? '0 0 0 1px rgba(0, 0, 0, 0.4)'
+      : '0 0 0 1px rgba(79, 95, 212, 0.22)'};
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 34px;
+    height: 56px;
+    border-radius: 14px;
+    background-color: ${props => props.theme === 'dark' ? 'rgba(17, 21, 36, 0.94)' : 'rgba(23, 31, 68, 0.94)'};
+    box-shadow: 0 4px 10px rgba(0, 0, 0, ${props => props.theme === 'dark' ? '0.45' : '0.25'});
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 14px 26px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='26' viewBox='0 0 14 26'%3E%3Cpath fill='%23ffffff' d='M2.2 13l5-5.2v10.4l-5-5.2zm9.6 0l-5 5.2V7.8l5 5.2z'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  &:hover::after {
+    background-color: ${props => props.theme === 'dark' ? 'rgba(33, 39, 66, 0.96)' : 'rgba(79, 95, 212, 0.92)'};
+  }
+
+  @media (max-width: 1024px) {
+    display: none;
+  }
 `;
 
-const SubmitButton = styled.button`
-  padding: 0.7rem 2.5rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  font-size: 0.9rem;
-  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
-  color: white;
-  
-  &:hover {
-    background-color: ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'};
-  }
+const PromptScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.75rem;
+  height: 100%;
+`;
+
+const AnswerScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-left: 0.75rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: stretch;
+`;
+
+const CenteredContent = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  box-sizing: border-box;
 `;
 
 const LoadingContainer = styled.div`
@@ -283,13 +568,20 @@ const LoadingContainer = styled.div`
 `;
 
 const ErrorContainer = styled.div`
-  max-width: 500px;
-  margin: 5rem auto;
+  max-width: 600px;
+  width: min(600px, 100%);
+  margin: 0 auto;
   text-align: center;
-  padding: 2rem;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  background: transparent;
+  border-radius: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  
+  @media (max-width: 420px) {
+    padding: 1.5rem;
+    border-radius: 0.85rem;
+  }
   
   h2 {
     color: ${props => props.theme === 'dark' ? '#ff6666' : '#d32f2f'};
@@ -302,29 +594,22 @@ const ErrorContainer = styled.div`
   }
 `;
 
-const BackButton = styled.button`
-  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.7rem 1.5rem;
-  font-weight: 500;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'};
-  }
-`;
-
 const ResultContainer = styled.div`
   max-width: 600px;
-  margin: 3rem auto;
-  padding: 2rem;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
+  width: min(600px, 100%);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  background: transparent;
+  border-radius: 1rem;
   text-align: center;
-  box-shadow: var(--card-shadow);
   color: var(--text-primary);
+  box-sizing: border-box;
+  overflow: hidden;
+  
+  @media (max-width: 420px) {
+    padding: 1.5rem;
+    border-radius: 0.85rem;
+  }
 `;
 
 const ScoreDisplay = styled.div`
@@ -363,18 +648,19 @@ const CompletionContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  padding: 3rem;
-  background: linear-gradient(135deg, 
-    ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : 'rgba(106, 126, 252, 0.05)'}, 
-    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)'}
-  );
-  border: 1px solid ${props => props.theme === 'dark' ? 'rgba(141, 71, 255, 0.2)' : 'rgba(106, 126, 252, 0.1)'};
+  padding: clamp(2rem, 5vw, 3rem);
+  background: transparent;
+  border: none;
   border-radius: 1.5rem;
   text-align: center;
-  backdrop-filter: blur(10px);
-  box-shadow: ${props => props.theme === 'dark' 
-    ? '0 8px 32px rgba(0, 0, 0, 0.3)' 
-    : '0 8px 32px rgba(106, 126, 252, 0.1)'};
+  width: min(600px, 100%);
+  box-sizing: border-box;
+  overflow: hidden;
+  
+  @media (max-width: 420px) {
+    padding: 1.75rem;
+    border-radius: 0.95rem;
+  }
 `;
 
 const CompletionIcon = styled.div`
@@ -404,30 +690,6 @@ const CompletionMessage = styled.p`
   line-height: 1.6;
 `;
 
-const CompletionSubmitButton = styled.button`
-  padding: 1rem 3rem;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 1.1rem;
-  background: linear-gradient(135deg, 
-    ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'}, 
-    ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'}
-  );
-  color: white;
-  box-shadow: 0 4px 16px rgba(106, 126, 252, 0.3);
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(106, 126, 252, 0.4);
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-`;
 
 function TakeExamPage() {
   const { examId } = useParams();
@@ -453,11 +715,21 @@ function TakeExamPage() {
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
   const [examCompleted, setExamCompleted] = useState(false);
   const [lastTabSwitchTime, setLastTabSwitchTime] = useState(null);
+  const [panelRatio, setPanelRatio] = useState(0.5);
+  const [isResizingPanels, setIsResizingPanels] = useState(false);
+  const questionContentRef = useRef(null);
+  const [isTimerHidden, setIsTimerHidden] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
 
   useEffect(() => {
     if (!examId) return;
     examService.getExamById(examId)
       .then(res => {
+        if (res.data) {
+          setExam(res.data);
+        } else {
+          setExam(null);
+        }
         if (res.data && typeof res.data.totalQuestions === 'number') {
           setTotalQuestions(res.data.totalQuestions);
         } else {
@@ -467,6 +739,7 @@ function TakeExamPage() {
       .catch(err => {
         console.error('Failed to fetch exam for total questions:', err);
         setTotalQuestions(null);
+        setExam(null);
       });
   }, [examId]);
   
@@ -530,6 +803,7 @@ function TakeExamPage() {
                   const allQuestions = [];
                   
                   if (responseData.studentExam?.exam?.questions && Array.isArray(responseData.studentExam.exam.questions)) {
+                    setExam(responseData.studentExam.exam);
                     console.log('All questions from API:', responseData.studentExam.exam.questions);
                     
                     responseData.studentExam.exam.questions.forEach((q, index) => {
@@ -683,7 +957,7 @@ function TakeExamPage() {
       setTimeRemaining(prevTime => {
         if (prevTime <= 1) {
           clearInterval(timer);
-          handleSubmitExam();
+          handleSubmitExam({ autoTrigger: true });
           return 0;
         }
         
@@ -911,6 +1185,10 @@ function TakeExamPage() {
           return;
         }
         
+        if (responseData.studentExam?.exam) {
+          setExam(responseData.studentExam.exam);
+        }
+        
         if (responseData.studentExam?.exam?.questions?.length) {
           const count = responseData.studentExam.exam.questions.length;
           console.log(`Setting total questions count: ${count}`);
@@ -1005,34 +1283,22 @@ function TakeExamPage() {
   
   useEffect(() => {
     const handleBeforeUnload = (event) => {
-      if (studentExamId && !showResults) {
-        try {
-          const syncRequest = new XMLHttpRequest();
-          const url = `http://localhost:8080/api/v1/student-exams/submit?studentExamId=${encodeURIComponent(studentExamId)}`;
-          
-          let authToken = localStorage.getItem('token');
-          
-          syncRequest.open('POST', url, false);
-          if (authToken) {
-            syncRequest.setRequestHeader('Authorization', `Bearer ${authToken}`);
-          }
-          syncRequest.setRequestHeader('Content-Type', 'application/json');
-          syncRequest.send();
-          
-          const examIdParts = studentExamId.split('-');
-          if (examIdParts.length > 1) {
-            const examId = examIdParts[1];
-            const completedExams = JSON.parse(localStorage.getItem('completedExams') || '{}');
-            completedExams[examId] = true;
-            localStorage.setItem('completedExams', JSON.stringify(completedExams));
-          }
-        } catch (err) {
-          console.error('Error auto-submitting exam on page leave:', err);
-        }
+      if (!studentExamId || showResults) {
+        return;
       }
-      
+
+      const examIdParts = studentExamId.split('-');
+      if (examIdParts.length > 1) {
+        const examId = examIdParts[1];
+        const completedExams = JSON.parse(localStorage.getItem('completedExams') || '{}');
+        completedExams[examId] = false;
+        localStorage.setItem('completedExams', JSON.stringify(completedExams));
+      }
+
+      const warningMessage = 'You have unsaved exam progress. Are you sure you want to leave?';
       event.preventDefault();
-      event.returnValue = 'You have unsaved exam progress. Are you sure you want to leave?';
+      event.returnValue = warningMessage;
+      return warningMessage;
     };
     
     if (studentExamId && !showResults) {
@@ -1043,6 +1309,42 @@ function TakeExamPage() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [studentExamId, showResults]);
+
+  useEffect(() => {
+    if (!isResizingPanels) return;
+
+    const handlePointerMove = (event) => {
+      if (!questionContentRef.current) return;
+      if (event.touches) {
+        event.preventDefault();
+      }
+
+      const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+      const rect = questionContentRef.current.getBoundingClientRect();
+      const rawRatio = (clientX - rect.left) / rect.width;
+
+      const clampedRatio = Math.min(0.75, Math.max(0.25, rawRatio));
+      setPanelRatio(clampedRatio);
+    };
+
+    const stopResizing = () => {
+      setIsResizingPanels(false);
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', stopResizing);
+    window.addEventListener('touchmove', handlePointerMove, { passive: false });
+    window.addEventListener('touchend', stopResizing);
+    window.addEventListener('touchcancel', stopResizing);
+
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', stopResizing);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', stopResizing);
+      window.removeEventListener('touchcancel', stopResizing);
+    };
+  }, [isResizingPanels]);
 
   const getUserInitial = () => {
     if (user && user.username) {
@@ -1063,17 +1365,57 @@ function TakeExamPage() {
     return 'Student';
   };
 
-  const handleSubmitExam = () => {
+  const handleSubmitExam = (eventOrOptions) => {
+    let options = {};
+    
+    if (eventOrOptions && typeof eventOrOptions.preventDefault === 'function') {
+      eventOrOptions.preventDefault();
+    } else if (eventOrOptions && typeof eventOrOptions === 'object') {
+      options = eventOrOptions;
+    }
+    
+    const { autoTrigger = false } = options;
+    
     if (!studentExamId) {
       setError('No active exam session found');
       return;
     }
     
+    if (autoTrigger) {
+      setShowSubmitConfirmation(false);
+      setInfoMessage('Time is up. Submitting your exam automatically...');
+      handleConfirmSubmit({ isAuto: true });
+      return;
+    }
+    
+    setInfoMessage('');
     setShowSubmitConfirmation(true);
   };
   
-  const handleConfirmSubmit = async () => {
+  const handleConfirmSubmit = async (eventOrOptions, maybeOptions) => {
+    let event = null;
+    let options = {};
+    
+    if (eventOrOptions && typeof eventOrOptions.preventDefault === 'function') {
+      event = eventOrOptions;
+      options = maybeOptions || {};
+    } else if (eventOrOptions && typeof eventOrOptions === 'object') {
+      options = eventOrOptions;
+    }
+    
+    if (event) {
+      event.preventDefault();
+    }
+    
+    const { isAuto = false } = options;
+    
+    let submissionSucceeded = false;
+
     try {
+      if (isAuto) {
+        setInfoMessage('Time is up. Submitting your exam automatically...');
+      }
+      
       setLoading(true);
       
       localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
@@ -1118,6 +1460,7 @@ function TakeExamPage() {
         
         setExamResult(result);
         setShowResults(true);
+        submissionSucceeded = true;
         
         localStorage.removeItem('currentStudentExamId');
         localStorage.removeItem('examSession');
@@ -1143,10 +1486,44 @@ function TakeExamPage() {
       } else {
         setError('Failed to submit exam. Please try again.');
       }
+      if (isAuto) {
+        setInfoMessage('Automatic submission failed. Please try again.');
+      }
     } finally {
       setLoading(false);
       setShowSubmitConfirmation(false);
+      if (isAuto && submissionSucceeded) {
+        setInfoMessage('');
+      }
     }
+  };
+
+  const getExamTitleText = () => {
+    if (exam) {
+      return (
+        exam.title ||
+        exam.name ||
+        exam.examTitle ||
+        exam.examName ||
+        'Exam Session'
+      );
+    }
+    return 'Exam Session';
+  };
+
+  const getExamMetaTag = () => {
+    if (exam) {
+      if (exam.subjectName) {
+        return exam.subjectName;
+      }
+      if (exam.category) {
+        return exam.category;
+      }
+      if (exam.moduleName) {
+        return exam.moduleName;
+      }
+    }
+    return null;
   };
 
   const ExamResultsScreen = () => {
@@ -1206,10 +1583,6 @@ function TakeExamPage() {
             ))}
           </div>
         )}
-        
-        <BackButton theme={theme} onClick={() => navigate('/exams')}>
-          Back to Exams
-        </BackButton>
       </ResultContainer>
     );
   };
@@ -1221,15 +1594,14 @@ function TakeExamPage() {
         <CompletionTitle theme={theme}>Exam Completed!</CompletionTitle>
         <CompletionMessage>
           You have successfully completed all questions in this exam. 
-          Please click the submit button below to finalize your answers and view your results.
+          Use the footer controls to submit and review your results.
         </CompletionMessage>
-        <CompletionSubmitButton theme={theme} onClick={handleSubmitExam}>
-          Submit Exam
-        </CompletionSubmitButton>
       </CompletionContainer>
     );
   };
   
+  const timeRunningOut = timeRemaining !== null && timeRemaining < 300;
+
   if (loading) {
     return (
       <LoadingContainer>
@@ -1240,51 +1612,111 @@ function TakeExamPage() {
   
   if (error) {
     return (
-      <ErrorContainer theme={theme}>
-        <h2>Error</h2>
-        <p>{error}</p>
-        <BackButton theme={theme} onClick={() => navigate('/exams')}>
-          Back to Exams
-        </BackButton>
-      </ErrorContainer>
+      <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        {renderHeader({ showSubmitButton: false })}
+        <SectionDivider theme={theme} />
+        <MainContent>
+          <CenteredContent>
+            <ErrorContainer theme={theme}>
+              <h2>Error</h2>
+              <p>{error}</p>
+            </ErrorContainer>
+          </CenteredContent>
+        </MainContent>
+        <BottomSection>
+          <SectionDivider theme={theme} />
+          <FooterContainer theme={theme}>
+            <FooterUser>{getUserName()}</FooterUser>
+            <FooterProgressGroup>
+              <FooterProgressPill theme={theme}>
+                Exam Status
+              </FooterProgressPill>
+              <FooterNotice theme={theme}>An error occurred while loading this exam.</FooterNotice>
+            </FooterProgressGroup>
+            <FooterActions>
+              <FooterActionButton
+                theme={theme}
+                variant="ghost"
+                onClick={() => navigate('/exams')}
+              >
+                Back
+              </FooterActionButton>
+            </FooterActions>
+          </FooterContainer>
+        </BottomSection>
+      </PageContainer>
     );
   }
   
   if (showResults) {
-    return <ExamResultsScreen />;
+    return (
+      <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        {renderHeader({ showSubmitButton: false })}
+        <SectionDivider theme={theme} />
+        <MainContent>
+          <CenteredContent>
+            <ExamResultsScreen />
+          </CenteredContent>
+        </MainContent>
+        <BottomSection>
+          <SectionDivider theme={theme} />
+          <FooterContainer theme={theme}>
+            <FooterUser>{getUserName()}</FooterUser>
+            <FooterProgressGroup>
+              <FooterProgressPill theme={theme}>
+                Results Summary
+              </FooterProgressPill>
+              <FooterNotice theme={theme}>You can review your answers or return to the exam list.</FooterNotice>
+            </FooterProgressGroup>
+            <FooterActions>
+              <FooterActionButton
+                theme={theme}
+                variant="ghost"
+                onClick={() => navigate('/exams')}
+              >
+                Back to Exams
+              </FooterActionButton>
+            </FooterActions>
+          </FooterContainer>
+        </BottomSection>
+      </PageContainer>
+    );
   }
 
-  const timeRunningOut = timeRemaining !== null && timeRemaining < 300;
+  const totalQuestionCount = typeof totalQuestions === 'number' && totalQuestions > 0
+    ? totalQuestions
+    : questions.length;
 
   if (examCompleted) {
     return (
       <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
-        <Header>
-          <SearchContainer theme={theme}>
-            <SearchIcon>🔍</SearchIcon>
-            <SearchInput placeholder="Search..." />
-          </SearchContainer>
-          
-          <ActionButtons>
-            <UserProfile>
-              <span>{getUserName()}</span>
-              <UserAvatar theme={theme}>{getUserInitial()}</UserAvatar>
-            </UserProfile>
-          </ActionButtons>
-        </Header>
-        
+        {renderHeader({ showSubmitButton: false })}
+        <SectionDivider theme={theme} />
         <MainContent>
-          <QuizHeader>
-            <QuizTitle>Quiz</QuizTitle>
-            <TimerDisplay timeRunningOut={timeRunningOut} theme={theme}>
-              Timer: {formatTime(timeRemaining)}
-            </TimerDisplay>
-          </QuizHeader>
-          
-          <QuizContent>
+          <CenteredContent>
             <ExamCompletionScreen />
-          </QuizContent>
+          </CenteredContent>
         </MainContent>
+        <BottomSection>
+          <SectionDivider theme={theme} />
+          <FooterContainer theme={theme}>
+            <FooterUser>{getUserName()}</FooterUser>
+            <FooterProgressGroup>
+              <FooterProgressPill theme={theme}>
+                Review & Submit
+              </FooterProgressPill>
+              <FooterNotice theme={theme}>Click submit to finalize and see your results.</FooterNotice>
+            </FooterProgressGroup>
+            <FooterActions>
+              <FooterActionButton
+                theme={theme}
+                onClick={handleSubmitExam}
+              >
+                Submit Now
+              </FooterActionButton>
+            </FooterActions>
+          </FooterContainer>
+        </BottomSection>
         
         <ConfirmationModal
           isOpen={showSubmitConfirmation}
@@ -1298,19 +1730,47 @@ function TakeExamPage() {
   
   if (questions.length === 0) {
     return (
-      <ErrorContainer theme={theme}>
-        <h2>No Questions Available</h2>
-        <p>There was an issue loading the questions for this quiz.</p>
-        <BackButton theme={theme} onClick={() => navigate('/exams')}>
-          Back to Exams
-        </BackButton>
-      </ErrorContainer>
+      <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        {renderHeader({ showSubmitButton: false })}
+        <SectionDivider theme={theme} />
+        <MainContent>
+          <CenteredContent>
+            <ErrorContainer theme={theme}>
+              <h2>No Questions Available</h2>
+              <p>There was an issue loading the questions for this quiz.</p>
+            </ErrorContainer>
+          </CenteredContent>
+        </MainContent>
+        <BottomSection>
+          <SectionDivider theme={theme} />
+          <FooterContainer theme={theme}>
+            <FooterUser>{getUserName()}</FooterUser>
+            <FooterProgressGroup>
+              <FooterProgressPill theme={theme}>
+                Waiting for Questions
+              </FooterProgressPill>
+              <FooterNotice theme={theme}>Please return to the exam list and try again.</FooterNotice>
+            </FooterProgressGroup>
+            <FooterActions>
+              <FooterActionButton
+                theme={theme}
+                variant="ghost"
+                onClick={() => navigate('/exams')}
+              >
+                Back
+              </FooterActionButton>
+            </FooterActions>
+          </FooterContainer>
+        </BottomSection>
+      </PageContainer>
     );
   }
   
   const currentQuestion = questions.length > 0 
     ? (questions[currentQuestionIndex] || questions[0]) 
     : null;
+
+  const displayedQuestionNumber = currentQuestion ? getDisplayedQuestionNumber() : 0;
   
   console.log('🐛 RENDER STATE DEBUG:', {
     currentQuestionIndex,
@@ -1331,235 +1791,305 @@ function TakeExamPage() {
     switch (currentQuestion.type) {
       case 'ESSAY':
         return (
-          <div>
-            <EssayInput
-              theme={theme}
-              value={essayAnswers[currentQuestion.id] || ''}
-              onChange={(e) => handleEssayChange(currentQuestion.id, e.target.value)}
-              placeholder="Write your answer here..."
-            />
-            <NavigationBar>
-              {serverLastQuestionFlag ? (
-                <>
-                  <div style={{ 
-                    marginRight: 'auto', 
-                    backgroundColor: '#f0f8ff', 
-                    padding: '10px 15px',
-                    borderRadius: '8px',
-                    color: '#4b6dcc',
-                    fontWeight: '500'
-                  }}>
-                    🎉 You've completed the exam! Please click Submit to finish.
-                  </div>
-                  <SubmitButton onClick={handleSubmitExam}>
-                    Submit
-                  </SubmitButton>
-                </>
-              ) : (
-                <SubmitButton onClick={() => submitEssayAnswer(currentQuestion.id)}>
-                  Next
-                </SubmitButton>
-              )}
-            </NavigationBar>
-          </div>
+          <EssayInput
+            theme={theme}
+            value={essayAnswers[currentQuestion.id] || ''}
+            onChange={(e) => handleEssayChange(currentQuestion.id, e.target.value)}
+            placeholder="Write your answer here..."
+          />
         );
         
       case 'MULTIPLE_CHOICE':
         return (
-          <>
-            <AnswerOptions>
-              {(currentQuestion.options || []).map(option => (
-                <AnswerOption 
-                  key={option.id || 'unknown'}
-                  selected={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
-                  theme={theme}
-                >
-                  <CheckboxInput 
-                    type="checkbox"
-                    name={`question-${currentQuestion.id}-option-${option.id || 'unknown'}`}
-                    checked={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
-                    onChange={() => handleMultipleChoiceSelect(currentQuestion.id, option.id)}
-                  />
-                  <OptionText>
-                    {typeof option.text === 'string' ? option.text : 
-                     typeof option.text === 'object' ? JSON.stringify(option.text) : 
-                     String(option.text || '')}
-                  </OptionText>
-                </AnswerOption>
-              ))}
-            </AnswerOptions>
-            <NavigationBar>
-              {serverLastQuestionFlag ? (
-                <>
-                  <div style={{ 
-                    marginRight: 'auto', 
-                    backgroundColor: '#f0f8ff', 
-                    padding: '10px 15px',
-                    borderRadius: '8px',
-                    color: '#4b6dcc',
-                    fontWeight: '500'
-                  }}>
-                    🎉 You've completed the exam! Please click Submit to finish.
-                  </div>
-                  <SubmitButton onClick={handleSubmitExam}>
-                    Submit
-                  </SubmitButton>
-                </>
-              ) : (
-                <SubmitButton onClick={() => submitMultipleChoiceAnswer(currentQuestion.id)}>
-                  Next
-                </SubmitButton>
-              )}
-            </NavigationBar>
-          </>
+          <AnswerOptions>
+            {(currentQuestion.options || []).map(option => (
+              <AnswerOption 
+                key={option.id || 'unknown'}
+                selected={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
+                theme={theme}
+              >
+                <CheckboxInput 
+                  type="checkbox"
+                  name={`question-${currentQuestion.id}-option-${option.id || 'unknown'}`}
+                  checked={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
+                  onChange={() => handleMultipleChoiceSelect(currentQuestion.id, option.id)}
+                />
+                <OptionText>
+                  {typeof option.text === 'string' ? option.text : 
+                   typeof option.text === 'object' ? JSON.stringify(option.text) : 
+                   String(option.text || '')}
+                </OptionText>
+              </AnswerOption>
+            ))}
+          </AnswerOptions>
         );
         
       case 'SINGLE_CHOICE':
       default:
         return (
-          <>
-            <AnswerOptions>
-              {(currentQuestion.options || []).map(option => (
-                <AnswerOption 
-                  key={option.id || 'unknown'}
-                  selected={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
-                  theme={theme}
-                  onClick={() => handleSingleChoiceSelect(currentQuestion.id, option.id)}
-                >
-                  <RadioInput 
-                    type="radio"
-                    name={`question-${currentQuestion.id}`}
-                    checked={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
-                    onChange={() => {}}
-                  />
-                  <OptionText>
-                    {typeof option.text === 'string' ? option.text : 
-                     typeof option.text === 'object' ? JSON.stringify(option.text) : 
-                     String(option.text || '')}
-                  </OptionText>
-                </AnswerOption>
-              ))}
-            </AnswerOptions>
-            <NavigationBar>
-              {serverLastQuestionFlag ? (
-                <>
-                  <div style={{ 
-                    marginRight: 'auto', 
-                    backgroundColor: '#f0f8ff', 
-                    padding: '10px 15px',
-                    borderRadius: '8px',
-                    color: '#4b6dcc',
-                    fontWeight: '500'
-                  }}>
-                    🎉 You've completed the exam! Please click Submit to finish.
-                  </div>
-                  <SubmitButton onClick={handleSubmitExam}>
-                    Submit
-                  </SubmitButton>
-                </>
-              ) : (
-                <SubmitButton theme={theme} onClick={() => submitSingleChoiceAnswer(currentQuestion.id)}>
-                  Next
-                </SubmitButton>
-              )}
-            </NavigationBar>
-          </>
+          <AnswerOptions>
+            {(currentQuestion.options || []).map(option => (
+              <AnswerOption 
+                key={option.id || 'unknown'}
+                selected={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
+                theme={theme}
+                onClick={() => handleSingleChoiceSelect(currentQuestion.id, option.id)}
+              >
+                <RadioInput 
+                  type="radio"
+                  name={`question-${currentQuestion.id}`}
+                  checked={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
+                  onChange={() => {}}
+                />
+                <OptionText>
+                  {typeof option.text === 'string' ? option.text : 
+                   typeof option.text === 'object' ? JSON.stringify(option.text) : 
+                   String(option.text || '')}
+                </OptionText>
+              </AnswerOption>
+            ))}
+          </AnswerOptions>
         );
     }
   };
+
+  const advanceToNextStep = () => {
+    if (!currentQuestion) return;
+    
+    switch (currentQuestion.type) {
+      case 'ESSAY':
+        submitEssayAnswer(currentQuestion.id);
+        break;
+      case 'MULTIPLE_CHOICE':
+        submitMultipleChoiceAnswer(currentQuestion.id);
+        break;
+      case 'SINGLE_CHOICE':
+      default:
+        submitSingleChoiceAnswer(currentQuestion.id);
+        break;
+    }
+  };
+
+  const getFooterAction = () => {
+    if (!currentQuestion) return null;
+    
+    if (serverLastQuestionFlag) {
+      return {
+        label: 'Submit',
+        onClick: handleSubmitExam
+      };
+    }
+    
+    return {
+      label: 'Next',
+      onClick: advanceToNextStep
+    };
+  };
+
+  const handleResizeStart = (event) => {
+    event.preventDefault();
+    if (!questionContentRef.current) {
+      setIsResizingPanels(true);
+      return;
+    }
+    
+    const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+    const rect = questionContentRef.current.getBoundingClientRect();
+    const rawRatio = (clientX - rect.left) / rect.width;
+    const clampedRatio = Math.min(0.75, Math.max(0.25, rawRatio));
+    setPanelRatio(clampedRatio);
+    setIsResizingPanels(true);
+  };
+
+  function getDisplayedQuestionNumber() {
+    const examSessionId = studentExamId || localStorage.getItem('currentStudentExamId');
+    const backendQuestionIndex = examSessionId ? localStorage.getItem(`exam_current_question_${examSessionId}`) : null;
+    let questionNumber = currentQuestionIndex + 1;
+    
+    if (backendQuestionIndex !== null && !Number.isNaN(parseInt(backendQuestionIndex, 10))) {
+      questionNumber = parseInt(backendQuestionIndex, 10) + 1;
+    } else if (questions.length > 0 && currentQuestion) {
+      const actualPosition = questions.findIndex(q => q.id === currentQuestion.id);
+      if (actualPosition !== -1) {
+        questionNumber = actualPosition + 1;
+      }
+    }
+    
+    return questionNumber;
+  }
+
+  function renderHeader(options = {}) {
+    const { showSubmitButton = true } = options;
+    const metaTag = getExamMetaTag();
+    const totalCount = typeof totalQuestions === 'number' && totalQuestions > 0
+      ? totalQuestions
+      : questions.length;
+    
+    return (
+      <Header>
+        <ExamInfo>
+          <ExamTitle>{getExamTitleText()}</ExamTitle>
+          <ExamMetaRow>
+            {metaTag && <span>{metaTag}</span>}
+            {totalCount > 0 && <span>{totalCount} questions</span>}
+          </ExamMetaRow>
+        </ExamInfo>
+        
+        <TimerDisplay theme={theme}>
+          {!isTimerHidden && (
+            <TimerBubble theme={theme} $timeRunningOut={timeRunningOut}>
+              {formatTime(timeRemaining)}
+            </TimerBubble>
+          )}
+          <TimerToggleButton
+            theme={theme}
+            onClick={() => setIsTimerHidden(prev => !prev)}
+          >
+            {isTimerHidden ? 'Show' : 'Hide'}
+          </TimerToggleButton>
+        </TimerDisplay>
+        
+        <HeaderActions>
+          {showSubmitButton && (
+            <SubmitQuizButton theme={theme} onClick={handleSubmitExam}>
+              Submit Exam
+            </SubmitQuizButton>
+          )}
+          <UserProfile>
+            <span>{getUserName()}</span>
+            <UserAvatar theme={theme}>{getUserInitial()}</UserAvatar>
+          </UserProfile>
+        </HeaderActions>
+      </Header>
+    );
+  }
   
+  const footerAction = getFooterAction();
+  const footerNotice = infoMessage
+    ? infoMessage
+    : currentQuestion && serverLastQuestionFlag
+      ? "You've reached the final question. Submit when you're ready."
+      : '';
+  const questionProgressLabel = totalQuestionCount > 0 && displayedQuestionNumber > 0
+    ? `Question ${displayedQuestionNumber} of ${totalQuestionCount}`
+    : 'Question Progress';
+
   return (
     <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
-      <Header>
-        <SearchContainer theme={theme}>
-          <SearchIcon>🔍</SearchIcon>
-          <SearchInput placeholder="Search..." />
-        </SearchContainer>
-        
-        <ActionButtons>
-            <SubmitQuizButton onClick={handleSubmitExam}>
-              Submit Quiz
-            </SubmitQuizButton>
-            <UserProfile>
-              <span>{getUserName()}</span>
-              <UserAvatar theme={theme}>{getUserInitial()}</UserAvatar>
-            </UserProfile>
-          </ActionButtons>
-        </Header>
-        
-        <MainContent>
-          <QuizHeader>
-            <QuizTitle>Quiz</QuizTitle>
-            <TimerDisplay timeRunningOut={timeRunningOut} theme={theme}>
-              Timer: {formatTime(timeRemaining)}
-            </TimerDisplay>
-          </QuizHeader>
-          
-          {currentQuestion ? (
-            <QuizContent>
-              <QuestionInfo>
-                {(() => {
-                  const examSessionId = studentExamId || localStorage.getItem('currentStudentExamId');
-                  const backendQuestionIndex = localStorage.getItem(`exam_current_question_${examSessionId}`);
-                  let questionNumber = currentQuestionIndex + 1;
-                  if (backendQuestionIndex !== null && !isNaN(parseInt(backendQuestionIndex))) {
-                    questionNumber = parseInt(backendQuestionIndex) + 1;
-                  } else if (questions.length > 0 && currentQuestion) {
-                    const actualPosition = questions.findIndex(q => q.id === currentQuestion.id);
-                    if (actualPosition !== -1) {
-                      questionNumber = actualPosition + 1;
-                    }
-                  }
-                  return serverLastQuestionFlag
-                    ? `Question ${questionNumber}${typeof totalQuestions === 'number' && totalQuestions > 0 ? '/' + totalQuestions : ''} (Last question)`
-                    : `Question ${questionNumber}${typeof totalQuestions === 'number' && totalQuestions > 0 ? '/' + totalQuestions : ''}`;
-                })()}
-              </QuestionInfo>
-              
-              <Instructions>
-                Answer the question below
-              </Instructions>
-              
-              <QuestionContent>
-                <QuestionImage>
-                  {currentQuestion.imageUrl ? (
-                    <img src={currentQuestion.imageUrl} alt="Quiz question illustration" />
-                  ) : (
-                    <div style={{ 
-                      width: '220px', 
-                      height: '280px', 
-                      backgroundColor: theme === 'dark' ? '#333' : '#f5f5f5', 
-                      borderRadius: '8px' 
-                    }} />
-                  )}
-                </QuestionImage>
-                
+      {renderHeader()}
+      <SectionDivider theme={theme} />
+      <MainContent>
+        {currentQuestion ? (
+          <QuizContent>
+            <QuestionHeaderBar theme={theme}>
+              <QuestionBadge>
+                <QuestionCounter theme={theme}>
+                  {displayedQuestionNumber}
+                  {totalQuestionCount > 0 ? `/${totalQuestionCount}` : ''}
+                </QuestionCounter>
                 <div>
-                  <QuestionText>
-                    {currentQuestion.text || "Loading question..."}
-                  </QuestionText>
-                  
-                  {renderQuestionInput()}
+                  <QuestionLabel>Question {displayedQuestionNumber}</QuestionLabel>
+                  {/* <QuestionMeta>
+                    {serverLastQuestionFlag ? 'This is the last question of the exam.' : 'Answer the question to continue.'}
+                  </QuestionMeta> */}
                 </div>
-              </QuestionContent>
-            </QuizContent>
-          ) : (
-            <QuizContent>
-              <div style={{ textAlign: 'center', padding: '2rem' }}>
-                <p>Loading question data... If this takes too long, please refresh the page.</p>
-              </div>
-            </QuizContent>
-          )}
-        </MainContent>
-        
-        <ConfirmationModal
-          isOpen={showSubmitConfirmation}
-          onClose={() => setShowSubmitConfirmation(false)}
-          onConfirm={handleConfirmSubmit}
-          message="Are you sure you want to submit Quiz?"
-        />
-      </PageContainer>
-    );
+              </QuestionBadge>
+              <QuestionMeta>
+                {currentQuestion.type === 'ESSAY'
+                  ? 'Essay response'
+                  : currentQuestion.type === 'MULTIPLE_CHOICE'
+                    ? 'Select all that apply'
+                    : 'Select one answer'}
+              </QuestionMeta>
+            </QuestionHeaderBar>
+            
+            <QuestionContent ref={questionContentRef}>
+              <PromptPanel
+                theme={theme}
+                style={{
+                  flexBasis: `${panelRatio * 100}%`,
+                  maxWidth: `${panelRatio * 100}%`,
+                  flexGrow: 0,
+                  flexShrink: 0
+                }}
+              >
+                <PromptScrollArea>
+                  <QuestionText>
+                    {currentQuestion.text || 'Loading question...'}
+                  </QuestionText>
+                  <QuestionImage theme={theme} hasImage={Boolean(currentQuestion.imageUrl)}>
+                    {currentQuestion.imageUrl && (
+                      <img src={currentQuestion.imageUrl} alt="Quiz question illustration" />
+                    )}
+                  </QuestionImage>
+                </PromptScrollArea>
+              </PromptPanel>
+
+              <Resizer
+                theme={theme}
+                onMouseDown={handleResizeStart}
+                onTouchStart={handleResizeStart}
+              />
+              
+              <AnswerPanel
+                theme={theme}
+                style={{
+                  flexBasis: `${(1 - panelRatio) * 100}%`,
+                  maxWidth: `${(1 - panelRatio) * 100}%`,
+                  flexGrow: 0,
+                  flexShrink: 0
+                }}
+              >
+                <AnswerScrollArea>
+                  <Instructions>
+                    Answer section
+                  </Instructions>
+                  {renderQuestionInput()}
+                </AnswerScrollArea>
+              </AnswerPanel>
+            </QuestionContent>
+          </QuizContent>
+        ) : (
+          <QuizContent>
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <p>Loading question data... If this takes too long, please refresh the page.</p>
+            </div>
+          </QuizContent>
+        )}
+      </MainContent>
+      <BottomSection>
+        <SectionDivider theme={theme} />
+        <FooterContainer theme={theme}>
+          <FooterUser>{getUserName()}</FooterUser>
+          <FooterProgressGroup>
+            <FooterProgressPill theme={theme}>
+              {questionProgressLabel}
+            </FooterProgressPill>
+            {footerNotice && (
+              <FooterNotice theme={theme}>{footerNotice}</FooterNotice>
+            )}
+          </FooterProgressGroup>
+          <FooterActions>
+            {footerAction && (
+              <FooterActionButton
+                theme={theme}
+                onClick={footerAction.onClick}
+              >
+                {footerAction.label}
+              </FooterActionButton>
+            )}
+          </FooterActions>
+        </FooterContainer>
+      </BottomSection>
+      
+      <ConfirmationModal
+        isOpen={showSubmitConfirmation}
+        onClose={() => setShowSubmitConfirmation(false)}
+        onConfirm={handleConfirmSubmit}
+        message="Are you sure you want to submit Quiz?"
+      />
+    </PageContainer>
+  );
 }
 
 export default TakeExamPage; 
