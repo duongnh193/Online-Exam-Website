@@ -182,6 +182,7 @@ function LecturerDashboardPage() {
   const handleLogout = () => {
     setShowLogoutConfirmation(true);
     setShowDropdown(false);
+    localStorage.removeItem("theme"); 
   };
   
   const handleConfirmLogout = () => {

@@ -158,6 +158,7 @@ function AdminDashboardPage() {
     
     // Hiển thị modal xác nhận thay vì gọi logout trực tiếp
     setShowLogoutConfirmation(true);
+    localStorage.removeItem("theme"); 
   };
   
   const handleConfirmLogout = () => {

@@ -6,9 +6,11 @@ import theme from './theme/theme';
 import './App.css';
 import './styles/scroll.css';
 import { AuthProvider } from './hooks/useAuth';
+import  ScrollToTop  from './components/common/ScrollToTop';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
+
 
 function App() {
   return (
@@ -17,6 +19,7 @@ function App() {
         <CssBaseline />
         <AuthProvider>
           <ThemeProvider>
+            <ScrollToTop />
             <div className="App">
               <Toaster position="top-right" />
               <AppRoutes />
