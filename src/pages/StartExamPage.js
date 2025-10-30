@@ -6,6 +6,7 @@ import studentExamService from '../services/studentExamService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import { useLoading } from '../contexts/LoadingContext';
 
 const PageContainer = styled.div`
   display: flex;
@@ -105,11 +106,19 @@ function StartExamPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { disableLoader, enableLoader } = useLoading();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showStartConfirmation, setShowStartConfirmation] = useState(false);
   const [examResponse, setExamResponse] = useState(null);
+
+  useEffect(() => {
+    disableLoader();
+    return () => {
+      enableLoader();
+    };
+  }, [disableLoader, enableLoader]);
   
   useEffect(() => {
     // Validate that we have an exam ID

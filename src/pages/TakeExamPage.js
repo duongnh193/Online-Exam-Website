@@ -7,6 +7,7 @@ import questionService from '../services/questionService';
 import examService from '../services/examService';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import { useLoading } from '../contexts/LoadingContext';
 
 // Styled Components for the new design
 const PageContainer = styled.div`
@@ -696,6 +697,7 @@ function TakeExamPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { disableLoader, enableLoader } = useLoading();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exam, setExam] = useState(null);
@@ -720,6 +722,13 @@ function TakeExamPage() {
   const questionContentRef = useRef(null);
   const [isTimerHidden, setIsTimerHidden] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
+
+  useEffect(() => {
+    disableLoader();
+    return () => {
+      enableLoader();
+    };
+  }, [disableLoader, enableLoader]);
 
   useEffect(() => {
     if (!examId) return;

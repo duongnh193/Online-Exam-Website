@@ -1,6 +1,7 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
+import { useLoading } from '../contexts/LoadingContext';
 
 // Create the AuthContext and export it so it can be imported elsewhere
 export const AuthContext = createContext();
@@ -11,6 +12,19 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { showLoader, hideLoader } = useLoading();
+
+  useEffect(() => {
+    if (!isLoading) {
+      hideLoader();
+      return undefined;
+    }
+
+    showLoader();
+    return () => {
+      hideLoader();
+    };
+  }, [isLoading, showLoader, hideLoader]);
 
   // Check if the user is authenticated on initial load
   useEffect(() => {
@@ -248,7 +262,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Add a function to refresh user data from localStorage
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       console.log('useAuth: Refreshing user data from localStorage');
       const storedUserData = localStorage.getItem('user');
@@ -327,7 +341,7 @@ export const AuthProvider = ({ children }) => {
       console.error('useAuth: Error refreshing user data:', error);
       return user;
     }
-  };
+  }, [user]);
 
   // Add an effect to refresh user data when navigating to the settings page
   useEffect(() => {
@@ -344,7 +358,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [location.pathname, isAuthenticated]);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     setUser,
     isAuthenticated,
@@ -354,7 +368,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     verifyOtp,
     refreshUser
-  };
+  }), [user, isAuthenticated, isLoading, login, register, logout, verifyOtp, refreshUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

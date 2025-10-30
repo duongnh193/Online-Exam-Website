@@ -97,11 +97,10 @@ const Navbar = () => {
     { name: 'Resource', value: 'resource', target: 'resource-section' }
   ];
   const marqueePhrases = [
-    'Empower every learner',
-    'Discover inspiring lessons',
-    'Fuel your academic journey',
-    'Master exams with confidence',
-    'Unlock new skills daily'
+    'Your Knowledge, Our Commitment',
+    'Exams Made Easy, From Anywhere',
+    'Digital Exams, Real Results',
+    'AI supported Instructional Excellence',
   ];
   const marqueeAnimation = keyframes`
     0% {
@@ -133,18 +132,20 @@ const Navbar = () => {
                 display: 'flex',
                 alignItems: 'center',
                 px: 0,
-                flexShrink: 0
+                flexShrink: 0,
               }}
             >
               <Box
                 component="img"
                 src={logoImage}
                 alt="Brand logo"
+                onClick={() => handleScrollClick('home', 'hero-section')}
                 sx={{
                   height: '100%',
                   width: 'auto',
                   objectFit: 'contain',
-                  display: 'block'
+                  display: 'block',
+                  borderRadius: '999px'
                 }}
               />
             </Box>
@@ -168,7 +169,7 @@ const Navbar = () => {
                 component="span"
                 sx={{
                   whiteSpace: 'nowrap',
-                  animation: `${marqueeAnimation} 24s linear infinite`,
+                  animation: `${marqueeAnimation} 20s linear infinite`,
                   display: 'inline-flex',
                   alignItems: 'center'
                 }}
@@ -191,7 +192,7 @@ const Navbar = () => {
                           mr: 6
                         }}
                       >
-                        <Box
+                        {/* <Box
                           component="img"
                           src={logoImage}
                           alt="Scrolling brand logo"
@@ -202,7 +203,7 @@ const Navbar = () => {
                             mr: 2,
                             filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
                           }}
-                        />
+                        /> */}
                         <Typography
                           component="span"
                           sx={{
@@ -305,7 +306,7 @@ const Navbar = () => {
                         spy={true}
                         smooth={true}
                         offset={-60}
-                        duration={300}
+                        duration={200}
                         onSetActive={() => setActiveTab(item.value)}
                       >
                         <Button 
@@ -359,7 +360,7 @@ const Navbar = () => {
                     }}
                     onClick={openRegisterModal}
                   >
-                    Get started
+                    Register
                   </Button>
                 </Box>
               </Box>

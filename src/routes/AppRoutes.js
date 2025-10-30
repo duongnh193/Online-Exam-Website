@@ -44,7 +44,7 @@ const ProtectedRoute = ({ children }) => {
 
   if (isLoading) {
     console.log('ProtectedRoute: Still loading auth state');
-    return <div>Loading...</div>;
+    return null;
   }
 
   if (!isAuthenticated) {
@@ -78,7 +78,7 @@ const RoleRoute = ({ children, allowedRoles }) => {
 
   if (isLoading) {
     console.log('RoleRoute - Still loading');
-    return <div>Loading...</div>;
+    return null;
   }
 
   if (!isAuthenticated) {
