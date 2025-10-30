@@ -15,6 +15,7 @@ import vn.com.example.exam.online.model.entity.Question;
 import vn.com.example.exam.online.model.entity.StudentExam;
 import vn.com.example.exam.online.model.entity.User;
 import vn.com.example.exam.online.model.response.QuestionExamResponse;
+import vn.com.example.exam.online.model.response.QuestionStateResponse;
 import vn.com.example.exam.online.model.response.StudentExamDetailResponse;
 import vn.com.example.exam.online.model.response.StudentExamResponse;
 import vn.com.example.exam.online.model.response.StudentExamResultResponse;
@@ -29,9 +30,12 @@ import vn.com.example.exam.online.repository.UserRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static vn.com.example.exam.online.model.ExamReviewMode.FULL;
@@ -72,38 +76,40 @@ public class StudentExamService {
         if (timeNow.isAfter(exam.getEndAt())) {
             throw new RuntimeException("The exam has already ended.");
         }
-        String studentExamId = student.getId() + "-" + examId;
 
-        // Kiểm tra xem bài thi đã được bắt đầu chưa
+        String studentExamId = student.getId() + "-" + examId;
         Optional<StudentExam> existingExam = studentExamRepository.findById(studentExamId);
 
         if (existingExam.isPresent()) {
             StudentExam studentExam = existingExam.get();
             if (studentExam.getStatus() == StudentExamStatus.IN_PROGRESS) {
-                var now = OffsetDateTime.now();
-                var remainingTime = Duration.between(now, studentExam.getFinishAtEstimate()).toSeconds();
+                Long remainingTime = calculateSecondsRemaining(studentExam);
 
-                // Nếu thời gian làm bài đã hết, đánh dấu là hoàn thành
-                if (remainingTime <= 0) {
+                if (remainingTime != null && remainingTime <= 0) {
                     studentExam.setStatus(StudentExamStatus.COMPLETED);
                     studentExamRepository.save(studentExam);
                     throw new RuntimeException("Time's up! Exam already completed");
                 }
 
-                // Lấy câu hỏi hiện tại
-                List<Question> orderedQuestions = getOrderedQuestions(exam);
-                int currentIndex = Optional.ofNullable(studentExam.getCurrentQuestion()).orElse(0);
-                Question currentQuestion = orderedQuestions.get(currentIndex);
+                List<Question> orderedQuestions = getOrderedQuestions(studentExam.getExam());
+                int currentIndex = sanitizeIndex(
+                        Optional.ofNullable(studentExam.getCurrentQuestion()).orElse(0),
+                        orderedQuestions.size()
+                );
+                studentExam.setCurrentQuestion(currentIndex);
+                studentExamRepository.save(studentExam);
 
-                return new StudentExamResponse(studentExam, mapToQuestionResponse(currentQuestion), false, remainingTime);
+                Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExamId);
+                return buildStudentExamResponse(studentExam, orderedQuestions, submissions, currentIndex);
             } else if (studentExam.getStatus() == StudentExamStatus.COMPLETED) {
                 throw new RuntimeException("Exam already completed");
             }
         }
-        var now = OffsetDateTime.now();
-        // Tạo đối tượng StudentExam mới nếu chưa có
-        StudentExam studentExam = new StudentExam()
-                .setId(studentExamId)  // Sử dụng ID ghép
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        StudentExam studentExam = existingExam.orElseGet(() -> new StudentExam()
+                .setId(studentExamId)
                 .setExam(exam)
                 .setStudent(student)
                 .setScore(0.0)
@@ -111,67 +117,81 @@ public class StudentExamService {
                 .setStartAt(now)
                 .setFinishAtEstimate(now.plusMinutes(exam.getDuration()))
                 .setTime(exam.getDuration())
-                .setCurrentQuestion(0);
+                .setCurrentQuestion(0));
 
         studentExam = studentExamRepository.save(studentExam);
 
-        // Lấy câu hỏi đầu tiên
-        Question firstQuestion = getOrderedQuestions(exam).get(0);
-        return new StudentExamResponse(studentExam, mapToQuestionResponse(firstQuestion), false, null);
+        List<Question> orderedQuestions = getOrderedQuestions(studentExam.getExam());
+        Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExamId);
+        return buildStudentExamResponse(studentExam, orderedQuestions, submissions, 0);
     }
 
-    private List<Question> getOrderedQuestions(Exam exam) {
-        return exam.getQuestions().stream()
-                .sorted(Comparator.comparing(Question::getId))
-                .toList();
-    }
-
-    public StudentExamResponse submitAnswer(String studentExamId, Long questionId, String answer) {
+    public StudentExamResponse submitAnswer(String studentExamId, Long questionId, String answer, Integer currentQuestionIndex) {
         StudentExam studentExam = studentExamRepository.findById(studentExamId)
                 .orElseThrow(() -> new RuntimeException("Student exam not found"));
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new RuntimeException("Question not found"));
 
-        boolean isCorrect = checkAnswer(question, answer);
-
-        ExamSubmission submission = new ExamSubmission()
-                .setStudentExam(studentExam)
-                .setQuestion(question)
-                .setAnswer(answer.trim())
-                .setIsCorrect(isCorrect);
-        examSubmissionRepository.save(submission);
         List<Question> orderedQuestions = getOrderedQuestions(studentExam.getExam());
-        int currentIndex = findIndexById(orderedQuestions, questionId);
-        double score = calculateScore(studentExam);
-        studentExam.setScore(score);
-        boolean isLast = (currentIndex + 1 == orderedQuestions.size());
-        if (!isLast) {
-            studentExam.setCurrentQuestion(currentIndex + 1);
-            studentExamRepository.save(studentExam);
-            Question nextQuestion = orderedQuestions.get(currentIndex + 1);
-            return new StudentExamResponse(studentExam, mapToQuestionResponse(nextQuestion), false, null);
-        } else {
-            studentExamRepository.save(studentExam); // vẫn lưu lại score, currentQuestion
-            return new StudentExamResponse(studentExam, null, true, null); // isLast = true
+        int questionIndex = findIndexById(orderedQuestions, questionId);
+        if (questionIndex < 0) {
+            throw new RuntimeException("Question does not belong to this exam");
         }
+
+        String normalizedAnswer = answer != null ? answer.trim() : null;
+
+        Optional<ExamSubmission> existingSubmission = examSubmissionRepository
+                .findTopByStudentExamIdAndQuestionIdOrderByIdDesc(studentExamId, questionId);
+
+        if (normalizedAnswer == null || normalizedAnswer.isBlank()) {
+            existingSubmission.ifPresent(examSubmissionRepository::delete);
+        } else {
+            ExamSubmission submission = existingSubmission.orElseGet(() -> new ExamSubmission()
+                    .setStudentExam(studentExam)
+                    .setQuestion(question));
+            submission.setAnswer(normalizedAnswer);
+            submission.setIsCorrect(checkAnswer(question, normalizedAnswer));
+            examSubmissionRepository.save(submission);
+        }
+
+        int targetIndex = currentQuestionIndex != null
+                ? sanitizeIndex(currentQuestionIndex, orderedQuestions.size())
+                : questionIndex;
+
+        studentExam.setCurrentQuestion(targetIndex);
+        studentExam.setScore(calculateScore(studentExam));
+        studentExamRepository.save(studentExam);
+
+        Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExamId);
+        return buildStudentExamResponse(studentExam, orderedQuestions, submissions, targetIndex);
     }
 
-    private int findIndexById(List<Question> list, Long id) {
-        for (int i = 0; i < list.size(); i++) {
-            if (list.get(i).getId().equals(id)) return i;
+    public StudentExamResponse getQuestion(String studentExamId, int questionIndex) {
+        StudentExam studentExam = studentExamRepository.findById(studentExamId)
+                .orElseThrow(() -> new RuntimeException("Student exam not found"));
+
+        List<Question> orderedQuestions = getOrderedQuestions(studentExam.getExam());
+        if (orderedQuestions.isEmpty()) {
+            throw new RuntimeException("Exam does not contain any questions");
         }
-        return -1;
+
+        int sanitizedIndex = sanitizeIndex(questionIndex, orderedQuestions.size());
+        studentExam.setCurrentQuestion(sanitizedIndex);
+        studentExamRepository.save(studentExam);
+
+        Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExamId);
+        return buildStudentExamResponse(studentExam, orderedQuestions, submissions, sanitizedIndex);
     }
 
     public ExamResult submitExam(String studentExamId) {
         StudentExam studentExam = studentExamRepository.findById(studentExamId)
                 .orElseThrow(() -> new RuntimeException("Student exam not found"));
 
-        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExamId);
-        long correctAnswersCount = submissions.stream()
+        Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExamId);
+        long correctAnswersCount = submissions.values().stream()
                 .filter(ExamSubmission::getIsCorrect)
                 .count();
-        int totalQuestions = submissions.size();
+        int totalQuestions = studentExam.getExam().getQuestions().size();
         double score = totalQuestions > 0 ? (correctAnswersCount * 10.0) / totalQuestions : 0.0;
 
         studentExam.setScore(score);
@@ -180,7 +200,10 @@ public class StudentExamService {
         long minutesSpent = Duration.between(studentExam.getStartAt(), studentExam.getFinishAt()).toMinutes();
         studentExam.setTime((int) minutesSpent);
         studentExamRepository.save(studentExam);
-        return new ExamResult(correctAnswersCount, totalQuestions - correctAnswersCount, totalQuestions, score, Duration.between(studentExam.getFinishAt(), studentExam.getStartAt()));
+
+        long wrongAnswers = totalQuestions - correctAnswersCount;
+        return new ExamResult(correctAnswersCount, wrongAnswers, totalQuestions, score,
+                Duration.between(studentExam.getStartAt(), studentExam.getFinishAt()));
     }
 
     private boolean checkAnswer(Question question, String answer) {
@@ -209,10 +232,10 @@ public class StudentExamService {
     }
 
     private double calculateScore(StudentExam studentExam) {
-        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExam.getId());
+        Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExam.getId());
 
         long totalQuestions = studentExam.getExam().getQuestions().size();
-        long correctAnswers = submissions.stream()
+        long correctAnswers = submissions.values().stream()
                 .filter(s -> Boolean.TRUE.equals(s.getIsCorrect()))
                 .count();
 
@@ -259,9 +282,9 @@ public class StudentExamService {
         StudentExam studentExam = studentExamRepository.findById(studentExamId)
                 .orElseThrow(() -> new RuntimeException("Not found"));
 
-        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExamId);
+        Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExamId);
 
-        List<QuestionDetail> details = submissions.stream().map(sub -> {
+        List<QuestionDetail> details = submissions.values().stream().map(sub -> {
             Question q = sub.getQuestion();
             return new QuestionDetail(
                     q.getId(),
@@ -300,13 +323,16 @@ public class StudentExamService {
             return new StudentExamDetailResponse(studentExamId, studentExam.getSwitchTab(), List.of());
         }
 
-        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExamId);
+        Map<Long, ExamSubmission> submissions = getLatestSubmissions(studentExamId);
 
-        List<QuestionDetail> details = submissions.stream()
+        List<QuestionDetail> details = submissions.values().stream()
                 .map(sub -> {
                     Question q = sub.getQuestion();
 
-                    String correctAnswer = (reviewMode == ExamReviewMode.FULL) ? q.getAnswer() : null;
+                    String correctAnswer = (reviewMode == FULL) ? q.getAnswer() : null;
+                    if (reviewMode == INCORRECT_ONLY && Boolean.TRUE.equals(sub.getIsCorrect())) {
+                        correctAnswer = null;
+                    }
 
                     return new QuestionDetail(
                             q.getId(),
@@ -323,8 +349,92 @@ public class StudentExamService {
         return new StudentExamDetailResponse(studentExamId, studentExam.getSwitchTab(), details);
     }
 
+    private List<Question> getOrderedQuestions(Exam exam) {
+        return exam.getQuestions().stream()
+                .sorted(Comparator.comparing(Question::getId))
+                .toList();
+    }
 
+    private int findIndexById(List<Question> list, Long id) {
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).getId().equals(id)) return i;
+        }
+        return -1;
+    }
+
+    private Map<Long, ExamSubmission> getLatestSubmissions(String studentExamId) {
+        List<ExamSubmission> submissions = examSubmissionRepository.findByStudentExamId(studentExamId);
+        submissions.sort(Comparator.comparing(ExamSubmission::getId));
+
+        Map<Long, ExamSubmission> latest = new LinkedHashMap<>();
+        for (ExamSubmission submission : submissions) {
+            latest.put(submission.getQuestion().getId(), submission);
+        }
+        return latest;
+    }
+
+    private List<QuestionStateResponse> buildQuestionStates(List<Question> orderedQuestions, Map<Long, ExamSubmission> submissions) {
+        List<QuestionStateResponse> states = new ArrayList<>();
+        for (int i = 0; i < orderedQuestions.size(); i++) {
+            Question question = orderedQuestions.get(i);
+            ExamSubmission submission = submissions.get(question.getId());
+            boolean answered = submission != null && submission.getAnswer() != null && !submission.getAnswer().isBlank();
+            Boolean correct = submission != null ? submission.getIsCorrect() : null;
+            states.add(new QuestionStateResponse(question.getId(), i, answered, correct));
+        }
+        return states;
+    }
+
+    private StudentExamResponse buildStudentExamResponse(StudentExam studentExam,
+                                                         List<Question> orderedQuestions,
+                                                         Map<Long, ExamSubmission> submissions,
+                                                         int currentIndex) {
+        StudentExamResponse response = new StudentExamResponse();
+        response.setStudentExam(studentExam);
+        response.setTotalQuestions(orderedQuestions.size());
+
+        if (!orderedQuestions.isEmpty()) {
+            int sanitizedIndex = sanitizeIndex(currentIndex, orderedQuestions.size());
+            Question currentQuestion = orderedQuestions.get(sanitizedIndex);
+            studentExam.getExam().setQuestions(new ArrayList<>(orderedQuestions));
+
+            response.setQuestion(mapToQuestionResponse(currentQuestion));
+            response.setCurrentIndex(sanitizedIndex);
+            response.setAnswer(Optional.ofNullable(submissions.get(currentQuestion.getId()))
+                    .map(ExamSubmission::getAnswer)
+                    .orElse(null));
+            response.setFirstQuestion(sanitizedIndex == 0);
+            response.setLastQuestion(sanitizedIndex == orderedQuestions.size() - 1);
+        } else {
+            response.setCurrentIndex(0);
+            response.setFirstQuestion(true);
+            response.setLastQuestion(true);
+        }
+
+        response.setQuestionStates(buildQuestionStates(orderedQuestions, submissions));
+        response.setCompleted(studentExam.getStatus() == StudentExamStatus.COMPLETED);
+        response.setSecondsRemaining(calculateSecondsRemaining(studentExam));
+        return response;
+    }
+
+    private Long calculateSecondsRemaining(StudentExam studentExam) {
+        if (studentExam.getFinishAtEstimate() == null) {
+            return null;
+        }
+        long seconds = Duration.between(OffsetDateTime.now(), studentExam.getFinishAtEstimate()).toSeconds();
+        return Math.max(seconds, 0);
+    }
+
+    private int sanitizeIndex(int index, int size) {
+        if (size <= 0) {
+            return 0;
+        }
+        if (index < 0) {
+            return 0;
+        }
+        if (index >= size) {
+            return size - 1;
+        }
+        return index;
+    }
 }
-
-
-

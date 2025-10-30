@@ -11,4 +11,5 @@ public class SubmitAnswerRequest {
     private Long questionId;
     @NotNull
     private String answer;
+    private Integer currentQuestionIndex;
 }

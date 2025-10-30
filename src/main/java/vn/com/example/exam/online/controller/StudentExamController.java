@@ -47,7 +47,8 @@ public class StudentExamController {
                 studentExamService.submitAnswer(
                         request.getStudentExamId(),
                         request.getQuestionId(),
-                        request.getAnswer()
+                        request.getAnswer(),
+                        request.getCurrentQuestionIndex()
                 )
         );
     }
@@ -81,5 +82,12 @@ public class StudentExamController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<StudentExamDetailResponse> getStudentExamDetailForStudent(@PathVariable String studentExamId) {
         return ResponseEntity.ok(studentExamService.getStudentExamDetailById(studentExamId));
+    }
+
+    @GetMapping("/{studentExamId}/questions/{questionIndex}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentExamResponse> getQuestionByIndex(@PathVariable String studentExamId,
+                                                                  @PathVariable int questionIndex) {
+        return ResponseEntity.ok(studentExamService.getQuestion(studentExamId, questionIndex));
     }
 }
