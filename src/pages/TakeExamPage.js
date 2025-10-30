@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../hooks/useAuth';
 import studentExamService from '../services/studentExamService';
-import questionService from '../services/questionService';
 import examService from '../services/examService';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
@@ -234,30 +233,61 @@ const FooterActions = styled.div`
   flex: 0 0 auto;
 `;
 
+const NavigatorContainer = styled.div`
+  position: relative;
+  display: inline-flex;
+`;
+
+const FooterQuestionButton = styled.button`
+  display: inline-flex;
+  padding: 0.45rem 1.95rem;
+  border-radius: 0.75rem;
+  border: none;
+  background: ${props => props.theme === 'dark' ? '#201b3d' : '#1d223d'};
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${props => props.theme === 'dark'
+      ? '0 8px 18px rgba(0, 0, 0, 0.4)'
+      : '0 8px 18px rgba(29, 34, 61, 0.25)'};
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const FooterActionButton = styled.button`
   padding: 1.05rem 2.5rem;
   border-radius: 2.5rem;
   border: none;
   font-weight: 600;
   font-size: 1.05rem;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   color: #ffffff;
   background: ${props => props.variant === 'ghost'
     ? (props.theme === 'dark' ? '#3a4165' : '#4f5fd4')
-    : (props.theme === 'dark' ? '#8d47ff' : '#6a7efc')};
+    : '#6a7efc'};
   box-shadow: ${props => props.theme === 'dark'
     ? '0 4px 12px rgba(0, 0, 0, 0.35)'
     : '0 4px 12px rgba(106, 126, 252, 0.25)'};
   transition: transform 0.1s ease, box-shadow 0.1s ease;
+  opacity: ${props => props.disabled ? 0.6 : 1};
+  pointer-events: ${props => props.disabled ? 'none' : 'auto'};
   
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: ${props => props.theme === 'dark'
       ? '0 6px 16px rgba(0, 0, 0, 0.45)'
       : '0 6px 16px rgba(106, 126, 252, 0.35)'};
   }
   
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0);
   }
 `;
@@ -291,6 +321,150 @@ const QuestionHeaderBar = styled.div`
   margin-bottom: 1.5rem;
 `;
 
+const QuestionNavigation = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`;
+
+const NavigatorPopover = styled.div`
+  position: absolute;
+  bottom: calc(100% + 16px);
+  right: 0;
+  background: ${props => props.theme === 'dark' ? '#151229' : '#ffffff'};
+  border: 1px solid ${props => props.theme === 'dark' ? '#2c2f4d' : '#dce0f5'};
+  border-radius: 1.25rem;
+  box-shadow: ${props => props.theme === 'dark'
+    ? '0 22px 48px rgba(0, 0, 0, 0.6)'
+    : '0 22px 48px rgba(47, 63, 160, 0.22)'};
+  padding: 1.35rem;
+  min-width: 320px;
+  z-index: 20;
+  &:after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    right: 32px;
+    border-width: 10px 8px 0 8px;
+    border-style: solid;
+    border-color: ${props => props.theme === 'dark' ? '#151229' : '#ffffff'} transparent transparent transparent;
+  }
+  &:before {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    right: 30px;
+    border-width: 12px 10px 0 10px;
+    border-style: solid;
+    border-color: ${props => props.theme === 'dark' ? '#2c2f4d' : '#dce0f5'} transparent transparent transparent;
+  }
+`;
+
+const NavigatorFooter = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+`;
+
+const PopoverHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: ${props => props.theme === 'dark' ? '#f2f4ff' : '#1d223d'};
+`;
+
+const Legend = styled.div`
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+`;
+
+const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: ${props => props.theme === 'dark' ? '#cfd2ff' : '#4a4f75'};
+`;
+
+const StatusDot = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  color: #fff;
+  background: ${props => props.$variant === 'current'
+    ? '#6a7efc'
+    : props.$variant === 'answered'
+      ? '#5fb878'
+      : props.$variant === 'review'
+        ? '#ff8f6a'
+        : '#9ca3c7'};
+`;
+
+const QuestionNavButton = styled.button`
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid ${props => props.$current
+    ? (props.theme === 'dark' ? '#8d47ff' : '#6a7efc')
+    : props.$review
+      ? '#ff8f6a'
+      : (props.theme === 'dark' ? '#3d425f' : '#c7ccdd')};
+  background: ${props => props.$current
+    ? (props.theme === 'dark' ? '#8d47ff' : '#6a7efc')
+    : props.$answered
+      ? (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.2)' : 'rgba(106, 126, 252, 0.16)')
+      : props.$review
+        ? (props.theme === 'dark' ? 'rgba(255, 143, 106, 0.2)' : 'rgba(255, 143, 106, 0.18)')
+        : 'transparent'};
+  color: ${props => props.$current
+    ? '#ffffff'
+    : props.theme === 'dark'
+      ? '#e0e4ff'
+      : '#1d223d'};
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  opacity: ${props => props.disabled ? 0.6 : 1};
+  pointer-events: ${props => props.disabled ? 'none' : 'auto'};
+  font-weight: ${props => props.$answered ? 700 : 600};
+  position: relative;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: ${props => props.theme === 'dark'
+      ? '0 4px 10px rgba(0, 0, 0, 0.35)'
+      : '0 4px 10px rgba(106, 126, 252, 0.25)'};
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+`;
+
+const ReviewBadge = styled.span`
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff8f6a;
+  border: 2px solid ${props => props.theme === 'dark' ? '#101528' : '#ffffff'};
+`;
+
 const QuestionBadge = styled.div`
   display: flex;
   align-items: center;
@@ -316,9 +490,38 @@ const QuestionLabel = styled.div`
 `;
 
 const QuestionMeta = styled.div`
-  font-size: 1.3rem;
-  fontWeight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 600;
   color: var(--text-secondary);
+`;
+
+const ReviewToggleButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid ${props => props.$active
+    ? (props.theme === 'dark' ? '#ff9c7e' : '#ff8f6a')
+    : (props.theme === 'dark' ? '#3d425f' : '#c7ccdd')};
+  background: ${props => props.$active
+    ? (props.theme === 'dark' ? 'rgba(255, 143, 106, 0.2)' : 'rgba(255, 143, 106, 0.15)')
+    : 'transparent'};
+  color: ${props => props.$active
+    ? (props.theme === 'dark' ? '#ffc1aa' : '#d76236')
+    : (props.theme === 'dark' ? '#e0e4ff' : '#3f4470')};
+  cursor: pointer;
+
+  &:hover {
+    background: ${props => props.$active
+      ? (props.theme === 'dark' ? 'rgba(255, 143, 106, 0.25)' : 'rgba(255, 143, 106, 0.22)')
+      : (props.theme === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(99, 105, 158, 0.08)')};
+  }
 `;
 
 const Instructions = styled.p`
@@ -711,17 +914,20 @@ function TakeExamPage() {
   const [studentExamId, setStudentExamId] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [examResult, setExamResult] = useState(null);
-  const [serverLastQuestionFlag, setServerLastQuestionFlag] = useState(false);
-  const [resumingExam, setResumingExam] = useState(false);
-  const [timeExpirationChecked, setTimeExpirationChecked] = useState(false);
+  const [questionStates, setQuestionStates] = useState([]);
+  const [answerCache, setAnswerCache] = useState({});
+  const [activeQuestion, setActiveQuestion] = useState(null);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
   const [examCompleted, setExamCompleted] = useState(false);
-  const [lastTabSwitchTime, setLastTabSwitchTime] = useState(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [questionLoading, setQuestionLoading] = useState(false);
   const [panelRatio, setPanelRatio] = useState(0.5);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
   const questionContentRef = useRef(null);
   const [isTimerHidden, setIsTimerHidden] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
+  const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
+  const [reviewFlags, setReviewFlags] = useState({});
 
   useEffect(() => {
     disableLoader();
@@ -751,213 +957,554 @@ function TakeExamPage() {
         setExam(null);
       });
   }, [examId]);
+
+  const mapQuestionPayload = useCallback((questionData) => {
+    if (!questionData) {
+      return null;
+    }
+
+    const normalizeOption = (choice) => {
+      if (typeof choice === 'string') {
+        return { id: choice, text: choice };
+      }
+      if (typeof choice === 'object' && choice !== null) {
+        return {
+          id: choice.id || choice.optionKey || choice.value || Math.random().toString(36).slice(2, 9),
+          text: choice.text || choice.content || choice.optionValue || String(choice.id ?? '')
+        };
+      }
+      return { id: String(choice), text: String(choice) };
+    };
+
+    return {
+      id: questionData.id,
+      text: questionData.title || questionData.text || '',
+      type: questionData.type,
+      imageUrl: questionData.image || questionData.imageUrl || questionData.img || questionData.imagePath || questionData.imageUri || null,
+      options: Array.isArray(questionData.choices) ? questionData.choices.map(normalizeOption) : []
+    };
+  }, []);
+
+  const syncAnswerStateFromServer = useCallback((question, answerValue) => {
+    if (!question) {
+      return;
+    }
+
+    const normalizedAnswer = typeof answerValue === 'string' ? answerValue.trim() : '';
+    setAnswerCache(prev => ({ ...prev, [question.id]: normalizedAnswer }));
+
+    const normalizeOptionText = (option) => {
+      if (!option) return '';
+      if (typeof option.text === 'string') return option.text.trim();
+      if (typeof option.text === 'object') return JSON.stringify(option.text);
+      return String(option.text ?? '').trim();
+    };
+
+    if (question.type === 'MULTIPLE_CHOICE') {
+      const selections = normalizedAnswer
+        ? normalizedAnswer.split(',').map(item => item.trim()).filter(Boolean)
+        : [];
+
+      const mappedSelections = selections.map(selectionText => {
+        const matchedOption = (question.options || []).find(opt => normalizeOptionText(opt) === selectionText);
+        if (matchedOption) {
+          return { id: matchedOption.id, text: matchedOption.text };
+        }
+        return { id: selectionText, text: selectionText };
+      });
+
+      setMultipleChoiceAnswers(prev => ({
+        ...prev,
+        [question.id]: mappedSelections
+      }));
+
+      setAnswers(prev => ({
+        ...prev,
+        [question.id]: null
+      }));
+
+      setEssayAnswers(prev => ({
+        ...prev,
+        [question.id]: ''
+      }));
+      return;
+    }
+
+    if (question.type === 'ESSAY') {
+      setEssayAnswers(prev => ({
+        ...prev,
+        [question.id]: answerValue || ''
+      }));
+      setAnswers(prev => ({
+        ...prev,
+        [question.id]: null
+      }));
+      setMultipleChoiceAnswers(prev => ({
+        ...prev,
+        [question.id]: []
+      }));
+      return;
+    }
+
+    const matchedOption = (question.options || []).find(opt => normalizeOptionText(opt) === normalizedAnswer);
+
+    setAnswers(prev => ({
+      ...prev,
+      [question.id]: matchedOption
+        ? { id: matchedOption.id, text: matchedOption.text }
+        : null
+    }));
+
+    setMultipleChoiceAnswers(prev => ({
+      ...prev,
+      [question.id]: []
+    }));
+
+    setEssayAnswers(prev => ({
+      ...prev,
+      [question.id]: ''
+    }));
+  }, [setAnswerCache, setMultipleChoiceAnswers, setAnswers, setEssayAnswers]);
+
+  const applyExamResponse = useCallback((responseData) => {
+    if (!responseData || !responseData.studentExam) {
+      setError('Failed to load exam session. Please try again.');
+      return;
+    }
+
+    const { studentExam, question, currentIndex, totalQuestions: total, questionStates: states, secondsRemaining, answer } = responseData;
+
+    if (studentExam.id) {
+      setStudentExamId(studentExam.id);
+      localStorage.setItem('currentStudentExamId', studentExam.id);
+    }
+
+    let normalizedQuestions = Array.isArray(studentExam.exam?.questions)
+      ? studentExam.exam.questions.map(mapQuestionPayload)
+      : [];
+
+    if (typeof total === 'number') {
+      setTotalQuestions(total);
+    } else {
+      setTotalQuestions(normalizedQuestions.length);
+    }
+
+    if (studentExam.exam) {
+      setExam(studentExam.exam);
+    }
+
+    if (typeof currentIndex === 'number') {
+      setCurrentQuestionIndex(currentIndex);
+      if (studentExam.id) {
+        localStorage.setItem(`exam_current_question_${studentExam.id}`, currentIndex.toString());
+      }
+    }
+
+    if (Array.isArray(states)) {
+      setQuestionStates(states);
+      setExamCompleted(states.length > 0 && states.every(state => state.answered));
+    } else {
+      setQuestionStates([]);
+      setExamCompleted(false);
+    }
+
+    if (typeof secondsRemaining === 'number') {
+      setTimeRemaining(secondsRemaining);
+    }
+
+    const stateList = Array.isArray(states) ? states : [];
+    const indexResolver = (state, fallbackIndex) => {
+      if (!stateList.length || !state) return fallbackIndex;
+      if (typeof state.index === 'number') return state.index;
+      return fallbackIndex;
+    };
+
+    const expectedLength = (() => {
+      if (typeof total === 'number' && total > 0) return total;
+      if (stateList.length > 0) {
+        const resolved = stateList.map((state, idx) => indexResolver(state, idx));
+        return Math.max(...resolved) + 1;
+      }
+      if (typeof currentIndex === 'number' && currentIndex >= 0) return currentIndex + 1;
+      return normalizedQuestions.length;
+    })();
+
+    const questionStateById = new Map(
+      stateList.map((state, idx) => [state.questionId, indexResolver(state, idx)])
+    );
+
+    if ((!normalizedQuestions.length) && expectedLength > 0) {
+      normalizedQuestions = Array.from({ length: expectedLength }, () => null);
+    } else if (expectedLength > 0 && normalizedQuestions.length < expectedLength) {
+      normalizedQuestions = [
+        ...normalizedQuestions,
+        ...Array(expectedLength - normalizedQuestions.length).fill(null)
+      ];
+    }
+
+    if (Array.isArray(studentExam.exam?.questions) && studentExam.exam.questions.length) {
+      const examQuestions = studentExam.exam.questions.map(mapQuestionPayload);
+      const merged = normalizedQuestions.length ? [...normalizedQuestions] : [];
+
+      examQuestions.forEach(q => {
+        if (!q) {
+          return;
+        }
+        const targetIndex = questionStateById.has(q.id)
+          ? questionStateById.get(q.id)
+          : merged.findIndex(existing => existing?.id === q.id);
+        if (targetIndex !== undefined && targetIndex !== -1) {
+          while (merged.length <= targetIndex) {
+            merged.push(null);
+          }
+          merged[targetIndex] = q;
+        } else {
+          merged.push(q);
+        }
+      });
+
+      normalizedQuestions = merged;
+    }
+
+    let mappedCurrent = null;
+    let targetIndex = typeof currentIndex === 'number' && currentIndex >= 0 ? currentIndex : 0;
+
+    if (question) {
+      mappedCurrent = mapQuestionPayload(question);
+    }
+
+    setQuestions(prev => {
+      let merged = normalizedQuestions.length ? [...normalizedQuestions] : [...prev];
+
+      if (!merged.length && expectedLength > 0) {
+        merged = Array.from({ length: expectedLength }, () => null);
+      }
+
+      if (mappedCurrent) {
+        if (merged.length <= targetIndex) {
+          merged = [...merged, ...Array(targetIndex - merged.length + 1).fill(null)];
+        }
+        merged[targetIndex] = mappedCurrent;
+      }
+
+      if (!merged.length && mappedCurrent) {
+        merged = [mappedCurrent];
+        targetIndex = 0;
+      }
+
+      if (stateList.length) {
+        const prevById = new Map((prev || []).filter(Boolean).map(q => [q.id, q]));
+        merged = merged.map((item, idx) => {
+          if (item && item.id) return item;
+          const state = stateList.find((s, sIdx) => indexResolver(s, sIdx) === idx);
+          if (state) {
+            const stateQuestionId = state.questionId;
+            if (stateQuestionId && prevById.has(stateQuestionId)) {
+              return prevById.get(stateQuestionId);
+            }
+            if (stateQuestionId && mappedCurrent && stateQuestionId === mappedCurrent.id) {
+              return mappedCurrent;
+            }
+            if (stateQuestionId) {
+              return item ?? { id: stateQuestionId, text: '', type: mappedCurrent?.type || 'SINGLE_CHOICE', options: [] };
+            }
+          }
+          return item;
+        });
+      }
+
+      return merged;
+    });
+
+    if (mappedCurrent) {
+      syncAnswerStateFromServer(mappedCurrent, answer);
+      setActiveQuestion(mappedCurrent);
+    } else if (typeof targetIndex === 'number' && targetIndex >= 0 && normalizedQuestions[targetIndex]) {
+      syncAnswerStateFromServer(normalizedQuestions[targetIndex], answer);
+      setActiveQuestion(normalizedQuestions[targetIndex]);
+    }
+  }, [
+    mapQuestionPayload,
+    syncAnswerStateFromServer,
+    setExam,
+    setStudentExamId,
+    setTotalQuestions,
+    setCurrentQuestionIndex,
+    setQuestionStates,
+    setExamCompleted,
+    setTimeRemaining,
+    setQuestions
+  ]);
   
   useEffect(() => {
-    const storedStudentExamId = localStorage.getItem('currentStudentExamId');
-    
-    if (storedStudentExamId) {
-      console.log('Retrieved student exam ID from localStorage:', storedStudentExamId);
-      setStudentExamId(storedStudentExamId);
-      
-      setServerLastQuestionFlag(false);
-      
-      const resumeExam = async () => {
-        try {
-          setResumingExam(true);
-          setLoading(true);
-          
-          const actualExamId = examId || storedStudentExamId.split('-')[1];
-          console.log('Actual exam ID for password retrieval:', actualExamId);
-          
-          try {
-            console.log('Retrieving password from backend API...');
-            const password = await examService.getExamPassword(actualExamId);
-            console.log('Password retrieved successfully from backend');
-            
-            if (password) {
-              try {
-                console.log(`Attempting to resume exam ${examId} with retrieved password`);
-                const startResponse = await studentExamService.startExam(examId, password);
-                
-                if (startResponse && startResponse.data) {
-                  const responseData = startResponse.data;
-                  console.log('API response data:', responseData);
-                  
-                  const isLastQuestion = responseData.lastQuestion === true;
-                  setServerLastQuestionFlag(isLastQuestion);
-                  
-                  if (responseData.studentExam?.exam?.questions?.length) {
-                    const totalQuestionsCount = responseData.studentExam.exam.questions.length;
-                    setTotalQuestions(totalQuestionsCount);
-                    console.log(`Total questions count: ${totalQuestionsCount}`);
-                  }
-                  
-                  if (responseData.studentExam?.currentQuestion !== undefined) {
-                    const currentIndex = responseData.studentExam.currentQuestion;
-                    setCurrentQuestionIndex(currentIndex);
-                    console.log(`Current question index: ${currentIndex}`);
-                    
-                    if (storedStudentExamId) {
-                      localStorage.setItem(`exam_current_question_${storedStudentExamId}`, currentIndex.toString());
-                      console.log(`🔄 Resume: Updated localStorage currentQuestion from backend: ${currentIndex}`);
-                    }
-                  }
-                  
-                  if (responseData.secondRemaining !== undefined && responseData.secondRemaining !== null) {
-                    setTimeRemaining(responseData.secondRemaining);
-                    setTimeExpirationChecked(true);
-                    console.log(`Time remaining: ${responseData.secondRemaining} seconds`);
-                  }
-                  
-                  const allQuestions = [];
-                  
-                  if (responseData.studentExam?.exam?.questions && Array.isArray(responseData.studentExam.exam.questions)) {
-                    setExam(responseData.studentExam.exam);
-                    console.log('All questions from API:', responseData.studentExam.exam.questions);
-                    
-                    responseData.studentExam.exam.questions.forEach((q, index) => {
-                      const questionData = {
-                        id: q.id,
-                        text: q.title || q.text,
-                        type: q.type,
-                        imageUrl: q.image || q.imageUrl || q.img || q.imagePath || q.imageUri || null,
-                        options: q.choices?.map(choice => {
-                          if (typeof choice === 'string') {
-                            return { id: choice, text: choice };
-                          } else if (typeof choice === 'object') {
-                            return {
-                              id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
-                              text: choice.text || choice.content || choice.optionValue || String(choice)
-                            };
-                          } else {
-                            return { id: String(choice), text: String(choice) };
-                          }
-                        }) || []
-                      };
-                      allQuestions.push(questionData);
-                      console.log(`Added question ${index} with ID ${q.id} to local state`);
-                    });
-                  }
-                  
-                  if (responseData.nextQuestion) {
-                    const questionData = responseData.nextQuestion;
-                    console.log('Current question data from API:', questionData);
-                    console.log('Image fields in question data:', {
-                      image: questionData.image,
-                      
-                    });
-                    
-                    const mappedQuestion = {
-                      id: questionData.id,
-                      text: questionData.title,
-                      type: questionData.type,
-                      imageUrl: questionData.image || questionData.imageUrl || questionData.img || questionData.imagePath || questionData.imageUri || null,
-                      options: questionData.choices?.map(choice => {
-                        if (typeof choice === 'string') {
-                          return { id: choice, text: choice };
-                        } else if (typeof choice === 'object') {
-                          return {
-                            id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
-                            text: choice.text || choice.content || choice.optionValue || String(choice)
-                          };
-                        } else {
-                          return { id: String(choice), text: String(choice) };
-                        }
-                      }) || []
-                    };
-                    
-                    console.log('Processed question with image URL:', mappedQuestion.imageUrl);
-                    console.log('Full processed question:', mappedQuestion);
-                    
-                    const existingIndex = allQuestions.findIndex(q => q.id === mappedQuestion.id);
-                    if (existingIndex === -1) {
-                      allQuestions.push(mappedQuestion);
-                      console.log(`Added nextQuestion with ID ${mappedQuestion.id} to questions array`);
-                    } else {
-                      allQuestions[existingIndex] = mappedQuestion;
-                      console.log(`Updated existing question with ID ${mappedQuestion.id}`);
-                    }
-                    
-                    setQuestions(allQuestions);
-                    console.log('🔄 Resume: Set questions array with length:', allQuestions.length);
-                    console.log('🔄 Resume: Questions IDs:', allQuestions.map(q => q.id));
-                    
-                    if (responseData.nextQuestion && allQuestions.length > 0) {
-                      const actualCurrentQID = responseData.nextQuestion.id;
-                      const actualIndex = allQuestions.findIndex(q => q.id === actualCurrentQID);
-                      
-                      if (actualIndex !== -1) {
-                        console.log('🔄 Resume: Setting currentQuestionIndex to actual position:', {
-                          questionId: actualCurrentQID,
-                          actualIndex: actualIndex,
-                          backendIndex: responseData.studentExam?.currentQuestion,
-                          questionsLength: allQuestions.length
-                        });
-                        setCurrentQuestionIndex(actualIndex);
-                      } else {
-                        console.warn('🔄 Resume: nextQuestion not found in allQuestions, defaulting to last index');
-                        setCurrentQuestionIndex(allQuestions.length - 1);
-                      }
-                    } else {
-                      console.log('🔄 Resume: No nextQuestion or empty questions array, setting index to 0');
-                      setCurrentQuestionIndex(0);
-                    }
-                    
-                    setLoading(false);
-                  } else if (isLastQuestion) {
-                    setError('You have reached the last question. Please submit your exam.');
-                    setLoading(false);
-                  } else {
-                    setError('Could not retrieve the current question. Please try starting the exam again.');
-                    setLoading(false);
-                  }
-                } else {
-                  console.error('No data in API response');
-                  setError('Could not retrieve exam data. Please try again.');
-                  setLoading(false);
-                }
-              } catch (startErr) {
-                console.error('Error using retrieved password:', startErr);
-                handleResumeError(startErr);
-              }
-            } else {
-              console.warn('No password retrieved from backend');
-              setError('Could not retrieve exam password. Please start the exam again.');
-              setLoading(false);
-            }
-          } catch (passwordErr) {
-            console.error('Error retrieving password from backend:', passwordErr);
-            setError('Could not retrieve exam password. Please start the exam again.');
-            setLoading(false);
-          }
-        } catch (err) {
-          console.error('Error in resume exam flow:', err);
-          handleResumeError(err);
-        } finally {
-          setResumingExam(false);
-        }
-      };
-      
-      const handleResumeError = (err) => {
-        console.error('Resume error details:', err.response?.data || err.message);
-        
-        if (err.completed) {
-          setError('This exam has already been completed or the time has expired.');
-        } else if (err.response?.data?.message) {
-          setError(err.response.data.message);
-        } else {
-          setError('Failed to resume exam. Please try starting again.');
-        }
-        
+    let cancelled = false;
+
+    const initializeExamSession = async () => {
+      const storedStudentExamId = localStorage.getItem('currentStudentExamId');
+
+      if (storedStudentExamId) {
+        setStudentExamId(storedStudentExamId);
+      }
+
+      const derivedExamId = examId || (storedStudentExamId ? storedStudentExamId.split('-')[1] : null);
+
+      if (!derivedExamId) {
+        setError('No active exam session found. Please start the exam again.');
         setLoading(false);
-      };
-      
-      resumeExam();
-    } else {
-      setError('No active exam session found. Please start the exam again.');
-      setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const password = await examService.getExamPassword(derivedExamId);
+        const response = await studentExamService.startExam(derivedExamId, password);
+        if (cancelled) {
+          return;
+        }
+        if (response?.data) {
+          applyExamResponse(response.data);
+        } else {
+          setError('Invalid exam response received.');
+        }
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        console.error('Failed to initialize exam session:', err);
+        const message = err.response?.data?.message || err.message || 'Failed to start exam.';
+        setError(message);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeExamSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [examId, applyExamResponse]);
+  
+  const getAnswerPayload = useCallback((question) => {
+    if (!question) {
+      return '';
     }
-  }, [examId]);
+
+    if (question.type === 'MULTIPLE_CHOICE') {
+      const selections = multipleChoiceAnswers[question.id] || [];
+      return selections
+        .map(selection => (selection?.text || '').trim())
+        .filter(Boolean)
+        .join(', ');
+    }
+
+    if (question.type === 'ESSAY') {
+      return (essayAnswers[question.id] || '').trim();
+    }
+
+    const selected = answers[question.id];
+    return selected?.text ? selected.text.trim() : '';
+  }, [answers, multipleChoiceAnswers, essayAnswers]);
+
+  const persistAnswer = useCallback(async (questionId, answerText, questionIndex) => {
+    if (!studentExamId || !questionId) {
+      return null;
+    }
+
+    try {
+      const response = await studentExamService.submitAnswer(
+        studentExamId,
+        questionId,
+        answerText,
+        questionIndex
+      );
+
+      if (response?.data) {
+        applyExamResponse(response.data);
+        return response.data;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to persist answer:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to save answer.');
+      throw error;
+    }
+  }, [studentExamId, applyExamResponse, setError]);
+
+  const saveCurrentAnswerIfNeeded = useCallback(async () => {
+    const question = questions[currentQuestionIndex] || activeQuestion;
+    if (!question || !studentExamId) {
+      return null;
+    }
+
+    const payload = getAnswerPayload(question);
+    const cached = (answerCache[question.id] || '').trim();
+    const normalizedPayload = payload.trim();
+
+    if (normalizedPayload === cached) {
+      return null;
+    }
+
+    return persistAnswer(question.id, normalizedPayload, currentQuestionIndex);
+  }, [
+    questions,
+    activeQuestion,
+    currentQuestionIndex,
+    studentExamId,
+    getAnswerPayload,
+    answerCache,
+    persistAnswer
+  ]);
+
+  const loadQuestionByIndex = useCallback(async (targetIndex) => {
+    if (!studentExamId) {
+      return;
+    }
+
+    const totalCount = typeof totalQuestions === 'number' && totalQuestions > 0
+      ? totalQuestions
+      : Math.max(
+          questions.length,
+          activeQuestion ? 1 : 0,
+          Array.isArray(questionStates) ? questionStates.length : 0
+        );
+
+    if (totalCount === 0) {
+      return;
+    }
+
+    const sanitizedIndex = Math.max(0, Math.min(targetIndex, totalCount - 1));
+
+    setQuestionLoading(true);
+    try {
+      const response = await studentExamService.getQuestion(studentExamId, sanitizedIndex);
+      if (response?.data) {
+        applyExamResponse(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load question:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to load question.');
+    } finally {
+      setQuestionLoading(false);
+    }
+  }, [studentExamId, totalQuestions, questions, questionStates, activeQuestion, applyExamResponse, setError]);
+
+  const navigateToQuestion = useCallback(async (targetIndex) => {
+    const totalCount = typeof totalQuestions === 'number' && totalQuestions > 0
+      ? totalQuestions
+      : Math.max(
+          questions.length,
+          activeQuestion ? 1 : 0,
+          Array.isArray(questionStates) ? questionStates.length : 0
+        );
+
+    if (totalCount === 0) {
+      return;
+    }
+
+    const sanitizedIndex = Math.max(0, Math.min(targetIndex, totalCount - 1));
+
+    if (sanitizedIndex === currentQuestionIndex || isNavigating) {
+      return;
+    }
+
+    setIsNavigating(true);
+    try {
+      await saveCurrentAnswerIfNeeded();
+      await loadQuestionByIndex(sanitizedIndex);
+      setIsNavigatorOpen(false);
+    } catch (error) {
+      console.error('Navigation failed:', error);
+    } finally {
+      setIsNavigating(false);
+    }
+  }, [
+    totalQuestions,
+    questions,
+    questionStates,
+    activeQuestion,
+    currentQuestionIndex,
+    isNavigating,
+    saveCurrentAnswerIfNeeded,
+    loadQuestionByIndex
+  ]);
+
+  const toggleReviewFlag = useCallback((questionId) => {
+    if (!questionId) return;
+    setReviewFlags(prev => ({
+      ...prev,
+      [questionId]: !prev?.[questionId]
+    }));
+  }, []);
+
+  const handleSubmitExam = async (eventOrOptions) => {
+    let options = {};
+    
+    if (eventOrOptions && typeof eventOrOptions.preventDefault === 'function') {
+      eventOrOptions.preventDefault();
+    } else if (eventOrOptions && typeof eventOrOptions === 'object') {
+      options = eventOrOptions;
+    }
+    
+    const { autoTrigger = false } = options;
+    
+    if (!studentExamId) {
+      setError('No active exam session found');
+      return;
+    }
+
+    try {
+      await saveCurrentAnswerIfNeeded();
+    } catch (error) {
+      console.error('Failed to save current answer before submission:', error);
+    }
+    
+    if (autoTrigger) {
+      setShowSubmitConfirmation(false);
+      setInfoMessage('Time is up. Submitting your exam automatically...');
+      handleConfirmSubmit({ isAuto: true });
+      return;
+    }
+    
+    setInfoMessage('');
+    setShowSubmitConfirmation(true);
+  };
+
+  const handleNextQuestion = useCallback(async () => {
+    const totalCount = typeof totalQuestions === 'number' && totalQuestions > 0
+      ? totalQuestions
+      : Math.max(
+          questions.length,
+          activeQuestion ? 1 : 0,
+          Array.isArray(questionStates) ? questionStates.length : 0
+        );
+
+    const isLast = totalCount > 0 && currentQuestionIndex >= totalCount - 1;
+
+    if (isLast) {
+      await handleSubmitExam();
+      return;
+    }
+
+    await navigateToQuestion(currentQuestionIndex + 1);
+  }, [
+    totalQuestions,
+    questions,
+    questionStates,
+    activeQuestion,
+    currentQuestionIndex,
+    navigateToQuestion,
+    handleSubmitExam
+  ]);
+
+  const handlePreviousQuestion = useCallback(async () => {
+    await navigateToQuestion(currentQuestionIndex - 1);
+  }, [navigateToQuestion, currentQuestionIndex]);
   
   useEffect(() => {
     if (timeRemaining === null || loading || timeRemaining <= 0) return;
@@ -980,7 +1527,7 @@ function TakeExamPage() {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [timeRemaining, loading, studentExamId]);
+  }, [timeRemaining, loading, studentExamId, handleSubmitExam]);
 
   useEffect(() => {
     if (!studentExamId || showResults || examCompleted || loading) return;
@@ -988,13 +1535,11 @@ function TakeExamPage() {
     let isTabActive = true;
 
     const handleTabSwitch = async () => {
-      console.log('🚨 Tab switch detected - calling checkTab API immediately');
-
       try {
         await studentExamService.checkTab(studentExamId);
-        console.log('✅ Tab switch recorded successfully');
+        // console.log('Tab switch recorded successfully');
       } catch (error) {
-        console.error('❌ Failed to record tab switch:', error);
+        console.error('Failed to record tab switch:', error);
       }
     };
 
@@ -1014,7 +1559,7 @@ function TakeExamPage() {
 
     const handleWindowBlur = () => {
       if (isTabActive) {
-        console.log('🔄 Window lost focus - tab switch detected');
+        // console.log('Window lost focus - tab switch detected');
         isTabActive = false;
         
         handleTabSwitch();
@@ -1022,7 +1567,7 @@ function TakeExamPage() {
     };
 
     const handleWindowFocus = () => {
-      console.log('🔄 Window gained focus');
+      // console.log('🔄 Window gained focus');
       isTabActive = true;
     };
 
@@ -1106,189 +1651,6 @@ function TakeExamPage() {
     });
   };
   
-  const submitSingleChoiceAnswer = (questionId) => {
-    const selectedOption = answers[questionId];
-    if (!selectedOption) {
-      alert('Please select an answer');
-      return;
-    }
-    
-    console.log(`Submitting single choice answer - Question ${questionId}, Selected option:`, selectedOption);
-    
-    const answerContent = selectedOption.text;
-    
-    if (serverLastQuestionFlag) {
-      submitAnswer(questionId, answerContent, true);
-    } else {
-      submitAnswer(questionId, answerContent);
-    }
-  };
-  
-  const submitMultipleChoiceAnswer = (questionId) => {
-    const selections = multipleChoiceAnswers[questionId] || [];
-    if (selections.length === 0) {
-      alert('Please select at least one answer');
-      return;
-    }
-    
-    const answerContents = selections.map(option => option.text);
-    
-    const answer = answerContents.join(', ');
-    console.log(`Submitting multiple choice answer - Question ${questionId}, Selected options:`, answer);
-    
-    if (serverLastQuestionFlag) {
-      submitAnswer(questionId, answer, true);
-    } else {
-      submitAnswer(questionId, answer);
-    }
-  };
-  
-  const submitEssayAnswer = (questionId) => {
-    const text = essayAnswers[questionId] || '';
-    if (!text.trim()) {
-      alert('Please write your answer');
-      return;
-    }
-    
-    console.log(`Submitting essay answer - Question ${questionId}, Text length: ${text.length} chars`);
-    
-    if (serverLastQuestionFlag) {
-      submitAnswer(questionId, text, true);
-    } else {
-      submitAnswer(questionId, text);
-    }
-  };
-  
-  const submitAnswer = async (questionId, answer, isLastQuestion = false) => {
-    if (loading) return;
-    
-    if (localStorage.getItem(`exam_submitting_${studentExamId}`) === 'true') {
-      console.log('Exam is being submitted, skipping individual answer submission');
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      console.log(`--- SUBMITTING ANSWER DETAILS ---`);
-      console.log(`Question ID: ${questionId}`);
-      console.log(`Answer value: ${answer}`);
-      console.log(`Student Exam ID: ${studentExamId}`);
-      console.log(`Is Last Question: ${isLastQuestion}`);
-      
-      const response = await studentExamService.submitAnswer(studentExamId, questionId, answer);
-      console.log('Answer submitted successfully', response.data);
-      
-      if (response && response.data) {
-        const responseData = response.data;
-        
-        const isLastQuestion = responseData.lastQuestion === true;
-        console.log('Server response lastQuestion flag:', isLastQuestion);
-        
-        setServerLastQuestionFlag(isLastQuestion);
-        
-        if (isLastQuestion) {
-          console.log('🎉 Exam completed! Setting examCompleted to true');
-          setExamCompleted(true);
-          setLoading(false);
-          return;
-        }
-        
-        if (responseData.studentExam?.exam) {
-          setExam(responseData.studentExam.exam);
-        }
-        
-        if (responseData.studentExam?.exam?.questions?.length) {
-          const count = responseData.studentExam.exam.questions.length;
-          console.log(`Setting total questions count: ${count}`);
-          setTotalQuestions(count);
-        }
-        
-        if (responseData.studentExam?.currentQuestion !== undefined && studentExamId) {
-          const backendCurrentQuestion = responseData.studentExam.currentQuestion;
-          localStorage.setItem(`exam_current_question_${studentExamId}`, backendCurrentQuestion.toString());
-          console.log(`🔄 Updated localStorage currentQuestion from backend: ${backendCurrentQuestion}`);
-        }
-        
-        if (!responseData.nextQuestion || !responseData.nextQuestion.id) {
-          if (isLastQuestion) {
-            console.log('No next question, and server confirms this is the last question');
-          } else {
-            console.warn('No next question but lastQuestion is false - unexpected state');
-          }
-          setLoading(false);
-          return;
-        }
-        
-        const nextQuestion = {
-          id: responseData.nextQuestion.id,
-          text: responseData.nextQuestion.title,
-          type: responseData.nextQuestion.type,
-          imageUrl: responseData.nextQuestion.image || responseData.nextQuestion.imageUrl || responseData.nextQuestion.img || responseData.nextQuestion.imagePath || responseData.nextQuestion.imageUri || null,
-          options: responseData.nextQuestion.choices?.map(choice => {
-            if (typeof choice === 'string') {
-              return { id: choice, text: choice };
-            } else if (typeof choice === 'object') {
-              return {
-                id: choice.id || choice.optionKey || Math.random().toString(36).substring(2, 9),
-                text: choice.text || choice.content || choice.optionValue || JSON.stringify(choice)
-              };
-            } else {
-              return { id: String(choice), text: String(choice) };
-            }
-          }) || []
-        };
-        
-        console.log('Next question image from submitAnswer:', {
-          originalImage: responseData.nextQuestion.image,
-          processedImageUrl: nextQuestion.imageUrl,
-          questionId: nextQuestion.id
-        });
-        
-        setQuestions(prev => {
-          const existingIndex = prev.findIndex(q => q.id === nextQuestion.id);
-          
-          let updatedQuestions;
-          if (existingIndex !== -1) {
-            updatedQuestions = [...prev];
-            updatedQuestions[existingIndex] = nextQuestion;
-            console.log('🔄 Questions Updated (replaced):', {
-              index: existingIndex,
-              questionId: nextQuestion.id,
-              totalLength: updatedQuestions.length
-            });
-          } else {
-            updatedQuestions = [...prev, nextQuestion];
-            console.log('🔄 Questions Updated (added):', {
-              previousLength: prev.length,
-              newLength: updatedQuestions.length,
-              newQuestionId: nextQuestion.id,
-              newQuestionText: nextQuestion.text?.substring(0, 50)
-            });
-          }
-          
-          return updatedQuestions;
-        });
-        
-        setCurrentQuestionIndex(prevIndex => {
-          const newIndex = prevIndex + 1;
-          console.log('🔄 Index Update:', {
-            from: prevIndex,
-            to: newIndex,
-            nextQuestionId: nextQuestion.id,
-            nextQuestionText: nextQuestion.text?.substring(0, 50),
-            questionsAfterUpdate: 'Will be updated after questions state updates'
-          });
-          return newIndex;
-        });
-      }
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-      setError('Failed to submit answer. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
   
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -1372,33 +1734,6 @@ function TakeExamPage() {
       return user.username || 'Student';
     }
     return 'Student';
-  };
-
-  const handleSubmitExam = (eventOrOptions) => {
-    let options = {};
-    
-    if (eventOrOptions && typeof eventOrOptions.preventDefault === 'function') {
-      eventOrOptions.preventDefault();
-    } else if (eventOrOptions && typeof eventOrOptions === 'object') {
-      options = eventOrOptions;
-    }
-    
-    const { autoTrigger = false } = options;
-    
-    if (!studentExamId) {
-      setError('No active exam session found');
-      return;
-    }
-    
-    if (autoTrigger) {
-      setShowSubmitConfirmation(false);
-      setInfoMessage('Time is up. Submitting your exam automatically...');
-      handleConfirmSubmit({ isAuto: true });
-      return;
-    }
-    
-    setInfoMessage('');
-    setShowSubmitConfirmation(true);
   };
   
   const handleConfirmSubmit = async (eventOrOptions, maybeOptions) => {
@@ -1636,12 +1971,12 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            <FooterProgressGroup>
+            {/* <FooterProgressGroup>
               <FooterProgressPill theme={theme}>
                 Exam Status
               </FooterProgressPill>
               <FooterNotice theme={theme}>An error occurred while loading this exam.</FooterNotice>
-            </FooterProgressGroup>
+            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -1671,12 +2006,12 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            <FooterProgressGroup>
+            {/* <FooterProgressGroup>
               <FooterProgressPill theme={theme}>
                 Results Summary
               </FooterProgressPill>
               <FooterNotice theme={theme}>You can review your answers or return to the exam list.</FooterNotice>
-            </FooterProgressGroup>
+            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -1710,12 +2045,12 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            <FooterProgressGroup>
+            {/* <FooterProgressGroup>
               <FooterProgressPill theme={theme}>
                 Review & Submit
               </FooterProgressPill>
               <FooterNotice theme={theme}>Click submit to finalize and see your results.</FooterNotice>
-            </FooterProgressGroup>
+            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -1737,7 +2072,12 @@ function TakeExamPage() {
     );
   }
   
-  if (questions.length === 0) {
+  const fallbackQuestions = questions.length > 0 ? questions : (activeQuestion ? [activeQuestion] : []);
+  const currentQuestion = questions.length > 0
+    ? (questions[currentQuestionIndex] || questions.find(Boolean) || activeQuestion)
+    : activeQuestion;
+
+  if (!currentQuestion) {
     return (
       <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
         {renderHeader({ showSubmitButton: false })}
@@ -1754,12 +2094,12 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            <FooterProgressGroup>
+            {/* <FooterProgressGroup>
               <FooterProgressPill theme={theme}>
                 Waiting for Questions
               </FooterProgressPill>
               <FooterNotice theme={theme}>Please return to the exam list and try again.</FooterNotice>
-            </FooterProgressGroup>
+            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -1774,25 +2114,22 @@ function TakeExamPage() {
       </PageContainer>
     );
   }
-  
-  const currentQuestion = questions.length > 0 
-    ? (questions[currentQuestionIndex] || questions[0]) 
-    : null;
 
   const displayedQuestionNumber = currentQuestion ? getDisplayedQuestionNumber() : 0;
-  
-  console.log('🐛 RENDER STATE DEBUG:', {
-    currentQuestionIndex,
-    questionsLength: questions.length,
-    currentQuestionId: currentQuestion?.id,
-    currentQuestionText: currentQuestion?.text?.substring(0, 50),
-    currentQuestionImageUrl: currentQuestion?.imageUrl,
-    serverLastQuestionFlag,
-    loading,
-    questionsIds: questions.map(q => q.id)
-  });
-  
-  const isLastQuestion = serverLastQuestionFlag;
+  const currentQuestionReview = currentQuestion ? Boolean(reviewFlags[currentQuestion.id]) : false;
+  const isLastQuestion = totalQuestionCount > 0 && currentQuestionIndex >= totalQuestionCount - 1;
+  const isFirstQuestion = currentQuestionIndex <= 0;
+
+  // console.log('🐛 RENDER STATE DEBUG:', {
+  //   currentQuestionIndex,
+  //   questionsLength: questions.length,
+  //   currentQuestionId: currentQuestion?.id,
+  //   currentQuestionText: currentQuestion?.text?.substring(0, 50),
+  //   currentQuestionImageUrl: currentQuestion?.imageUrl,
+  //   isLastQuestion,
+  //   loading,
+  //   questionsIds: questions.map(q => q.id)
+  // });
   
   const renderQuestionInput = () => {
     if (!currentQuestion) return null;
@@ -1860,39 +2197,6 @@ function TakeExamPage() {
           </AnswerOptions>
         );
     }
-  };
-
-  const advanceToNextStep = () => {
-    if (!currentQuestion) return;
-    
-    switch (currentQuestion.type) {
-      case 'ESSAY':
-        submitEssayAnswer(currentQuestion.id);
-        break;
-      case 'MULTIPLE_CHOICE':
-        submitMultipleChoiceAnswer(currentQuestion.id);
-        break;
-      case 'SINGLE_CHOICE':
-      default:
-        submitSingleChoiceAnswer(currentQuestion.id);
-        break;
-    }
-  };
-
-  const getFooterAction = () => {
-    if (!currentQuestion) return null;
-    
-    if (serverLastQuestionFlag) {
-      return {
-        label: 'Submit',
-        onClick: handleSubmitExam
-      };
-    }
-    
-    return {
-      label: 'Next',
-      onClick: advanceToNextStep
-    };
   };
 
   const handleResizeStart = (event) => {
@@ -1973,15 +2277,52 @@ function TakeExamPage() {
     );
   }
   
-  const footerAction = getFooterAction();
   const footerNotice = infoMessage
     ? infoMessage
-    : currentQuestion && serverLastQuestionFlag
+    : currentQuestion && isLastQuestion
       ? "You've reached the final question. Submit when you're ready."
       : '';
-  const questionProgressLabel = totalQuestionCount > 0 && displayedQuestionNumber > 0
-    ? `Question ${displayedQuestionNumber} of ${totalQuestionCount}`
-    : 'Question Progress';
+  // const questionProgressLabel = totalQuestionCount > 0 && displayedQuestionNumber > 0
+  //   ? `Câu hỏi ${displayedQuestionNumber}/${totalQuestionCount}`
+  //   : 'Tiến độ câu hỏi';
+  const navigatorLabel = totalQuestionCount > 0
+    ? `Question ${displayedQuestionNumber}/${totalQuestionCount}`
+    : 'Question Navigator';
+  const navigationDisabled = questionLoading || isNavigating || loading;
+  const questionLookupById = new Map(fallbackQuestions.filter(Boolean).map(question => [question.id, question]));
+  const questionStateItems = questionStates.length > 0
+    ? questionStates.map((state, idx) => {
+        const index = typeof state.index === 'number' ? state.index : idx;
+        const question = state.questionId ? questionLookupById.get(state.questionId) : fallbackQuestions[index];
+        const savedAnswer = state.questionId ? (answerCache[state.questionId] || '').trim() : '';
+        const localAnswer = getAnswerPayload(question);
+        const answeredFlag = state.answered !== undefined ? state.answered : undefined;
+        return {
+          questionId: state.questionId,
+          index,
+          answered: answeredFlag !== undefined ? Boolean(answeredFlag) : Boolean(savedAnswer || localAnswer),
+          review: state.questionId ? Boolean(reviewFlags[state.questionId]) : false
+        };
+      })
+    : fallbackQuestions.map((question, index) => {
+        if (!question) {
+          return {
+            questionId: null,
+            index,
+            answered: false,
+            review: false
+          };
+        }
+        const savedAnswer = (answerCache[question.id] || '').trim();
+        const localAnswer = getAnswerPayload(question);
+        return {
+          questionId: question.id,
+          index,
+          answered: Boolean(savedAnswer || localAnswer),
+          review: Boolean(reviewFlags[question.id])
+        };
+      });
+  const orderedQuestionStateItems = questionStateItems.slice().sort((a, b) => a.index - b.index);
 
   return (
     <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
@@ -1999,7 +2340,7 @@ function TakeExamPage() {
                 <div>
                   <QuestionLabel>Question {displayedQuestionNumber}</QuestionLabel>
                   {/* <QuestionMeta>
-                    {serverLastQuestionFlag ? 'This is the last question of the exam.' : 'Answer the question to continue.'}
+                    {isLastQuestion ? 'This is the last question of the exam.' : 'Answer the question to continue.'}
                   </QuestionMeta> */}
                 </div>
               </QuestionBadge>
@@ -2009,6 +2350,18 @@ function TakeExamPage() {
                   : currentQuestion.type === 'MULTIPLE_CHOICE'
                     ? 'Select all that apply'
                     : 'Select one answer'}
+                {currentQuestion?.id && (
+                  <ReviewToggleButton
+                    type="button"
+                    theme={theme}
+                    $active={currentQuestionReview}
+                    onClick={() => toggleReviewFlag(currentQuestion.id)}
+                    style={{ marginLeft: '1rem' }}
+                  >
+                    <span role="img" aria-label="review">🔖</span>
+                    {currentQuestionReview ? 'Bỏ đánh dấu' : 'Đánh dấu xem lại'}
+                  </ReviewToggleButton>
+                )}
               </QuestionMeta>
             </QuestionHeaderBar>
             
@@ -2071,23 +2424,86 @@ function TakeExamPage() {
         <FooterContainer theme={theme}>
           <FooterUser>{getUserName()}</FooterUser>
           <FooterProgressGroup>
-            <FooterProgressPill theme={theme}>
+            {/* <FooterProgressPill theme={theme}>
               {questionProgressLabel}
-            </FooterProgressPill>
+            </FooterProgressPill> */}
+            <NavigatorContainer>
+              <FooterQuestionButton
+                type="button"
+                theme={theme}
+                onClick={() => setIsNavigatorOpen(prev => !prev)}
+              >
+                {navigatorLabel}
+              </FooterQuestionButton>
+              {isNavigatorOpen && (
+                <NavigatorPopover theme={theme}>
+                  <PopoverHeader>
+                    <span>Question List</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsNavigatorOpen(false)}
+                      style={{ border: 'none', background: 'transparent', color: theme === 'dark' ? '#cfd2ff' : '#4a4f75', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Đóng
+                    </button>
+                  </PopoverHeader>
+                  <Legend>
+                    <LegendItem>
+                      <StatusDot $variant="current" />
+                      <span>Current</span>
+                    </LegendItem>
+                    <LegendItem>
+                      <StatusDot $variant="answered" />
+                      <span>Answered</span>
+                    </LegendItem>
+                    <LegendItem>
+                      <StatusDot $variant="review" />
+                      <span>For Review</span>
+                    </LegendItem>
+                    <LegendItem>
+                      <StatusDot $variant="unanswered" />
+                      <span>Unanswered</span>
+                    </LegendItem>
+                  </Legend>
+                  <QuestionNavigation>
+                    {orderedQuestionStateItems.map(item => (
+                      <QuestionNavButton
+                        key={`${item.questionId ?? 'q'}-${item.index}`}
+                        theme={theme}
+                        $current={item.index === currentQuestionIndex}
+                        $answered={item.answered}
+                        $review={item.review}
+                        disabled={navigationDisabled}
+                        onClick={() => navigateToQuestion(item.index)}
+                      >
+                        {item.index + 1}
+                        {item.review && <ReviewBadge theme={theme} />}
+                      </QuestionNavButton>
+                    ))}
+                  </QuestionNavigation>
+                </NavigatorPopover>
+              )}
+            </NavigatorContainer>
             {footerNotice && (
               <FooterNotice theme={theme}>{footerNotice}</FooterNotice>
             )}
           </FooterProgressGroup>
-          <FooterActions>
-            {footerAction && (
-              <FooterActionButton
-                theme={theme}
-                onClick={footerAction.onClick}
-              >
-                {footerAction.label}
-              </FooterActionButton>
-            )}
-          </FooterActions>
+        <FooterActions>
+          <FooterActionButton
+            theme={theme}
+            disabled={isFirstQuestion || questionLoading || isNavigating}
+            onClick={handlePreviousQuestion}
+          >
+            Quay lại
+          </FooterActionButton>
+          <FooterActionButton
+            theme={theme}
+            disabled={questionLoading || isNavigating}
+            onClick={handleNextQuestion}
+          >
+            {isLastQuestion ? 'Nộp bài' : 'Tiếp theo'}
+          </FooterActionButton>
+        </FooterActions>
         </FooterContainer>
       </BottomSection>
       

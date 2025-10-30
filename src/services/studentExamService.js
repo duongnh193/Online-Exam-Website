@@ -50,15 +50,15 @@ class StudentExamService {
       
       // Handle time remaining data
       let timeRemainingSeconds = null;
-      if (response.data.secondRemaining !== undefined && response.data.secondRemaining !== null) {
-        timeRemainingSeconds = response.data.secondRemaining;
+      if (response.data.secondsRemaining !== undefined && response.data.secondsRemaining !== null) {
+        timeRemainingSeconds = response.data.secondsRemaining;
         console.log(`Time remaining from server: ${timeRemainingSeconds} seconds`);
       }
       
       // Store session information  
       if (response.data && response.data.studentExam && response.data.studentExam.id) {
         console.log('Student Exam ID:', response.data.studentExam.id);
-        console.log('First question:', response.data.nextQuestion);
+        console.log('Current question:', response.data.question);
         console.log('Is last question:', response.data.lastQuestion);
         console.log('Current question index:', response.data.studentExam.currentQuestion);
         console.log('Time remaining (seconds):', timeRemainingSeconds);
@@ -151,7 +151,7 @@ class StudentExamService {
   }
 
   // Submit answer for a question
-  submitAnswer(studentExamId, questionId, answer) {
+  submitAnswer(studentExamId, questionId, answer, currentQuestionIndex = null) {
     if (!studentExamId || !questionId) {
       console.error('submitAnswer: Missing required parameters');
       return Promise.reject(new Error('Missing required parameters'));
@@ -221,7 +221,8 @@ class StudentExamService {
     const data = {
       studentExamId,
       questionId,
-      answer
+      answer,
+      currentQuestionIndex
     };
     
     // Lưu lại cấu trúc dữ liệu đã gửi để debug nếu cần
@@ -261,6 +262,27 @@ class StudentExamService {
       // Remove the submission timestamp to allow retry
       localStorage.removeItem(`last_submission_${submissionKey}`);
       throw error;
+    });
+  }
+
+  getQuestion(studentExamId, questionIndex) {
+    if (!studentExamId) {
+      console.error('getQuestion: Missing studentExamId');
+      return Promise.reject(new Error('Missing student exam ID'));
+    }
+
+    if (typeof questionIndex !== 'number') {
+      console.error('getQuestion: Missing question index');
+      return Promise.reject(new Error('Missing question index'));
+    }
+
+    const headers = authHeader();
+    const url = `${API_URL}/${encodeURIComponent(studentExamId)}/questions/${questionIndex}`;
+    logApiCall('GET', url, headers);
+
+    return axios.get(url, {
+      headers,
+      timeout: 5000
     });
   }
 
@@ -536,44 +558,15 @@ class StudentExamService {
     });
   }
 
-  // Phương thức mới để lấy câu hỏi hiện tại
-  getCurrentQuestion(studentExamId) {
+  // Fetch question data by index (defaults to first question)
+  getCurrentQuestion(studentExamId, questionIndex = 0) {
     if (!studentExamId) {
       console.error('getCurrentQuestion: Missing studentExamId');
       return Promise.reject(new Error('Missing student exam ID'));
     }
 
-    console.log(`Getting current question for exam ${studentExamId}`);
-    
-    // Dùng submitAnswer với questionId = 0 và answer rỗng để lấy câu hỏi hiện tại
-    // Đây là hack để không ảnh hưởng đến trạng thái bài thi
-    return this.submitAnswer(studentExamId, 0, "")
-      .then(response => {
-        console.log('Current question response:', response.data);
-        return response;
-      })
-      .catch(error => {
-        console.error('Error getting current question:', error);
-        
-        // Nếu lỗi, thử phương pháp khác bằng cách lấy kết quả
-        return this.getStudentExamResult(studentExamId)
-          .then(result => {
-            console.log('Got student exam result instead:', result.data);
-            
-            // Tạo câu trả lời giả để interface hoạt động đúng
-            return {
-              data: {
-                studentExam: result.data.studentExam || result.data,
-                nextQuestion: null,
-                lastQuestion: true
-              }
-            };
-          })
-          .catch(secondError => {
-            console.error('Both methods to get current question failed:', secondError);
-            throw new Error('Failed to retrieve current question state');
-          });
-      });
+    console.log(`Getting question ${questionIndex} for exam ${studentExamId}`);
+    return this.getQuestion(studentExamId, questionIndex);
   }
 
   // Check tab switching for anti-cheating measures
