@@ -7,6 +7,10 @@ import examService from '../services/examService';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import { useLoading } from '../contexts/LoadingContext';
+import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+
 
 // Styled Components for the new design
 const PageContainer = styled.div`
@@ -23,10 +27,10 @@ const Header = styled.header`
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   background-color: var(--bg-secondary);
-  padding: 1rem 2rem;
+  padding: 0.5rem 2rem;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   transition: background-color 0.3s ease;
-  gap: 1rem;
+  gap: 0.75rem;
   top: 0;
   position: sticky;
   z-index: 10;
@@ -40,7 +44,7 @@ const ExamInfo = styled.div`
 `;
 
 const ExamTitle = styled.h1`
-  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  font-size: clamp(1.3rem, 3vw, 2rem);
   font-weight: 700;
   margin: 0;
   color: #6a7efc;
@@ -52,7 +56,8 @@ const ExamMetaRow = styled.div`
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 800;
   color: var(--text-secondary);
 `;
 
@@ -62,7 +67,7 @@ const SubmitQuizButton = styled.button`
   border: none;
   border-radius: 28px;
   padding: 0.9rem 1.2rem;
-  font-size: 1.05rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   
@@ -89,7 +94,7 @@ const UserProfile = styled.div`
 const UserAvatar = styled.div`
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: ${props => props.$variant === 'unanswered' ? '6px' : '50%'};
   background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   color: white;
   display: flex;
@@ -201,9 +206,11 @@ const FooterProgressGroup = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.4rem;
   flex: 1;
   min-width: 0;
+  padding-left: clamp(16rem, 9vw, 6rem);
+  padding-right: clamp(1rem, 5vw, 4rem);
 `;
 
 const FooterProgressPill = styled.div`
@@ -233,20 +240,33 @@ const FooterActions = styled.div`
   flex: 0 0 auto;
 `;
 
+const FooterInfoText = styled.div`
+  font-size: 0.85rem;
+  color: ${props => props.theme === 'dark' ? '#cfd2ff' : '#4f5690'};
+  text-align: center;
+  min-height: 1.2rem;
+`;
+
 const NavigatorContainer = styled.div`
   position: relative;
   display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
 `;
 
 const FooterQuestionButton = styled.button`
   display: inline-flex;
-  padding: 0.45rem 1.95rem;
-  border-radius: 0.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.9rem;
+  border-radius: 999px;
   border: none;
   background: ${props => props.theme === 'dark' ? '#201b3d' : '#1d223d'};
   color: #ffffff;
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1rem;
+  line-height: 1;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 
@@ -310,17 +330,6 @@ const QuizContent = styled.div`
   border-top: 3px dashed ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : '#cdd1e4'};
 `;
 
-const QuestionHeaderBar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-radius: 0.9rem;
-  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.9)'};
-  border: 1px solid ${props => props.theme === 'dark' ? '#32374a' : '#dfe3f4'};
-  margin-bottom: 1.5rem;
-`;
-
 const QuestionNavigation = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -367,6 +376,28 @@ const NavigatorFooter = styled.div`
   margin-top: 1rem;
 `;
 
+const NavigatorPrimaryButton = styled.button`
+  padding: 0.55rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid ${props => props.theme === 'dark' ? '#8d9bff' : '#6a7efc'};
+  background: ${props => props.theme === 'dark' ? 'rgba(109, 125, 255, 0.16)' : 'rgba(106, 126, 252, 0.12)'};
+  color: ${props => props.theme === 'dark' ? '#cdd3ff' : '#3d42a6'};
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${props => props.theme === 'dark'
+      ? '0 8px 18px rgba(109, 125, 255, 0.35)'
+      : '0 8px 18px rgba(106, 126, 252, 0.28)'};
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const PopoverHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -392,46 +423,42 @@ const LegendItem = styled.div`
   color: ${props => props.theme === 'dark' ? '#cfd2ff' : '#4a4f75'};
 `;
 
-const StatusDot = styled.span`
+const LegendCurrentIcon = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  font-size: 0.7rem;
-  color: #fff;
-  background: ${props => props.$variant === 'current'
-    ? '#6a7efc'
-    : props.$variant === 'answered'
-      ? '#5fb878'
-      : props.$variant === 'review'
-        ? '#ff8f6a'
-        : '#9ca3c7'};
+  width: 20px;
+  height: 20px;
+  font-size: 1rem;
+  color: ${props => props.theme === 'dark' ? '#f7f6ff' : '#1d223d'};
+`;
+
+const LegendUnansweredIcon = styled.span`
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  border: 2px dashed #6a7efc;
+  border-radius: 6px;
+`;
+
+const LegendReviewIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 1rem;
+  color: #ff0000;
 `;
 
 const QuestionNavButton = styled.button`
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 1px solid ${props => props.$current
-    ? (props.theme === 'dark' ? '#8d47ff' : '#6a7efc')
-    : props.$review
-      ? '#ff8f6a'
-      : (props.theme === 'dark' ? '#3d425f' : '#c7ccdd')};
-  background: ${props => props.$current
-    ? (props.theme === 'dark' ? '#8d47ff' : '#6a7efc')
-    : props.$answered
-      ? (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.2)' : 'rgba(106, 126, 252, 0.16)')
-      : props.$review
-        ? (props.theme === 'dark' ? 'rgba(255, 143, 106, 0.2)' : 'rgba(255, 143, 106, 0.18)')
-        : 'transparent'};
-  color: ${props => props.$current
-    ? '#ffffff'
-    : props.theme === 'dark'
-      ? '#e0e4ff'
-      : '#1d223d'};
-  font-weight: 600;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: ${props => props.$answered ? '2px solid #6a7efc' : '2px dashed #6a7efc'};
+  background: ${props => props.$answered ? '#6a7efc' : '#ffffff'};
+  color: ${props => props.$answered ? '#ffffff' : '#6a7efc'};
+  font-weight: ${props => props.$answered ? 700 : 600};
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -439,7 +466,7 @@ const QuestionNavButton = styled.button`
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   opacity: ${props => props.disabled ? 0.6 : 1};
   pointer-events: ${props => props.disabled ? 'none' : 'auto'};
-  font-weight: ${props => props.$answered ? 700 : 600};
+  box-shadow: ${props => props.$current ? '0 10px 20px rgba(29, 34, 61, 0.25)' : 'none'};
   position: relative;
 
   &:hover:not(:disabled) {
@@ -454,15 +481,21 @@ const QuestionNavButton = styled.button`
   }
 `;
 
-const ReviewBadge = styled.span`
+const CurrentMarker = styled.span`
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ff8f6a;
-  border: 2px solid ${props => props.theme === 'dark' ? '#101528' : '#ffffff'};
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  color: ${props => props.theme === 'dark' ? '#f7f6ff' : '#1d223d'};
+`;
+
+const ReviewMarker = styled.span`
+  position: absolute;
+  top: -12px;
+  right: -16px;
+  font-size: 0.6rem;
+  color: #ff4f5a;
 `;
 
 const QuestionBadge = styled.div`
@@ -524,11 +557,57 @@ const ReviewToggleButton = styled.button`
   }
 `;
 
-const Instructions = styled.p`
-  font-size: 1.25rem;
-  font-weight: 800;
+const EliminationModeButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px dashed ${props => props.$active
+    ? (props.theme === 'dark' ? '#6a7efc' : '#3840a6')
+    : (props.theme === 'dark' ? '#3d425f' : '#c7ccdd')};
+  background: ${props => props.$active
+    ? (props.theme === 'dark' ? 'rgba(106, 126, 252, 0.22)' : 'rgba(106, 126, 252, 0.15)')
+    : 'transparent'};
+  color: ${props => props.$active
+    ? (props.theme === 'dark' ? '#cfd3ff' : '#1f2a7a')
+    : (props.theme === 'dark' ? '#e0e4ff' : '#3f4470')};
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.1s ease;
+
+  span {
+    text-decoration: line-through;
+    text-decoration-thickness: 3px;
+    text-decoration-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
+  }
+
+  &:hover {
+    background: ${props => props.$active
+      ? (props.theme === 'dark' ? 'rgba(106, 126, 252, 0.28)' : 'rgba(106, 126, 252, 0.22)')
+      : (props.theme === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(99, 105, 158, 0.08)')};
+    transform: translateY(-1px);
+  }
+`;
+
+const Instructions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 1.5rem;
+`;
+
+const InstructionActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-right: 20px;
 `;
 
 const QuestionContent = styled.div`
@@ -560,7 +639,7 @@ const QuestionImage = styled.div`
   display: ${props => props.hasImage ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
-  min-height: ${props => props.hasImage ? '200px' : '0'};
+  min-height: ${props => props.hasImage ? '180px' : '0'};
   flex: 1 1 auto;
   
   img {
@@ -573,7 +652,7 @@ const QuestionImage = styled.div`
 `;
 
 const QuestionText = styled.div`
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 1rem;
@@ -581,7 +660,7 @@ const QuestionText = styled.div`
 `;
 
 const PromptPanel = styled.div`
-  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.98)'};
+  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgb(255, 255, 255)'};
   border-radius: 1rem;
   padding: clamp(1.25rem, 2vw, 2rem);
   border: 1px solid ${props => props.theme === 'dark' ? '#2f3346' : '#e4e8f6'};
@@ -614,40 +693,169 @@ const AnswerPanel = styled.div`
 const AnswerOptions = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.9rem;
 `;
 
-const AnswerOption = styled.label`
+const AnswerOptionRow = styled.div`
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  padding: 1.5rem 1.2rem;
-  border: 1px solid ${props => props.selected ? 
-    (props.theme === 'dark' ? '#8d47ff' : '#6a7efc') : 
-    (props.theme === 'dark' ? '#444' : '#eee')};
-  border-radius: 10px;
-  cursor: pointer;
-  background-color: ${props => props.selected ? 
-    (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : 'rgba(106, 126, 252, 0.05)') : 
-    (props.theme === 'dark' ? '#2a2a2a' : 'white')};
-  
+  align-items: center;
+  gap: 0.75rem;
+  padding-right: ${props => (props.$hasToggle ? '3.5rem' : '0')};
+  overflow: visible;
+`;
+
+const AnswerOption = styled.button`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.95rem 1.15rem;
+  padding-right: ${props => (props.$hasToggle ? '2.75rem' : '1.15rem')};
+  border-radius: 12px;
+  border: 1px solid ${props => {
+    if (props.$selected) {
+      return props.theme === 'dark' ? '#8d47ff' : '#6a7efc';
+    }
+    if (props.$eliminated) {
+      return props.theme === 'dark' ? '#3a3e56' : '#d1d4e6';
+    }
+    return props.theme === 'dark' ? '#2f3346' : '#dfe3f6';
+  }};
+  background: ${props => {
+    if (props.$selected) {
+      return props.theme === 'dark' ? 'rgba(141, 71, 255, 0.18)' : 'rgba(106, 126, 252, 0.12)';
+    }
+    if (props.$eliminated) {
+      return props.theme === 'dark' ? 'rgba(58, 62, 86, 0.35)' : 'rgba(223, 227, 246, 0.4)';
+    }
+    return props.theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : '#ffffff';
+  }};
+  color: inherit;
+  cursor: ${props => (props.disabled ? 'not-allowed' : 'pointer')};
+  text-align: left;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: ${props => props.$selected
+    ? (props.theme === 'dark'
+      ? '0 8px 20px rgba(141, 71, 255, 0.25)'
+      : '0 10px 26px rgba(106, 126, 252, 0.18)')
+    : 'none'};
+  opacity: ${props => (props.disabled ? 0.55 : 1)};
+
   &:hover {
-    border-color: ${props => props.selected ? 
-      (props.theme === 'dark' ? '#8d47ff' : '#6a7efc') : 
-      (props.theme === 'dark' ? '#555' : '#ddd')};
-    background-color: ${props => props.selected ? 
-      (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.15)' : 'rgba(106, 126, 252, 0.05)') : 
-      (props.theme === 'dark' ? '#333' : '#fafafa')};
+    border-color: ${props => {
+      if (props.$selected) {
+        return props.theme === 'dark' ? '#9b5cff' : '#5a62f2';
+      }
+      if (props.$eliminated) {
+        return props.theme === 'dark' ? '#494d64' : '#b9bdd7';
+      }
+      return props.theme === 'dark' ? '#3b4161' : '#c6cae3';
+    }};
+    background: ${props => {
+      if (props.$selected) {
+        return props.theme === 'dark' ? 'rgba(141, 71, 255, 0.26)' : 'rgba(106, 126, 252, 0.18)';
+      }
+      if (props.$eliminated) {
+        return props.theme === 'dark' ? 'rgba(73, 77, 100, 0.4)' : 'rgba(191, 197, 225, 0.45)';
+      }
+      return props.theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f6f7ff';
+    }};
   }
 `;
 
-const RadioInput = styled.input`
-  margin-right: 0.8rem;
-  margin-top: 0.2rem;
+const OptionContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex: 1;
+  min-width: 0;
 `;
 
-const CheckboxInput = styled.input`
-  margin-right: 0.8rem;
-  margin-top: 0.2rem;
+const OptionLetter = styled.span`
+  width: ${props => props.$variant === 'square' ? '32px' : '36px'};
+  height: ${props => props.$variant === 'square' ? '32px' : '36px'};
+  border-radius: ${props => props.$variant === 'square' ? '8px' : '50%'};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  color: ${props => props.theme === 'dark' ? '#f5f5ff' : '#38406e'};
+  border: 2px solid ${props => props.$active
+    ? (props.theme === 'dark' ? '#8d47ff' : '#6a7efc')
+    : (props.theme === 'dark' ? '#444b6d' : '#c4c8db')};
+  background: ${props => props.$active
+    ? (props.theme === 'dark' ? 'rgba(141, 71, 255, 0.25)' : 'rgba(106, 126, 252, 0.15)')
+    : (props.theme === 'dark' ? 'rgba(68, 75, 109, 0.35)' : '#f3f5ff')};
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  transform: ${props => (props.$active ? 'scale(1.05)' : 'scale(1)')};
+  opacity: ${props => (props.$eliminated ? 0.6 : 1)};
+`;
+
+const OptionText = styled.div`
+  font-size: 1rem;
+  color: ${props => props.theme === 'dark' ? '#e6e8ff' : '#353c64'};
+  line-height: 1.45;
+  flex: 1;
+  word-break: break-word;
+  white-space: normal;
+  opacity: ${props => (props.$muted ? 0.6 : 1)};
+`;
+
+const EliminationToggleButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: 1.35rem;
+  transform: translate(150%, -120%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid ${props => props.$active
+    ? (props.theme === 'dark' ? '#ff8796' : '#ff7385')
+    : (props.theme === 'dark' ? '#3d425f' : '#c7ccdd')};
+  background: ${props => props.$active
+    ? (props.theme === 'dark' ? 'rgba(255, 135, 150, 0.12)' : 'rgba(255, 115, 133, 0.12)')
+    : (props.theme === 'dark' ? 'rgba(29, 33, 61, 0.65)' : '#ffffff')};
+  color: ${props => props.$active
+    ? (props.theme === 'dark' ? '#ffb0ba' : '#ff5d75')
+    : (props.theme === 'dark' ? '#e6e8ff' : '#3f4470')};
+  font-weight: 700;
+  font-size: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  box-shadow: ${props => props.theme === 'dark'
+    ? '0 6px 14px rgba(0, 0, 0, 0.35)'
+    : '0 6px 14px rgba(106, 126, 252, 0.16)'};
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 170%;
+    height: 1.75px;
+    background: ${props => props.$active
+      ? (props.theme === 'dark' ? '#ff8796' : '#ff7385')
+      : (props.theme === 'dark' ? '#3d425f' : '#c7ccdd')};
+    transform: translate(-50%, -50%);
+    left: 50%;
+    transition: background 0.2s ease;
+    opacity: 1;
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translate(140%, -130%);
+    border-color: ${props => props.$active
+      ? (props.theme === 'dark' ? '#ff9fad' : '#ff8aa0')
+      : (props.theme === 'dark' ? '#4a5075' : '#b6bbd5')};
+  }
 `;
 
 const EssayInput = styled.textarea`
@@ -676,12 +884,6 @@ const EssayInput = styled.textarea`
     background-color: ${props => props.theme === 'dark' ? 'rgba(23, 28, 46, 0.95)' : 'var(--bg-secondary)'};
   }
 `;
-
-const OptionText = styled.div`
-  font-size: 1.05rem;
-  color: var(--text-primary);
-`;
-
 const Resizer = styled.div`
   flex: 0 0 24px;
   cursor: col-resize;
@@ -748,7 +950,7 @@ const AnswerScrollArea = styled.div`
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.75rem;
   align-items: stretch;
 `;
 
@@ -928,6 +1130,8 @@ function TakeExamPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
   const [reviewFlags, setReviewFlags] = useState({});
+  const [isEliminationModeEnabled, setIsEliminationModeEnabled] = useState(true);
+  const [eliminatedOptions, setEliminatedOptions] = useState({});
 
   useEffect(() => {
     disableLoader();
@@ -1598,6 +1802,10 @@ function TakeExamPage() {
 
   const handleSingleChoiceSelect = (questionId, optionId) => {
     if (!questionId || !optionId) return;
+
+    if (isEliminationModeEnabled && isOptionEliminated(questionId, optionId)) {
+      return;
+    }
     
     const currentQuestion = questions.find(q => q.id === questionId);
     if (!currentQuestion) return;
@@ -1605,17 +1813,21 @@ function TakeExamPage() {
     const selectedOption = currentQuestion.options?.find(opt => opt.id === optionId);
     if (!selectedOption) return;
     
-    setAnswers({
-      ...answers,
+    setAnswers(prev => ({
+      ...prev,
       [questionId]: {
         id: optionId,
         text: selectedOption.text || ''
       }
-    });
+    }));
   };
   
   const handleMultipleChoiceSelect = (questionId, optionId) => {
     if (!questionId || !optionId) return;
+
+    if (isEliminationModeEnabled && isOptionEliminated(questionId, optionId)) {
+      return;
+    }
     
     const currentQuestion = questions.find(q => q.id === questionId);
     if (!currentQuestion) return;
@@ -1638,10 +1850,10 @@ function TakeExamPage() {
       ];
     }
     
-    setMultipleChoiceAnswers({
-      ...multipleChoiceAnswers,
+    setMultipleChoiceAnswers(prev => ({
+      ...prev,
       [questionId]: updatedSelections
-    });
+    }));
   };
   
   const handleEssayChange = (questionId, text) => {
@@ -1649,6 +1861,131 @@ function TakeExamPage() {
       ...essayAnswers,
       [questionId]: text
     });
+  };
+
+  const isOptionEliminated = useCallback((questionId, optionId) => {
+    if (!questionId || !optionId) return false;
+    const eliminated = eliminatedOptions[questionId];
+    return Array.isArray(eliminated) && eliminated.includes(optionId);
+  }, [eliminatedOptions]);
+
+  const toggleOptionElimination = useCallback((questionId, optionId) => {
+    if (!questionId || !optionId || !isEliminationModeEnabled) return;
+
+    setEliminatedOptions(prev => {
+      const currentSet = new Set(prev[questionId] || []);
+      const isAdding = !currentSet.has(optionId);
+
+      if (isAdding) {
+        currentSet.add(optionId);
+      } else {
+        currentSet.delete(optionId);
+      }
+
+      const updated = { ...prev };
+      if (currentSet.size > 0) {
+        updated[questionId] = Array.from(currentSet);
+      } else {
+        delete updated[questionId];
+      }
+
+      if (isAdding) {
+        setAnswers(prevAnswers => {
+          const existing = prevAnswers[questionId];
+          if (existing?.id === optionId) {
+            return { ...prevAnswers, [questionId]: null };
+          }
+          return prevAnswers;
+        });
+
+        setMultipleChoiceAnswers(prevMulti => {
+          const selections = prevMulti[questionId] || [];
+          if (!selections.some(item => item.id === optionId)) {
+            return prevMulti;
+          }
+          const updatedSelections = selections.filter(item => item.id !== optionId);
+          return {
+            ...prevMulti,
+            [questionId]: updatedSelections
+          };
+        });
+      }
+
+      return updated;
+    });
+  }, [isEliminationModeEnabled, setAnswers, setMultipleChoiceAnswers]);
+
+  const toggleEliminationMode = useCallback(() => {
+    setIsEliminationModeEnabled(prev => {
+      const next = !prev;
+      if (!next) {
+        setEliminatedOptions({});
+      }
+      return next;
+    });
+  }, [setEliminatedOptions]);
+
+  const getOptionLabel = (option) => {
+    if (!option) return '';
+    if (typeof option.text === 'string') return option.text;
+    if (typeof option.text === 'object') return JSON.stringify(option.text);
+    return String(option.text || '');
+  };
+
+  const renderOptionRow = (questionId, option, index, isSelected, onSelect) => {
+    const optionLetter = index < 26
+      ? String.fromCharCode(65 + index)
+      : `${index + 1}`;
+    const eliminated = isOptionEliminated(questionId, option.id);
+    const disabled = isEliminationModeEnabled && eliminated;
+    const optionKey = option.id || `option-${index}`;
+
+    return (
+      <AnswerOptionRow key={optionKey} $hasToggle={isEliminationModeEnabled}>
+        <AnswerOption
+          type="button"
+          theme={theme}
+          $selected={isSelected}
+          $eliminated={eliminated}
+          disabled={disabled}
+          $hasToggle={isEliminationModeEnabled}
+          onClick={() => {
+            if (!disabled) {
+              onSelect();
+            }
+          }}
+        >
+          <OptionContent>
+            <OptionLetter
+              theme={theme}
+              $active={isSelected}
+              $eliminated={eliminated}
+              $variant={(currentQuestion?.type || '').toUpperCase() === 'MULTIPLE_CHOICE' ? 'square' : 'round'}
+            >
+              {optionLetter}
+            </OptionLetter>
+            <OptionText
+              theme={theme}
+              $muted={disabled}
+            >
+              {getOptionLabel(option)}
+            </OptionText>
+          </OptionContent>
+        </AnswerOption>
+        {isEliminationModeEnabled && (
+          <EliminationToggleButton
+            type="button"
+            theme={theme}
+            aria-pressed={eliminated}
+            aria-label={`Eliminate option ${optionLetter}`}
+            $active={eliminated}
+            onClick={() => toggleOptionElimination(questionId, option.id)}
+          >
+            {optionLetter}
+          </EliminationToggleButton>
+        )}
+      </AnswerOptionRow>
+    );
   };
   
   
@@ -1770,20 +2107,6 @@ function TakeExamPage() {
       
       console.log('Raw response data:', JSON.stringify(response.data, null, 2));
       
-      if (response.data.answers) {
-        console.log('Answer details:', response.data.answers);
-      }
-      
-      if (response.data.questions) {
-        console.log('Question details:', response.data.questions);
-      }
-      
-      if (response.data.correctAnswers !== undefined) {
-        console.log('Correct answers count:', response.data.correctAnswers);
-        console.log('Wrong answers count:', response.data.wrongAnswers);
-        console.log('Total questions:', response.data.totalQuestions);
-      }
-      
       if (response.data) {
         const result = {
           correctAnswers: response.data.correctAnswers || 0,
@@ -1794,13 +2117,6 @@ function TakeExamPage() {
         };
         
         console.log('Final exam result being set:', result);
-        console.log('📊 Score Calculation Info:', {
-          correctAnswers: result.correctAnswers,
-          totalQuestions: result.totalQuestions,
-          rawScore: result.score,
-          scoreDisplay: `${result.score.toFixed(1)} điểm`,
-          calculationMethod: '(correctAnswers * 10.0) / totalQuestions'
-        });
         
         setExamResult(result);
         setShowResults(true);
@@ -1971,12 +2287,6 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            {/* <FooterProgressGroup>
-              <FooterProgressPill theme={theme}>
-                Exam Status
-              </FooterProgressPill>
-              <FooterNotice theme={theme}>An error occurred while loading this exam.</FooterNotice>
-            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -2006,12 +2316,6 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            {/* <FooterProgressGroup>
-              <FooterProgressPill theme={theme}>
-                Results Summary
-              </FooterProgressPill>
-              <FooterNotice theme={theme}>You can review your answers or return to the exam list.</FooterNotice>
-            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -2045,12 +2349,6 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            {/* <FooterProgressGroup>
-              <FooterProgressPill theme={theme}>
-                Review & Submit
-              </FooterProgressPill>
-              <FooterNotice theme={theme}>Click submit to finalize and see your results.</FooterNotice>
-            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -2094,12 +2392,6 @@ function TakeExamPage() {
           <SectionDivider theme={theme} />
           <FooterContainer theme={theme}>
             <FooterUser>{getUserName()}</FooterUser>
-            {/* <FooterProgressGroup>
-              <FooterProgressPill theme={theme}>
-                Waiting for Questions
-              </FooterProgressPill>
-              <FooterNotice theme={theme}>Please return to the exam list and try again.</FooterNotice>
-            </FooterProgressGroup> */}
             <FooterActions>
               <FooterActionButton
                 theme={theme}
@@ -2119,28 +2411,26 @@ function TakeExamPage() {
   const currentQuestionReview = currentQuestion ? Boolean(reviewFlags[currentQuestion.id]) : false;
   const isLastQuestion = totalQuestionCount > 0 && currentQuestionIndex >= totalQuestionCount - 1;
   const isFirstQuestion = currentQuestionIndex <= 0;
+  const isChoiceQuestion = currentQuestion && currentQuestion.type !== 'ESSAY';
+  const instructionLabel = (() => {
+    if (!currentQuestion) return 'Answer options';
+    if (currentQuestion.type === 'ESSAY') return 'Write your answer below';
+    if (currentQuestion.type === 'MULTIPLE_CHOICE') return 'Select all correct answers';
+    return 'Choose the best answer';
+  })();
 
-  // console.log('🐛 RENDER STATE DEBUG:', {
-  //   currentQuestionIndex,
-  //   questionsLength: questions.length,
-  //   currentQuestionId: currentQuestion?.id,
-  //   currentQuestionText: currentQuestion?.text?.substring(0, 50),
-  //   currentQuestionImageUrl: currentQuestion?.imageUrl,
-  //   isLastQuestion,
-  //   loading,
-  //   questionsIds: questions.map(q => q.id)
-  // });
-  
   const renderQuestionInput = () => {
     if (!currentQuestion) return null;
+    const questionId = currentQuestion.id;
+    const options = currentQuestion.options || [];
     
     switch (currentQuestion.type) {
       case 'ESSAY':
         return (
           <EssayInput
             theme={theme}
-            value={essayAnswers[currentQuestion.id] || ''}
-            onChange={(e) => handleEssayChange(currentQuestion.id, e.target.value)}
+            value={essayAnswers[questionId] || ''}
+            onChange={(e) => handleEssayChange(questionId, e.target.value)}
             placeholder="Write your answer here..."
           />
         );
@@ -2148,25 +2438,17 @@ function TakeExamPage() {
       case 'MULTIPLE_CHOICE':
         return (
           <AnswerOptions>
-            {(currentQuestion.options || []).map(option => (
-              <AnswerOption 
-                key={option.id || 'unknown'}
-                selected={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
-                theme={theme}
-              >
-                <CheckboxInput 
-                  type="checkbox"
-                  name={`question-${currentQuestion.id}-option-${option.id || 'unknown'}`}
-                  checked={(multipleChoiceAnswers[currentQuestion.id] || []).some(item => item.id === option.id)}
-                  onChange={() => handleMultipleChoiceSelect(currentQuestion.id, option.id)}
-                />
-                <OptionText>
-                  {typeof option.text === 'string' ? option.text : 
-                   typeof option.text === 'object' ? JSON.stringify(option.text) : 
-                   String(option.text || '')}
-                </OptionText>
-              </AnswerOption>
-            ))}
+            {options.map((option, index) => {
+              const isSelected = (multipleChoiceAnswers[questionId] || [])
+                .some(item => item.id === option.id);
+              return renderOptionRow(
+                questionId,
+                option,
+                index,
+                isSelected,
+                () => handleMultipleChoiceSelect(questionId, option.id)
+              );
+            })}
           </AnswerOptions>
         );
         
@@ -2174,26 +2456,16 @@ function TakeExamPage() {
       default:
         return (
           <AnswerOptions>
-            {(currentQuestion.options || []).map(option => (
-              <AnswerOption 
-                key={option.id || 'unknown'}
-                selected={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
-                theme={theme}
-                onClick={() => handleSingleChoiceSelect(currentQuestion.id, option.id)}
-              >
-                <RadioInput 
-                  type="radio"
-                  name={`question-${currentQuestion.id}`}
-                  checked={answers[currentQuestion.id] && answers[currentQuestion.id].id === option.id}
-                  onChange={() => {}}
-                />
-                <OptionText>
-                  {typeof option.text === 'string' ? option.text : 
-                   typeof option.text === 'object' ? JSON.stringify(option.text) : 
-                   String(option.text || '')}
-                </OptionText>
-              </AnswerOption>
-            ))}
+            {options.map((option, index) => {
+              const isSelected = answers[questionId] && answers[questionId].id === option.id;
+              return renderOptionRow(
+                questionId,
+                option,
+                index,
+                Boolean(isSelected),
+                () => handleSingleChoiceSelect(questionId, option.id)
+              );
+            })}
           </AnswerOptions>
         );
     }
@@ -2277,16 +2549,8 @@ function TakeExamPage() {
     );
   }
   
-  const footerNotice = infoMessage
-    ? infoMessage
-    : currentQuestion && isLastQuestion
-      ? "You've reached the final question. Submit when you're ready."
-      : '';
-  // const questionProgressLabel = totalQuestionCount > 0 && displayedQuestionNumber > 0
-  //   ? `Câu hỏi ${displayedQuestionNumber}/${totalQuestionCount}`
-  //   : 'Tiến độ câu hỏi';
   const navigatorLabel = totalQuestionCount > 0
-    ? `Question ${displayedQuestionNumber}/${totalQuestionCount}`
+    ? `Question ${displayedQuestionNumber} of ${totalQuestionCount}`
     : 'Question Navigator';
   const navigationDisabled = questionLoading || isNavigating || loading;
   const questionLookupById = new Map(fallbackQuestions.filter(Boolean).map(question => [question.id, question]));
@@ -2330,41 +2594,6 @@ function TakeExamPage() {
       <SectionDivider theme={theme} />
       <MainContent>
         {currentQuestion ? (
-          <QuizContent>
-            <QuestionHeaderBar theme={theme}>
-              <QuestionBadge>
-                <QuestionCounter theme={theme}>
-                  {displayedQuestionNumber}
-                  {totalQuestionCount > 0 ? `/${totalQuestionCount}` : ''}
-                </QuestionCounter>
-                <div>
-                  <QuestionLabel>Question {displayedQuestionNumber}</QuestionLabel>
-                  {/* <QuestionMeta>
-                    {isLastQuestion ? 'This is the last question of the exam.' : 'Answer the question to continue.'}
-                  </QuestionMeta> */}
-                </div>
-              </QuestionBadge>
-              <QuestionMeta>
-                {currentQuestion.type === 'ESSAY'
-                  ? 'Essay response'
-                  : currentQuestion.type === 'MULTIPLE_CHOICE'
-                    ? 'Select all that apply'
-                    : 'Select one answer'}
-                {currentQuestion?.id && (
-                  <ReviewToggleButton
-                    type="button"
-                    theme={theme}
-                    $active={currentQuestionReview}
-                    onClick={() => toggleReviewFlag(currentQuestion.id)}
-                    style={{ marginLeft: '1rem' }}
-                  >
-                    <span role="img" aria-label="review">🔖</span>
-                    {currentQuestionReview ? 'Bỏ đánh dấu' : 'Đánh dấu xem lại'}
-                  </ReviewToggleButton>
-                )}
-              </QuestionMeta>
-            </QuestionHeaderBar>
-            
             <QuestionContent ref={questionContentRef}>
               <PromptPanel
                 theme={theme}
@@ -2404,13 +2633,40 @@ function TakeExamPage() {
               >
                 <AnswerScrollArea>
                   <Instructions>
-                    Answer section
+                    <span style={{fontWeight: '800', fontSize: '1.4rem'}}>Question {displayedQuestionNumber}</span>
+                    {instructionLabel}
+                    <InstructionActions>
+                      {isChoiceQuestion && (
+                        <EliminationModeButton
+                          type="button"
+                          theme={theme}
+                          $active={isEliminationModeEnabled}
+                          onClick={toggleEliminationMode}
+                          aria-pressed={isEliminationModeEnabled}
+                        >
+                          <span>ABC</span>
+                        </EliminationModeButton>
+                      )}
+                      {currentQuestion?.id && (
+                        <ReviewToggleButton
+                          type="button"
+                          theme={theme}
+                          $active={currentQuestionReview}
+                          onClick={() => toggleReviewFlag(currentQuestion.id)}
+                        >
+                          {currentQuestionReview
+                            ? <BookmarkIcon style={{ fontSize: '1.2rem', marginRight: '0.25rem', color: "#ff0000"}} />
+                            : <BookmarkBorderIcon style={{ fontSize: '1.2rem', marginRight: '0.25rem'}} />}
+                          {currentQuestionReview ? 'Remove Review' : 'Mark for Review'}
+                        </ReviewToggleButton>
+                      )}
+                    </InstructionActions>
                   </Instructions>
                   {renderQuestionInput()}
                 </AnswerScrollArea>
               </AnswerPanel>
             </QuestionContent>
-          </QuizContent>
+          // </QuizContent>
         ) : (
           <QuizContent>
             <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -2424,9 +2680,6 @@ function TakeExamPage() {
         <FooterContainer theme={theme}>
           <FooterUser>{getUserName()}</FooterUser>
           <FooterProgressGroup>
-            {/* <FooterProgressPill theme={theme}>
-              {questionProgressLabel}
-            </FooterProgressPill> */}
             <NavigatorContainer>
               <FooterQuestionButton
                 type="button"
@@ -2434,59 +2687,64 @@ function TakeExamPage() {
                 onClick={() => setIsNavigatorOpen(prev => !prev)}
               >
                 {navigatorLabel}
+                <span style={{ fontSize: '0.85rem' }}>{isNavigatorOpen ? '▲' : '▼'}</span>
               </FooterQuestionButton>
               {isNavigatorOpen && (
                 <NavigatorPopover theme={theme}>
                   <PopoverHeader>
-                    <span>Question List</span>
+                    <span>Question Navigator</span>
                     <button
                       type="button"
                       onClick={() => setIsNavigatorOpen(false)}
                       style={{ border: 'none', background: 'transparent', color: theme === 'dark' ? '#cfd2ff' : '#4a4f75', cursor: 'pointer', fontWeight: 600 }}
                     >
-                      Đóng
+                      Close
                     </button>
                   </PopoverHeader>
                   <Legend>
                     <LegendItem>
-                      <StatusDot $variant="current" />
+                      <LegendCurrentIcon>
+                        <RoomOutlinedIcon style={{ fontSize: '1.2rem'}} />
+                      </LegendCurrentIcon>
                       <span>Current</span>
                     </LegendItem>
                     <LegendItem>
-                      <StatusDot $variant="answered" />
-                      <span>Answered</span>
-                    </LegendItem>
-                    <LegendItem>
-                      <StatusDot $variant="review" />
-                      <span>For Review</span>
-                    </LegendItem>
-                    <LegendItem>
-                      <StatusDot $variant="unanswered" />
+                      <LegendUnansweredIcon />
                       <span>Unanswered</span>
+                    </LegendItem>
+                    <LegendItem>
+                      <LegendReviewIcon>
+                        <BookmarkIcon style={{fontSize: '1.2rem'}} />
+                      </LegendReviewIcon>
+                      <span>For Review</span>
                     </LegendItem>
                   </Legend>
                   <QuestionNavigation>
                     {orderedQuestionStateItems.map(item => (
-                      <QuestionNavButton
-                        key={`${item.questionId ?? 'q'}-${item.index}`}
-                        theme={theme}
-                        $current={item.index === currentQuestionIndex}
-                        $answered={item.answered}
-                        $review={item.review}
-                        disabled={navigationDisabled}
-                        onClick={() => navigateToQuestion(item.index)}
-                      >
-                        {item.index + 1}
-                        {item.review && <ReviewBadge theme={theme} />}
-                      </QuestionNavButton>
+                    <QuestionNavButton
+                      key={`${item.questionId ?? 'q'}-${item.index}`}
+                      theme={theme}
+                      $current={item.index === currentQuestionIndex}
+                      $answered={item.answered}
+                      $review={item.review}
+                      disabled={navigationDisabled}
+                      onClick={() => navigateToQuestion(item.index)}
+                    >
+                      {item.index === currentQuestionIndex && <CurrentMarker theme={theme}><RoomOutlinedIcon style={{ fontSize: '1rem'}} /></CurrentMarker>}
+                      {item.index + 1}
+                      {item.review && <ReviewMarker>🚩</ReviewMarker>}
+                    </QuestionNavButton>
                     ))}
                   </QuestionNavigation>
+                  <NavigatorFooter>
+                    <NavigatorPrimaryButton type="button" onClick={() => setIsNavigatorOpen(false)}>
+                      Go to Review Page
+                    </NavigatorPrimaryButton>
+                  </NavigatorFooter>
                 </NavigatorPopover>
               )}
+              {infoMessage ? <FooterInfoText theme={theme}>{infoMessage}</FooterInfoText> : null}
             </NavigatorContainer>
-            {footerNotice && (
-              <FooterNotice theme={theme}>{footerNotice}</FooterNotice>
-            )}
           </FooterProgressGroup>
         <FooterActions>
           <FooterActionButton
@@ -2494,14 +2752,14 @@ function TakeExamPage() {
             disabled={isFirstQuestion || questionLoading || isNavigating}
             onClick={handlePreviousQuestion}
           >
-            Quay lại
+            Back
           </FooterActionButton>
           <FooterActionButton
             theme={theme}
             disabled={questionLoading || isNavigating}
             onClick={handleNextQuestion}
           >
-            {isLastQuestion ? 'Nộp bài' : 'Tiếp theo'}
+            {isLastQuestion ? 'Submit' : 'Next'}
           </FooterActionButton>
         </FooterActions>
         </FooterContainer>
