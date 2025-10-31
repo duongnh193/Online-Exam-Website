@@ -1,6 +1,7 @@
 package vn.com.example.exam.online.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -51,6 +52,7 @@ public class Question {
     QuestionType type;
     @Convert(converter = ChoiceDtoConverter.class)
     List<ChoiceDto> choices;
+    @Column(columnDefinition = "TEXT")
     String answer;
     @OneToMany(mappedBy = "question")
     @JsonIgnore
