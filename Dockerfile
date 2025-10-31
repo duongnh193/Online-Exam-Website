@@ -8,9 +8,9 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci && npm run build && npm prune --production
+RUN npm ci
 
-# Copy source code
+# Copy source code (including public/index.html)
 COPY . .
 
 # Copy docker environment file and rename it to .env
