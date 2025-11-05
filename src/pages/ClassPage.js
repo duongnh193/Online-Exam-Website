@@ -751,6 +751,7 @@ function ClassPage() {
       case 'myClasses': return '📚';
       case 'register': return '📋';
       case 'results': return '📊';
+      case 'assistant': return '🤖';
       default: return '•';
     }
   };
@@ -883,6 +884,10 @@ function ClassPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
+              <NavItem to="/ai-assistant">
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
+              </NavItem>
               {/* <NavItem to="/payment">
                 <NavIcon>{getMenuIcon('payment')}</NavIcon>
                 Payment
@@ -910,6 +915,10 @@ function ClassPage() {
               <NavItem to="/reports">
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
+              </NavItem>
+              <NavItem to="/ai-assistant">
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
               </NavItem>
             </>
           )}

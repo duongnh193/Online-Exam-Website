@@ -11,6 +11,7 @@ import ClassPage from '../pages/ClassPage';
 import StartExamPage from '../pages/StartExamPage';
 import TakeExamPage from '../pages/TakeExamPage';
 import ReportPage from '../pages/ReportPage';
+import AIAssistantPage from '../pages/AIAssistantPage';
 import ResultsPage from '../pages/ResultsPage';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -282,6 +283,18 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_ADMIN', 'ROLE_STUDENT']}>
               <SettingsPage />
+            </RoleRoute>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* AI Assistant route - available for lecturers and students */}
+      <Route 
+        path="/ai-assistant" 
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_STUDENT']}>
+              <AIAssistantPage />
             </RoleRoute>
           </ProtectedRoute>
         } 

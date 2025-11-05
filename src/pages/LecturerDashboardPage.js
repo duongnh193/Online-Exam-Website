@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
@@ -67,6 +67,7 @@ import {
 function LecturerDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme } = useTheme();
   const [sortOption, setSortOption] = useState('recent');
   const [examCount, setExamCount] = useState(null);
@@ -723,6 +724,13 @@ function LecturerDashboardPage() {
             <NavItem to="/reports">
               <NavIcon>{getMenuIcon('reports')}</NavIcon>
               Reports
+            </NavItem>
+            <NavItem
+              to="/ai-assistant"
+              className={location.pathname.startsWith('/ai-assistant') ? 'active' : ''}
+            >
+              <NavIcon>🤖</NavIcon>
+              AI Assistant
             </NavItem>
           </SidebarMenu>
           <BottomMenu>

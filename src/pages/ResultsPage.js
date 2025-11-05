@@ -665,6 +665,7 @@ function ResultsPage() {
       case 'dashboard': return '🏠';
       case 'exams': return '📝';
       case 'results': return '📊';
+      case 'assistant': return '🤖';
       case 'settings': return '⚙️';
       case 'signout': return '🚪';
       default: return '•';
@@ -771,6 +772,10 @@ function ResultsPage() {
           <NavItem to="/results" className={isRouteActive('/results') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('results')}</NavIcon>
             Results
+          </NavItem>
+          <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
+            <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+            AI Assistant
           </NavItem>
         </SidebarMenu>
         <BottomMenu>

@@ -628,6 +628,13 @@ function StudentDashboardPage() {
               <NavIcon>{getMenuIcon('results')}</NavIcon>
               Results
             </NavItem>
+            <NavItem
+              to="/ai-assistant"
+              className={isRouteActive('/ai-assistant') ? 'active' : ''}
+            >
+              <NavIcon>🤖</NavIcon>
+              AI Assistant
+            </NavItem>
           </SidebarMenu>
           <BottomMenu>
             <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>

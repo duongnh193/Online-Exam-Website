@@ -874,6 +874,7 @@ function ExamPage() {
       case 'myClasses': return '📚';
       case 'register': return '📋';
       case 'results': return '📊';
+      case 'assistant': return '🤖';
       default: return '•';
     }
   };
@@ -1162,6 +1163,10 @@ function ExamPage() {
                 <NavIcon>{getMenuIcon('results')}</NavIcon>
                 Results
               </NavItem>
+              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
+              </NavItem>
             </>
           ) : isLecturer ? (
             // Lecturer navigation
@@ -1182,6 +1187,10 @@ function ExamPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
+              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
+              </NavItem>
             </>
           ) : (
             // Admin navigation
@@ -1201,6 +1210,10 @@ function ExamPage() {
               <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
+              </NavItem>
+              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
               </NavItem>
               {/* <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('payment')}</NavIcon>

@@ -1721,6 +1721,7 @@ function SettingsPage() {
       case 'myClasses': return '📚';
       case 'register': return '📋';
       case 'results': return '📊';
+      case 'assistant': return '🤖';
       default: return '•';
     }
   };
@@ -2044,7 +2045,7 @@ function SettingsPage() {
       setTwoFactorSuccess(`Two-factor authentication has been ${newTwoFAState ? 'enabled' : 'disabled'}`);
       
       // Clear success message after 5 seconds
-      setTimeout(() => setTwoFactorSuccess(''), 5000);
+      setTimeout(() => setTwoFactorSuccess(''), 3000);
       
       // Refresh the user object to ensure it has the updated 2FA status
       await memoizedRefreshUser();
@@ -2224,6 +2225,10 @@ function SettingsPage() {
                 <NavIcon>{getMenuIcon('results')}</NavIcon>
                 Results
           </NavItem>
+              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
+              </NavItem>
             </>
           ) : isLecturer ? (
             // Lecturer navigation
@@ -2244,6 +2249,10 @@ function SettingsPage() {
             <NavIcon>{getMenuIcon('reports')}</NavIcon>
             Reports
           </NavItem>
+              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
+              </NavItem>
             </>
           ) : (
             // Admin navigation
@@ -2263,6 +2272,10 @@ function SettingsPage() {
               <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
+              </NavItem>
+              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
+                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
+                AI Assistant
               </NavItem>
               {/* <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('payment')}</NavIcon>
