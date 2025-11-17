@@ -1,0 +1,74 @@
+# version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: exam-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: exam_online
+      # MYSQL_USER: examuser
+      # MYSQL_PASSWORD: root
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./be/database:/docker-entrypoint-initdb.d
+    networks:
+      - exam-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+    # Backend Spring Boot
+  backend:
+    build:
+      context: ./be
+      dockerfile: Dockerfile
+    container_name: exam-backend
+    env_file:
+      - ./geminiapi.env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/exam_online
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpassword
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - exam-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    # Frontend React
+  frontend:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+    container_name: exam-frontend
+    ports:
+      - "1903:80"
+    depends_on:
+      - backend
+    networks:
+      - exam-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+
+networks:
+  exam-network:
+    driver: bridge
