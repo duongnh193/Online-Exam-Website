@@ -588,33 +588,61 @@ const ChatbotWidget = ({ userRole = 'student', user = null }) => {
   
   // Initialize conversation ID
   const [currentConversationId, setCurrentConversationId] = useState(() => {
-    // Try to load current conversation ID from storage
-    const savedId = chatHistoryService.getCurrentConversationId();
-    if (savedId) {
-      const conversation = chatHistoryService.getConversation(savedId);
-      if (conversation && conversation.messages.length > 0) {
-        return savedId;
-      }
-    }
-    // Create new conversation ID
+    // Create new conversation ID initially, will be updated after loading from backend
     return chatHistoryService.generateConversationId();
   });
 
   const [messages, setMessages] = useState(() => {
-    // Try to load messages from current conversation
-    const savedId = chatHistoryService.getCurrentConversationId();
-    if (savedId) {
-      const conversation = chatHistoryService.getConversation(savedId);
-      if (conversation && conversation.messages.length > 0) {
-        return conversation.messages;
-      }
-    }
-    // Default intro messages
+    // Default intro messages, will be updated after loading from backend
     return [
       { role: 'assistant', text: INTRO_MESSAGES[normalizedRole], source: 'intro' },
       { role: 'assistant', text: SECONDARY_HINT, source: 'guide' }
     ];
   });
+
+  // Load conversations from backend on mount
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        // Sync from backend first
+        await chatHistoryService.syncFromBackend();
+        
+        // Try to load current conversation ID from storage
+        const savedId = chatHistoryService.getCurrentConversationId();
+        if (savedId) {
+          const conversation = await chatHistoryService.getConversation(savedId, true);
+          if (conversation && conversation.messages.length > 0) {
+            setCurrentConversationId(savedId);
+            setMessages(conversation.messages);
+            return;
+          }
+        }
+        
+        // If no saved conversation, check if there are any recent conversations
+        const histories = await chatHistoryService.getAllHistories(true);
+        if (histories && histories.length > 0) {
+          // Load the most recent conversation
+          const mostRecent = histories[0];
+          setCurrentConversationId(mostRecent.id);
+          chatHistoryService.setCurrentConversationId(mostRecent.id);
+          setMessages(mostRecent.messages);
+        }
+      } catch (error) {
+        console.warn('Failed to load conversations from backend, using localStorage:', error);
+        // Fallback to localStorage
+        const savedId = chatHistoryService.getCurrentConversationId();
+        if (savedId) {
+          const conversation = await chatHistoryService.getConversation(savedId, false);
+          if (conversation && conversation.messages.length > 0) {
+            setCurrentConversationId(savedId);
+            setMessages(conversation.messages);
+          }
+        }
+      }
+    };
+
+    loadConversations();
+  }, []);
   
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -638,7 +666,10 @@ const ChatbotWidget = ({ userRole = 'student', user = null }) => {
     // Don't save intro messages only
     const userMessages = messages.filter(m => m.role === 'user');
     if (userMessages.length > 0) {
-      chatHistoryService.saveConversation(currentConversationId, messages);
+      chatHistoryService.saveConversation(currentConversationId, messages)
+        .catch(error => {
+          console.warn('Failed to save conversation:', error);
+        });
       chatHistoryService.setCurrentConversationId(currentConversationId);
     }
   }, [messages, currentConversationId]);
@@ -811,20 +842,37 @@ const handleIntent = async (intent, conversationSnapshot) => {
     setSelectedFile(null);
   };
 
-  const handleSelectConversation = (conversationId) => {
-    const conversation = chatHistoryService.getConversation(conversationId);
-    if (conversation) {
-      setCurrentConversationId(conversationId);
-      chatHistoryService.setCurrentConversationId(conversationId);
-      setMessages(conversation.messages);
-      setIsHistoryOpen(false);
+  const handleSelectConversation = async (conversationId) => {
+    try {
+      const conversation = await chatHistoryService.getConversation(conversationId, true);
+      if (conversation) {
+        setCurrentConversationId(conversationId);
+        chatHistoryService.setCurrentConversationId(conversationId);
+        setMessages(conversation.messages);
+        setIsHistoryOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      // Fallback to localStorage
+      const conversation = await chatHistoryService.getConversation(conversationId, false);
+      if (conversation) {
+        setCurrentConversationId(conversationId);
+        chatHistoryService.setCurrentConversationId(conversationId);
+        setMessages(conversation.messages);
+        setIsHistoryOpen(false);
+      }
     }
   };
 
-  const handleDeleteConversation = (conversationId) => {
-    if (conversationId === currentConversationId) {
-      // If deleting current conversation, start a new one
-      handleNewChat();
+  const handleDeleteConversation = async (conversationId) => {
+    try {
+      await chatHistoryService.deleteConversation(conversationId);
+      if (conversationId === currentConversationId) {
+        // If deleting current conversation, start a new one
+        handleNewChat();
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
     }
   };
 

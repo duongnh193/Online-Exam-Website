@@ -1,19 +1,44 @@
 import LocalStorage from '../infrastructure/storage/localStorage';
+import chatHistoryApiService from './chatHistoryApiService';
 
 const CHAT_HISTORY_KEY = 'ai_assistant_chat_history';
 const CURRENT_CONVERSATION_KEY = 'ai_assistant_current_conversation';
 const MAX_HISTORY_ITEMS = 50; // Giới hạn số lượng conversation lưu trữ
+const SYNC_ENABLED = true; // Enable/disable backend sync
 
 /**
  * Chat History Service
- * Manages chat conversation history using localStorage
+ * Manages chat conversation history using localStorage and backend API (hybrid approach)
  */
 class ChatHistoryService {
   /**
    * Get all chat histories
-   * @returns {Array} Array of conversation objects
+   * @param {boolean} useBackend - Whether to fetch from backend (default: true)
+   * @returns {Promise<Array>|Array} Array of conversation objects
    */
-  getAllHistories() {
+  async getAllHistories(useBackend = true) {
+    if (SYNC_ENABLED && useBackend) {
+      try {
+        const backendHistories = await chatHistoryApiService.getAllConversations();
+        // Sync to localStorage as backup
+        if (backendHistories && backendHistories.length > 0) {
+          const formattedHistories = backendHistories.map(conv => ({
+            id: conv.conversationId,
+            title: conv.title,
+            messages: conv.messages || [],
+            createdAt: conv.createdAt,
+            updatedAt: conv.updatedAt,
+            messageCount: conv.messageCount || 0
+          }));
+          LocalStorage.set(CHAT_HISTORY_KEY, formattedHistories);
+          return formattedHistories.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        }
+      } catch (error) {
+        console.warn('Failed to fetch from backend, using localStorage:', error);
+        // Fallback to localStorage
+      }
+    }
+    
     const histories = LocalStorage.get(CHAT_HISTORY_KEY) || [];
     // Sort by updatedAt descending (newest first)
     return histories.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
@@ -22,10 +47,30 @@ class ChatHistoryService {
   /**
    * Get a specific conversation by ID
    * @param {string} conversationId
-   * @returns {Object|null} Conversation object or null
+   * @param {boolean} useBackend - Whether to fetch from backend (default: true)
+   * @returns {Promise<Object|null>|Object|null} Conversation object or null
    */
-  getConversation(conversationId) {
-    const histories = this.getAllHistories();
+  async getConversation(conversationId, useBackend = true) {
+    if (SYNC_ENABLED && useBackend) {
+      try {
+        const backendConv = await chatHistoryApiService.getConversation(conversationId);
+        if (backendConv) {
+          return {
+            id: backendConv.conversationId,
+            title: backendConv.title,
+            messages: backendConv.messages || [],
+            createdAt: backendConv.createdAt,
+            updatedAt: backendConv.updatedAt,
+            messageCount: backendConv.messageCount || 0
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to fetch conversation from backend, using localStorage:', error);
+        // Fallback to localStorage
+      }
+    }
+    
+    const histories = await this.getAllHistories(false);
     return histories.find(h => h.id === conversationId) || null;
   }
 
@@ -34,10 +79,10 @@ class ChatHistoryService {
    * @param {string} conversationId - ID of the conversation
    * @param {Array} messages - Array of message objects
    * @param {string} title - Optional title for the conversation
-   * @returns {Object} Saved conversation object
+   * @returns {Promise<Object>|Object} Saved conversation object
    */
-  saveConversation(conversationId, messages, title = null) {
-    const histories = this.getAllHistories();
+  async saveConversation(conversationId, messages, title = null) {
+    const histories = await this.getAllHistories(false);
     const existingIndex = histories.findIndex(h => h.id === conversationId);
     
     // Generate title from first user message if not provided
@@ -69,28 +114,72 @@ class ChatHistoryService {
       }
     }
 
+    // Save to localStorage first (for immediate access)
     LocalStorage.set(CHAT_HISTORY_KEY, histories);
+
+    // Sync to backend (async, don't wait)
+    if (SYNC_ENABLED) {
+      chatHistoryApiService.saveConversation(conversationId, messages, title)
+        .then(backendConv => {
+          // Update localStorage with backend data if successful
+          if (backendConv) {
+            const updatedHistories = await this.getAllHistories(false);
+            const idx = updatedHistories.findIndex(h => h.id === conversationId);
+            if (idx >= 0) {
+              updatedHistories[idx] = {
+                ...updatedHistories[idx],
+                createdAt: backendConv.createdAt,
+                updatedAt: backendConv.updatedAt
+              };
+              LocalStorage.set(CHAT_HISTORY_KEY, updatedHistories);
+            }
+          }
+        })
+        .catch(error => {
+          console.warn('Failed to sync conversation to backend:', error);
+          // Continue with localStorage version
+        });
+    }
+
     return conversation;
   }
 
   /**
    * Delete a conversation
    * @param {string} conversationId
-   * @returns {boolean} Success status
+   * @returns {Promise<boolean>|boolean} Success status
    */
-  deleteConversation(conversationId) {
-    const histories = this.getAllHistories();
+  async deleteConversation(conversationId) {
+    const histories = await this.getAllHistories(false);
     const filtered = histories.filter(h => h.id !== conversationId);
     LocalStorage.set(CHAT_HISTORY_KEY, filtered);
+    
+    // Delete from backend
+    if (SYNC_ENABLED) {
+      chatHistoryApiService.deleteConversation(conversationId)
+        .catch(error => {
+          console.warn('Failed to delete conversation from backend:', error);
+        });
+    }
+    
     return filtered.length < histories.length;
   }
 
   /**
    * Delete all conversations
-   * @returns {boolean} Success status
+   * @returns {Promise<boolean>|boolean} Success status
    */
-  deleteAllConversations() {
+  async deleteAllConversations() {
     LocalStorage.set(CHAT_HISTORY_KEY, []);
+    
+    // Delete from backend
+    if (SYNC_ENABLED) {
+      chatHistoryApiService.deleteAllConversations()
+        .catch(error => {
+          console.warn('Failed to delete all conversations from backend:', error);
+        });
+    }
+    
     return true;
   }
 
@@ -124,16 +213,43 @@ class ChatHistoryService {
 
   /**
    * Get conversation statistics
-   * @returns {Object} Statistics object
+   * @param {boolean} useBackend - Whether to fetch from backend (default: true)
+   * @returns {Promise<Object>|Object} Statistics object
    */
-  getStatistics() {
-    const histories = this.getAllHistories();
+  async getStatistics(useBackend = true) {
+    const histories = await this.getAllHistories(useBackend);
     return {
       totalConversations: histories.length,
-      totalMessages: histories.reduce((sum, h) => sum + h.messageCount, 0),
+      totalMessages: histories.reduce((sum, h) => sum + (h.messageCount || 0), 0),
       oldestConversation: histories.length > 0 ? histories[histories.length - 1].createdAt : null,
       newestConversation: histories.length > 0 ? histories[0].createdAt : null
     };
+  }
+
+  /**
+   * Sync all conversations from backend to localStorage
+   * @returns {Promise<void>}
+   */
+  async syncFromBackend() {
+    if (!SYNC_ENABLED) return;
+    
+    try {
+      const backendHistories = await chatHistoryApiService.getAllConversations();
+      if (backendHistories && backendHistories.length > 0) {
+        const formattedHistories = backendHistories.map(conv => ({
+          id: conv.conversationId,
+          title: conv.title,
+          messages: conv.messages || [],
+          createdAt: conv.createdAt,
+          updatedAt: conv.updatedAt,
+          messageCount: conv.messageCount || 0
+        }));
+        LocalStorage.set(CHAT_HISTORY_KEY, formattedHistories);
+      }
+    } catch (error) {
+      console.error('Failed to sync from backend:', error);
+      throw error;
+    }
   }
 }
 

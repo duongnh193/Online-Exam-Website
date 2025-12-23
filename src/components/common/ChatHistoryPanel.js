@@ -207,23 +207,46 @@ const ChatHistoryPanel = ({
   onDeleteConversation 
 }) => {
   const [histories, setHistories] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    loadHistories();
-  }, []);
+    if (isOpen) {
+      loadHistories();
+    }
+  }, [isOpen]);
 
-  const loadHistories = () => {
-    const allHistories = chatHistoryService.getAllHistories();
-    setHistories(allHistories);
+  const loadHistories = async () => {
+    setLoading(true);
+    try {
+      const allHistories = await chatHistoryService.getAllHistories(true);
+      setHistories(allHistories);
+    } catch (error) {
+      console.error('Failed to load histories:', error);
+      // Fallback to localStorage
+      try {
+        const allHistories = await chatHistoryService.getAllHistories(false);
+        setHistories(allHistories);
+      } catch (fallbackError) {
+        console.error('Failed to load from localStorage:', fallbackError);
+        setHistories([]);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (e, conversationId) => {
+  const handleDelete = async (e, conversationId) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this conversation?')) {
-      chatHistoryService.deleteConversation(conversationId);
-      loadHistories();
-      if (onDeleteConversation) {
-        onDeleteConversation(conversationId);
+      try {
+        await chatHistoryService.deleteConversation(conversationId);
+        await loadHistories();
+        if (onDeleteConversation) {
+          onDeleteConversation(conversationId);
+        }
+      } catch (error) {
+        console.error('Failed to delete conversation:', error);
+        alert('Failed to delete conversation. Please try again.');
       }
     }
   };
@@ -251,7 +274,11 @@ const ChatHistoryPanel = ({
         </HistoryHeader>
       
       <HistoryList>
-        {histories.length === 0 ? (
+        {loading ? (
+          <EmptyState>
+            <p>Loading conversations...</p>
+          </EmptyState>
+        ) : histories.length === 0 ? (
           <EmptyState>
             <ChatBubbleOutlineIcon style={{ fontSize: '3rem', opacity: 0.3, marginBottom: '1rem' }} />
             <p>No conversation history yet</p>
