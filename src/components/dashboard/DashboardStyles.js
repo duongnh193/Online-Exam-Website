@@ -1,165 +1,195 @@
 import { Link } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
+import { TYPOGRAPHY_SCALE, SPACING_SCALE, RADIUS_SCALE, BREAKPOINTS } from '../../theme/tokens';
 
-export const ThemeStyles = createGlobalStyle`
-  .light-theme {
-    --bg-primary: #f8f9fa;
-    --bg-secondary: #ffffff;
-    --bg-sidebar: #6a00ff;
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --border-color: #eeeeee;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    --highlight-color: #6a00ff;
-  }
-  
-  .dark-theme {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2a2a2a;
-    --bg-sidebar: #3a3a3a;
-    --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border-color: #444444;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    --highlight-color: #8d47ff;
-  }
-`;
+export const ThemeStyles = createGlobalStyle``;
 
 export const DashboardContainer = styled.div`
   display: flex;
   min-height: 100vh;
   background-color: var(--bg-primary);
   transition: background-color 0.3s ease;
+  font-size: ${TYPOGRAPHY_SCALE.base};
 `;
 
 export const Sidebar = styled.aside`
-  width: 180px;
-  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
+  width: var(--sidebar-width);
+  background-color: var(--bg-sidebar);
   position: fixed;
   height: 100vh;
   overflow-y: auto;
   color: white;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border-radius: 0 20px 20px 0;
+  box-shadow: var(--card-shadow);
+  border-radius: 0 ${RADIUS_SCALE.lg} ${RADIUS_SCALE.lg} 0;
   transition: background-color 0.3s ease;
+  padding: ${SPACING_SCALE.lg} ${SPACING_SCALE.md};
+
+  @media (max-width: ${BREAKPOINTS.tablet}px) {
+    width: 72px;
+    padding: ${SPACING_SCALE.md} ${SPACING_SCALE.sm};
+  }
 `;
 
 export const Logo = styled.div`
-  font-size: 1.25rem;
+  font-size: ${TYPOGRAPHY_SCALE.md};
   font-weight: 600;
-  padding: 2rem 1.5rem;
+  padding: 0 ${SPACING_SCALE.sm} ${SPACING_SCALE.lg};
   display: flex;
   align-items: center;
+  gap: ${SPACING_SCALE.xs};
   
-  &::before {
-    content: "⦿⦿⦿";
-    letter-spacing: 2px;
-    font-size: 10px;
-    margin-right: 8px;
-    color: white;
+  span {
+    width: 32px;
+    height: 32px;
+    border-radius: ${RADIUS_SCALE.round};
+    background: rgba(255, 255, 255, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
   }
 `;
 
 export const SidebarMenu = styled.div`
   flex: 1;
-  margin-top: 1rem;
+  margin-top: ${SPACING_SCALE.md};
+  display: flex;
+  flex-direction: column;
+  gap: ${SPACING_SCALE.xs};
 `;
 
 export const NavItem = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
+  padding: ${SPACING_SCALE.sm} ${SPACING_SCALE.md};
   display: flex;
   align-items: center;
   cursor: pointer;
   position: relative;
   color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  border-radius: ${RADIUS_SCALE.md};
   
   &.active {
     color: white;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.15);
   }
   
   &:hover {
     color: white;
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.08);
   }
 `;
 
 export const NavIcon = styled.span`
-  margin-right: 12px;
-  width: 18px;
-  height: 18px;
+  margin-right: ${SPACING_SCALE.sm};
+  width: 1.25rem;
+  height: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: ${TYPOGRAPHY_SCALE.base};
   opacity: 0.9;
+
+  @media (max-width: ${BREAKPOINTS.tablet}px) {
+    margin: 0;
+  }
 `;
 
 export const BottomMenu = styled.div`
-  margin-bottom: 2rem;
+  margin-top: auto;
 `;
 
 export const MainContent = styled.main`
   flex: 1;
-  margin-left: 180px;
-  padding: 2rem;
+  margin-left: var(--sidebar-width);
+  padding: ${SPACING_SCALE.xl} ${SPACING_SCALE.xl} ${SPACING_SCALE.xxl};
   color: var(--text-primary);
   transition: color 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: ${SPACING_SCALE.lg};
+
+  @media (max-width: ${BREAKPOINTS.tablet}px) {
+    margin-left: 72px;
+    padding: ${SPACING_SCALE.lg};
+  }
+  
+  @media (max-width: ${BREAKPOINTS.mobile}px) {
+    margin-left: 0;
+    padding: ${SPACING_SCALE.md};
+  }
 `;
 
 export const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  margin-bottom: 2.5rem;
+  gap: ${SPACING_SCALE.lg};
+  margin-bottom: ${SPACING_SCALE.lg};
+
+  @media (max-width: ${BREAKPOINTS.mobile}px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const HeaderRight = styled.div`
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: ${SPACING_SCALE.md};
 `;
 
-export const NotificationIcon = styled.div`
-  width: 24px;
-  height: 24px;
-  position: relative;
+export const NotificationIcon = styled.button`
+  width: 42px;
+  height: 42px;
+  border-radius: ${RADIUS_SCALE.round};
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  
-  &::before {
-    content: '🔔';
-    font-size: 18px;
+  color: inherit;
+  transition: background 0.2s, transform 0.2s;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.4);
+    outline-offset: 2px;
   }
 `;
 
-export const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #6a00ff;
-  color: white;
+export const UserAvatar = styled.button`
+  width: 42px;
+  height: 42px;
+  border-radius: ${RADIUS_SCALE.round};
+  border: none;
+  background-color: var(--highlight-color, #6a00ff);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 16px;
+  font-size: ${TYPOGRAPHY_SCALE.sm};
   cursor: pointer;
+  transition: transform 0.2s, filter 0.2s;
+  box-shadow: 0 8px 16px rgba(74, 74, 255, 0.25);
+
+  &:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.4);
+    outline-offset: 2px;
+  }
 `;
 
 export const DropdownContainer = styled.div`
@@ -171,7 +201,7 @@ export const Dropdown = styled.div`
   top: calc(100% + 10px);
   right: 0;
   background-color: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: ${RADIUS_SCALE.md};
   box-shadow: var(--card-shadow);
   width: 180px;
   z-index: 100;
@@ -179,12 +209,12 @@ export const Dropdown = styled.div`
 `;
 
 export const DropdownItem = styled.div`
-  padding: 12px 16px;
+  padding: ${SPACING_SCALE.sm} ${SPACING_SCALE.md};
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: ${SPACING_SCALE.sm};
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: ${TYPOGRAPHY_SCALE.sm};
   cursor: pointer;
   
   &:hover {
@@ -194,7 +224,7 @@ export const DropdownItem = styled.div`
 
 export const PageTitle = styled.div`
   h1 {
-    font-size: 1.5rem;
+    font-size: ${TYPOGRAPHY_SCALE.lg};
     font-weight: bold;
     margin: 0;
     color: var(--text-primary);
@@ -203,17 +233,17 @@ export const PageTitle = styled.div`
   p {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 0.875rem;
+    font-size: ${TYPOGRAPHY_SCALE.sm};
   }
 `;
 
 export const SortDropdown = styled.select`
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 0.875rem;
-  color: #666;
+  padding: ${SPACING_SCALE.xs} ${SPACING_SCALE.sm};
+  border: 1px solid var(--border-color);
+  border-radius: ${RADIUS_SCALE.sm};
+  background-color: var(--bg-secondary);
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  color: var(--text-secondary);
   cursor: pointer;
   outline: none;
 `;

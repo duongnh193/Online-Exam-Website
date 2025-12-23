@@ -32,10 +32,8 @@ const ResetPasswordModal = ({ show, handleClose, onSwitchToLogin }) => {
     setError('');
     
     try {
-      console.log('Requesting password reset for:', emailOrUsername);
       const response = await authService.resetPassword(emailOrUsername);
       
-      console.log('Password reset response:', response);
       setCurrentStep(2);
       
       // Extract email from success message if possible

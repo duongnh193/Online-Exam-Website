@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { createGlobalStyle } from 'styled-components';
+import { BREAKPOINTS } from '../theme/tokens';
 
 // Theme variables
 const ThemeStyles = createGlobalStyle`
@@ -10,27 +11,43 @@ const ThemeStyles = createGlobalStyle`
   .light-theme {
     --bg-primary: #f8f9fa;
     --bg-secondary: #ffffff;
-    --bg-sidebar: #6a00ff;
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --border-color: #eeeeee;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    --highlight-color: #6a00ff;
+    --bg-sidebar: #4A4AFF;
+    --text-primary: #1f2933;
+    --text-secondary: #566274;
+    --border-color: #e4e7ec;
+    --card-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    --highlight-color: #4A4AFF;
     --input-bg: #ffffff;
-    --hover-bg: #f5f5f5;
+    --hover-bg: rgba(74, 74, 255, 0.08);
+    --sidebar-width: 240px;
   }
   
   .dark-theme {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2a2a2a;
-    --bg-sidebar: #3a3a3a;
-    --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border-color: #444444;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    --bg-primary: #121826;
+    --bg-secondary: #1f2937;
+    --bg-sidebar: #2f3749;
+    --text-primary: #f1f5f9;
+    --text-secondary: #bcccdc;
+    --border-color: #303749;
+    --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     --highlight-color: #8d47ff;
-    --input-bg: #333333;
-    --hover-bg: #404040;
+    --input-bg: #2d3648;
+    --hover-bg: rgba(141, 71, 255, 0.16);
+    --sidebar-width: 240px;
+  }
+  
+  @media (max-width: ${BREAKPOINTS.tablet}px) {
+    .light-theme,
+    .dark-theme {
+      --sidebar-width: 72px;
+    }
+  }
+  
+  @media (max-width: ${BREAKPOINTS.mobile}px) {
+    .light-theme,
+    .dark-theme {
+      --sidebar-width: 0px;
+    }
   }
   
   body {

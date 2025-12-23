@@ -42,7 +42,6 @@ const getUsers = () => {
   
   // Save default users to localStorage
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(defaultUsers));
-  console.log('Created default mock users:', defaultUsers);
   return defaultUsers;
 };
 

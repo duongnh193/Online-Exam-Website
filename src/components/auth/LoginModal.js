@@ -30,32 +30,18 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
 
   // Helper function to redirect based on user role
   const redirectBasedOnRole = (user) => {
-    console.log('LoginModal: redirectBasedOnRole called with user:', user);
     
     // Debug localStorage state
-    const localStorageState = {
-      token: localStorage.getItem('token'),
-      tokenType: localStorage.getItem('token_type'),
-      user: localStorage.getItem('user'),
-      parsedUser: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null
-    };
-    console.log('LoginModal: Current localStorage state:', localStorageState);
-    
-    // Use the role from localStorage as the source of truth (it's what will be used for subsequent requests)
-    const storedUser = localStorageState.parsedUser;
+    // Prefer role stored in localStorage after login so redirects stay consistent
+    const storedUser = localStorage.getItem('user')
+      ? JSON.parse(localStorage.getItem('user'))
+      : null;
     const roleFromStorage = storedUser?.role;
     const roleFromParam = user?.role;
-    
-    console.log('Role comparison:', { 
-      roleFromStorage, 
-      roleFromParam,
-      match: roleFromStorage === roleFromParam
-    });
     
     // Determine which role to use - prefer localStorage
     const effectiveRole = roleFromStorage || roleFromParam;
     
-    console.log('LoginModal: Using effective role for redirection:', effectiveRole);
     
     // If no valid role found in either source, redirect to home
     if (!effectiveRole) {
@@ -68,13 +54,10 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
     const normalizedRole = effectiveRole.toUpperCase();
     
     // Redirect based on normalized role
-    console.log('LoginModal: Redirecting based on normalized role:', normalizedRole);
     
     if (normalizedRole === 'ROLE_LECTURER' || normalizedRole === 'ROLE_ADMIN') {
-      console.log('LoginModal: Detected LECTURER or ADMIN role, navigating to /dashboard');
       window.location.href = '/dashboard';
     } else if (normalizedRole === 'ROLE_STUDENT') {
-      console.log('LoginModal: Detected STUDENT role, navigating to /student-dashboard');
       window.location.href = '/student-dashboard';
     } else {
       console.warn('LoginModal: Unrecognized role format:', normalizedRole);
@@ -88,20 +71,12 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
     setIsLoading(true);
 
     try {
-      console.log('LoginModal: Attempting login for:', usernameOrEmail);
-      console.log('LoginModal: Current localStorage state:', {
-        token: localStorage.getItem('token'),
-        user: localStorage.getItem('user')
-      });
-      
       // Call authService directly to get the full response with OTP info
       const response = await authService.login({ username: usernameOrEmail, password });
       
-      console.log('LoginModal: Login response:', response);
       
       // Check if OTP is required
       if (response.requiresOtp) {
-        console.log('LoginModal: OTP required, showing OTP modal');
         setOtpData({
           username: usernameOrEmail,
           password,
@@ -146,14 +121,7 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
         password: otpData.password,
         otp: otpValue
       };
-      
-      console.log('LoginModal: Verifying OTP with data:', {
-        ...verificationData,
-        password: '********' // Don't log the actual password
-      });
-      
       const response = await authService.verifyOtp(verificationData);
-      console.log('LoginModal: OTP verification response:', response);
       
       // Update auth context if successful
       if (response.success && response.user) {
@@ -179,7 +147,6 @@ const LoginModal = ({ show, handleClose, onSwitchToRegister, onSwitchToResetPass
   };
 
   const handleOtpSuccess = (response) => {
-    console.log('OTP verification successful, user:', response?.user);
     handleCloseOtpModal();
     handleClose();
     redirectBasedOnRole(response?.user);

@@ -101,12 +101,10 @@ class StatisticsService {
     const url = `${API_URL}/student-score-in-classes/${studentId}`;
     const headers = authHeader();
     
-    console.log(`Fetching scores for student ID: ${studentId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, { headers })
       .then(response => {
-        console.log('Student scores data retrieved:', response.data);
         return response;
       })
       .catch(error => {

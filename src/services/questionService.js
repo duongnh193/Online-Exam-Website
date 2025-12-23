@@ -5,14 +5,7 @@ import { buildApiUrl } from './apiConfig';
 const API_URL = buildApiUrl('/v1/questions');
 
 // Helper for logging API calls in development
-const logApiCall = (method, url, headers, body = null) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`🔄 ${method} ${url}`, { 
-      headers: headers ? { ...headers } : 'No headers',
-      body: body ? body : 'No body'
-    });
-  }
-};
+const logApiCall = () => {};
 
 class QuestionService {
   // Create a new question
@@ -63,9 +56,6 @@ class QuestionService {
     }
     
     // Log the request details
-    console.log(`Creating question for exam ID: ${formattedData.examId} by user ID: ${formattedData.user_id}`);
-    console.log('Question type:', formattedData.type);
-    console.log('Question data:', JSON.stringify(formattedData, null, 2));
     
     logApiCall('POST', API_URL, authHeader(), formattedData);
     
@@ -74,7 +64,6 @@ class QuestionService {
       timeout: 10000 // 10 second timeout
     })
       .then(response => {
-        console.log('Question created successfully:', response.data);
         return response;
       })
       .catch(error => {
@@ -130,7 +119,6 @@ class QuestionService {
     logApiCall('PUT', url, authHeader(), questionData);
     return axios.put(url, questionData, { headers: authHeader() })
       .then(response => {
-        console.log('Question updated successfully:', response.data);
         return response;
       })
       .catch(error => {
@@ -145,7 +133,6 @@ class QuestionService {
     logApiCall('DELETE', url, authHeader());
     return axios.delete(url, { headers: authHeader() })
       .then(response => {
-        console.log('Question deleted successfully');
         return response;
       })
       .catch(error => {
@@ -160,7 +147,6 @@ class QuestionService {
     logApiCall('GET', url, authHeader());
     return axios.get(url, { headers: authHeader() })
       .then(response => {
-        console.log('Question fetched successfully:', response.data);
         return response;
       })
       .catch(error => {
@@ -178,7 +164,6 @@ class QuestionService {
     }
     
     const url = `${API_URL}?examId=${examId}&page=${page}&size=${size}`;
-    console.log(`Fetching questions for exam ID: ${examId} (page: ${page}, size: ${size})`);
     
     logApiCall('GET', url, authHeader());
     
@@ -192,16 +177,6 @@ class QuestionService {
           console.warn('Empty response data from questions API');
           return { data: { content: [] } };
         }
-        
-        // Log first question for debugging
-        if (response.data.content && response.data.content.length > 0) {
-          console.log('First question sample:', JSON.stringify(response.data.content[0], null, 2));
-        } else if (Array.isArray(response.data) && response.data.length > 0) {
-          console.log('First question sample:', JSON.stringify(response.data[0], null, 2));
-        }
-        
-        console.log(`Successfully fetched ${response.data.content?.length || 
-          (Array.isArray(response.data) ? response.data.length : 0)} questions`);
         
         return response;
       })
@@ -241,7 +216,6 @@ class QuestionService {
     
     // Fix the URL - correct path according to the backend controller
     const url = `${API_URL}/questions/import?examId=${examId}`;
-    console.log(`Importing questions CSV for exam ID: ${examId}`);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -264,7 +238,6 @@ class QuestionService {
       timeout: 30000 // Increase timeout to 30 seconds for large files
     })
       .then(response => {
-        console.log('Questions imported successfully:', response.data);
         return response;
       })
       .catch(error => {
@@ -298,7 +271,6 @@ class QuestionService {
       timeout: 10000
     })
       .then(response => {
-        console.log('Questions fetched successfully:', response.data);
         return response;
       })
       .catch(error => {
@@ -317,7 +289,6 @@ class QuestionService {
       timeout: 10000
     })
       .then(response => {
-        console.log('Question statistics fetched successfully:', response.data);
         return response;
       })
       .catch(error => {

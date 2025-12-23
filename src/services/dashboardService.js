@@ -169,7 +169,6 @@ const dashboardService = {
   getExamScoreStatistics: async (examId) => {
     try {
       const response = await axios.get(`${STATS_API_URL}/exam-score/${examId}`, { headers: authHeader() });
-      console.log('Exam score statistics API response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching exam score statistics:', error);
@@ -188,7 +187,6 @@ const dashboardService = {
         `${STATS_API_URL}/student-scores/${classId}?page=${page}&size=${size}`, 
         { headers: authHeader() }
       );
-      console.log('Student scores in class API response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching student scores for class:', error);
@@ -251,7 +249,6 @@ const dashboardService = {
   // Lấy danh sách tất cả bài thi
   getAllExams: async (page = 0, size = 10) => {
     try {
-      console.log('Fetching all exams with page:', page, 'size:', size);
       
       // Mock data tạm thời
       const mockExams = [

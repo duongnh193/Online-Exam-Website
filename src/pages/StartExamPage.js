@@ -7,6 +7,7 @@ import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import { useLoading } from '../contexts/LoadingContext';
+import { SPACING_SCALE, RADIUS_SCALE, TYPOGRAPHY_SCALE } from '../theme/tokens';
 
 const PageContainer = styled.div`
   display: flex;
@@ -15,90 +16,129 @@ const PageContainer = styled.div`
   justify-content: center;
   min-height: 100vh;
   background-color: var(--bg-primary);
-  padding: 20px;
+  padding: ${SPACING_SCALE.xl};
   transition: background-color 0.3s ease;
+  position: relative;
 `;
 
 const ThemeToggleContainer = styled.div`
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: ${SPACING_SCALE.md};
+  right: ${SPACING_SCALE.md};
 `;
 
 const ContentContainer = styled.div`
   text-align: center;
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg, ${RADIUS_SCALE.lg});
+  padding: ${SPACING_SCALE.lg};
+  box-shadow: var(--card-shadow);
 `;
 
 const Welcome = styled.h1`
-  font-size: 24px;
-  font-weight: 500;
-  margin-bottom: 10px;
+  font-size: ${TYPOGRAPHY_SCALE.lg};
+  font-weight: 600;
+  margin-bottom: ${SPACING_SCALE.xs};
   color: var(--text-primary);
 `;
 
 const ReadyMessage = styled.h2`
-  font-size: 20px;
-  font-weight: 400;
-  margin-bottom: 30px;
+  font-size: ${TYPOGRAPHY_SCALE.md};
+  font-weight: 500;
+  margin-bottom: ${SPACING_SCALE.lg};
   color: var(--text-primary);
 `;
 
 const InstructionText = styled.p`
-  font-size: 14px;
-  margin-bottom: 20px;
-  line-height: 1.5;
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  margin-bottom: ${SPACING_SCALE.md};
+  line-height: 1.6;
   color: var(--text-secondary);
 `;
 
 const PasswordInput = styled.input`
   width: 100%;
-  padding: 12px;
-  margin-bottom: 20px;
+  padding: ${SPACING_SCALE.sm};
+  margin-bottom: ${SPACING_SCALE.md};
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 16px;
+  border-radius: var(--radius-md, ${RADIUS_SCALE.md});
+  font-size: ${TYPOGRAPHY_SCALE.base};
   box-sizing: border-box;
-  background-color: var(--input-bg);
+  background-color: var(--bg-primary);
   color: var(--text-primary);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 0 2px rgba(106, 0, 255, 0.15);
+  }
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: ${SPACING_SCALE.sm};
+  margin-top: ${SPACING_SCALE.sm};
+  width: 100%;
+`;
+
+const ReturnButton = styled.button`
+  flex: 0 0 40%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, ${RADIUS_SCALE.md});
+  padding: ${SPACING_SCALE.xs} ${SPACING_SCALE.md};
+  font-size: ${TYPOGRAPHY_SCALE.xs};
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(106, 126, 252, 0.08);
+  }
 `;
 
 const LoginButton = styled.button`
-  background-color: #6a00ff;
+  background: linear-gradient(120deg, #4A4AFF, #6A7EFC);
   color: white;
   border: none;
-  border-radius: 20px;
-  padding: 10px 40px;
-  font-size: 14px;
+  border-radius: var(--radius-pill, ${RADIUS_SCALE.pill});
+  padding: ${SPACING_SCALE.xs} ${SPACING_SCALE.lg};
+  font-size: ${TYPOGRAPHY_SCALE.sm};
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex: 1;
+  font-weight: 600;
 
   &:hover {
-    background-color: #5500d0;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(74, 74, 255, 0.25);
   }
   
   &:disabled {
-    background-color: #cccccc;
+    background: var(--border-color);
     cursor: not-allowed;
+    box-shadow: none;
   }
 `;
 
 const ErrorMessage = styled.div`
   color: #d32f2f;
-  margin-bottom: 20px;
-  font-size: 14px;
+  margin-bottom: ${SPACING_SCALE.sm};
+  font-size: ${TYPOGRAPHY_SCALE.sm};
 `;
 
 const InfoBox = styled.div`
-  background-color: ${props => props.theme === 'dark' ? 'rgba(150, 120, 255, 0.1)' : 'rgba(106, 0, 255, 0.05)'};
+  background-color: ${({ theme }) => (theme === 'dark' ? 'rgba(150, 120, 255, 0.1)' : 'rgba(106, 0, 255, 0.05)')};
   border-left: 3px solid var(--highlight-color);
-  padding: 12px 16px;
-  margin-top: 20px;
-  font-size: 13px;
-  line-height: 1.5;
+  padding: ${SPACING_SCALE.sm} ${SPACING_SCALE.md};
+  margin-top: ${SPACING_SCALE.md};
+  font-size: ${TYPOGRAPHY_SCALE.xs};
+  line-height: 1.6;
   color: var(--text-primary);
   text-align: left;
+  border-radius: var(--radius-md, ${RADIUS_SCALE.md});
 `;
 
 function StartExamPage() {
@@ -149,7 +189,6 @@ function StartExamPage() {
       // Gọi API start exam để kiểm tra
       const response = await studentExamService.startExam(examId, password);
       
-      console.log('Start exam response:', response.data);
       
       if (response && response.data && response.data.studentExam) {
         // Lưu response để sử dụng sau khi xác nhận
@@ -192,7 +231,6 @@ function StartExamPage() {
       const studentExamId = examResponse.studentExam.id;
       
       if (studentExamId) {
-        console.log('Starting exam with ID:', studentExamId);
         
         // Lưu studentExamId vào localStorage
         localStorage.setItem('currentStudentExamId', studentExamId);
@@ -239,9 +277,14 @@ function StartExamPage() {
             disabled={loading}
           />
           
-          <LoginButton type="submit" disabled={loading}>
-            {loading ? 'Starting...' : 'Start Exam'}
-          </LoginButton>
+          <ButtonRow>
+            <ReturnButton type="button" onClick={() => navigate('/exams')}>
+              Back to Exams
+            </ReturnButton>
+            <LoginButton type="submit" disabled={loading}>
+              {loading ? 'Starting...' : 'Start Exam'}
+            </LoginButton>
+          </ButtonRow>
         </form>
         
         <InfoBox theme={theme}>

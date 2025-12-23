@@ -8,10 +8,7 @@ import axios from 'axios';
 
 // Add axios interceptors for debugging
 axios.interceptors.request.use(
-  config => {
-    console.log(`🚀 Request: ${config.method.toUpperCase()} ${config.url}`, config);
-    return config;
-  },
+  config => config,
   error => {
     console.error('❌ Request Error:', error);
     return Promise.reject(error);
@@ -19,16 +16,12 @@ axios.interceptors.request.use(
 );
 
 axios.interceptors.response.use(
-  response => {
-    console.log(`✅ Response: ${response.status} ${response.config.url}`, response);
-    return response;
-  },
+  response => response,
   error => {
     if (error.response) {
       // The request was made and the server responded with a status code
       // that falls out of the range of 2xx
       console.error('❌ Response Error:', error.response.status, error.response.data);
-      console.log('Response headers:', error.response.headers);
     } else if (error.request) {
       // The request was made but no response was received
       console.error('❌ No Response from server:', error.request);
@@ -48,6 +41,5 @@ root.render(
 );
 
 // If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();

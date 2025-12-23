@@ -241,6 +241,7 @@ const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('token_type');
   localStorage.removeItem('user');
+  localStorage.removeItem('theme');
   sessionStorage.clear();
 
   document.cookie

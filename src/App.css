@@ -20,6 +20,17 @@ html {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Table alignment rules */
+table th,
+table td {
+  text-align: left;
+}
+
+table .numeric-cell,
+.numeric-cell {
+  text-align: center;
+}
+
 /* Custom paper hover effects */
 .MuiPaper-root {
   transition: all 0.3s ease-in-out !important;

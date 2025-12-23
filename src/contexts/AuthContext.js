@@ -23,14 +23,12 @@ export const AuthProvider = ({ children }) => {
             const user = JSON.parse(userStr);
             setCurrentUser(user);
             setIsAuthenticated(true);
-            console.log('AuthContext: User loaded from localStorage:', user);
           } else {
             // If token exists but no user, try to fetch current user
             const userData = await authService.getCurrentUser();
             if (userData) {
               setCurrentUser(userData);
               setIsAuthenticated(true);
-              console.log('AuthContext: User loaded from API:', userData);
             } else {
               // If getCurrentUser fails, clear invalid token
               authService.logout();
@@ -56,8 +54,6 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = (token, user) => {
-    console.log('AuthContext: Login called with user:', user);
-    
     // Store token if it's not already stored
     if (token && !authService.getToken()) {
       localStorage.setItem('token', token);
@@ -74,7 +70,6 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = () => {
-    console.log('AuthContext: Logout called');
     authService.logout();
     setCurrentUser(null);
     setIsAuthenticated(false);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled, { createGlobalStyle } from 'styled-components';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import styled from 'styled-components';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
@@ -11,216 +11,37 @@ import { FaEllipsisV } from 'react-icons/fa';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
-
-// Theme variables
-const ThemeStyles = createGlobalStyle`
-  .light-theme {
-    --bg-primary: #f8f9fa;
-    --bg-secondary: #ffffff;
-    --bg-sidebar: #6a00ff;
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --border-color: #eeeeee;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    --highlight-color: #6a00ff;
-  }
-  
-  .dark-theme {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2a2a2a;
-    --bg-sidebar: #3a3a3a;
-    --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border-color: #444444;
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    --highlight-color: #8d47ff;
-  }
-`;
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
+import {
+  DashboardContainer,
+  Sidebar,
+  Logo,
+  SidebarMenu,
+  NavItem,
+  NavIcon,
+  BottomMenu,
+  MainContent,
+  Header,
+  HeaderRight,
+  NotificationIcon,
+  UserAvatar,
+  DropdownContainer,
+  Dropdown,
+  DropdownItem,
+  PageTitle,
+} from '../components/dashboard/DashboardStyles';
 
 // Styled Components
-const DashboardContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  transition: background-color 0.3s ease;
-`;
-
-const Sidebar = styled.aside`
-  width: 180px;
-  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
-  position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border-radius: 0 20px 20px 0;
-  transition: background-color 0.3s ease;
-`;
-
-const Logo = styled.div`
-  font-size: 1.25rem;
-  font-weight: 600;
-  padding: 2rem 1.5rem;
-  display: flex;
-  align-items: center;
-  
-  &::before {
-    content: "⦿⦿⦿";
-    letter-spacing: 2px;
-    font-size: 10px;
-    margin-right: 8px;
-    color: white;
-  }
-`;
-
-const SidebarMenu = styled.div`
-  flex: 1;
-  margin-top: 1rem;
-`;
-
-const NavItem = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
-  text-decoration: none;
-  font-size: 0.9rem;
-  
-  &.active {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  &:hover {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: white;
-  }
-`;
-
-const NavIcon = styled.span`
-  margin-right: 12px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  opacity: 0.9;
-`;
-
-const BottomMenu = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-  margin-left: 180px;
-  padding: 2rem;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-`;
-
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2.5rem;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-`;
-
-const NotificationIcon = styled.div`
-  width: 24px;
-  height: 24px;
-  position: relative;
-  cursor: pointer;
-  
-  &::before {
-    content: '🔔';
-    font-size: 18px;
-  }
-`;
-
-const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #6a00ff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-`;
-
-const DropdownContainer = styled.div`
-  position: relative;
-`;
-
-const Dropdown = styled.div`
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
-  width: 180px;
-  z-index: 100;
-  overflow: hidden;
-`;
-
-const DropdownItem = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: var(--bg-primary);
-  }
-`;
-
-const PageTitle = styled.div`
-  h1 {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin: 0;
-    color: var(--text-primary);
-  }
-  
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-  }
-`;
-
 const SortDropdown = styled.select`
   padding: 0.5rem 1rem;
   border: 1px solid #ddd;
@@ -324,6 +145,18 @@ function StudentDashboardPage() {
   const dropdownRef = useRef(null);
   const [openMenuIdx, setOpenMenuIdx] = useState(null);
   const menuRefs = useRef([]);
+  const menuIcons = {
+    dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+    exams: <QuizOutlinedIcon fontSize="small" />,
+    class: <ClassOutlinedIcon fontSize="small" />,
+    reports: <AssessmentOutlinedIcon fontSize="small" />,
+    results: <BarChartOutlinedIcon fontSize="small" />,
+    assistant: <SmartToyOutlinedIcon fontSize="small" />,
+    settings: <SettingsOutlinedIcon fontSize="small" />,
+    signout: <LogoutOutlinedIcon fontSize="small" />,
+  };
+  const getMenuIcon = (name) => menuIcons[name] || <CircleOutlinedIcon fontSize="small" />;
+  const isRouteActive = (path) => location.pathname === path;
 
   // Color palette for color picker
   const COLOR_PICKER = [
@@ -345,14 +178,12 @@ function StudentDashboardPage() {
       try {
         // Fetch student's classes
         const classesResponse = await classService.getStudentClasses(user.id);
-        console.log('Classes response:', classesResponse);
         
         // Handle both paginated and non-paginated responses
         const classes = Array.isArray(classesResponse.data) 
           ? classesResponse.data 
           : (classesResponse.data.content || []);
           
-        console.log('Processed classes:', classes);
         setMyClasses(classes);
         
         if (classes.length === 0) {
@@ -364,7 +195,6 @@ function StudentDashboardPage() {
         
         // Fetch upcoming exams for all classes
         const upcomingExamsPromises = classes.map(classItem => {
-          console.log(`Fetching exams for class ID: ${classItem.id}, name: ${classItem.name || 'Unknown'}`);
           return examService.getExamsByClass(classItem.id);
         });
         
@@ -372,7 +202,6 @@ function StudentDashboardPage() {
         const allUpcomingExams = upcomingExamsResponses.flatMap((response, index) => {
           // Get the class details for this response
           const classItem = classes[index];
-          console.log(`Processing exams for class ${classItem.id} (${classItem.name || 'Unknown'})`);
           
           // Extract exams data with proper fallback handling
           const exams = Array.isArray(response.data) 
@@ -394,7 +223,6 @@ function StudentDashboardPage() {
                   name: classItem.name || `Class #${classItem.id}`
                 }
               };
-              console.log(`Processed exam: ${enhancedExam.id}, title: "${enhancedExam.title}"`);
               return enhancedExam;
             })
             .filter(exam => 
@@ -404,12 +232,10 @@ function StudentDashboardPage() {
         
         // Sort by start time
         allUpcomingExams.sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
-        console.log(`Total upcoming exams after processing: ${allUpcomingExams.length}`);
         setUpcomingExams(allUpcomingExams);
         
         // Fetch completed exams
         const completedExamsPromises = classes.map(classItem => {
-          console.log(`Fetching completed exams for class ID: ${classItem.id}`);
           return examService.getExamsByClass(classItem.id);
         });
         
@@ -417,7 +243,6 @@ function StudentDashboardPage() {
         const allCompletedExams = completedExamsResponses.flatMap((response, index) => {
           // Get the class details for this response
           const classItem = classes[index];
-          console.log(`Processing completed exams for class ${classItem.id} (${classItem.name || 'Unknown'})`);
           
           // Extract exams data with proper fallback handling
           const exams = Array.isArray(response.data) 
@@ -464,7 +289,6 @@ function StudentDashboardPage() {
       // Check 2FA status using authService
       const is2FAEnabled = authService.is2FAEnabled();
       setTwoFactorEnabled(is2FAEnabled);
-      console.log('2FA status initialized:', is2FAEnabled);
     }
   }, [user]);
   
@@ -504,17 +328,14 @@ function StudentDashboardPage() {
   ];
   
   const handleLogout = () => {
-    console.log('StudentDashboardPage: Initiating logout process');
     // Make sure the dropdowns are closed
     setShowDropdown(false);
     
     // Hiển thị modal xác nhận thay vì gọi logout trực tiếp
     setShowLogoutConfirmation(true);
-    localStorage.removeItem("theme"); 
   };
   
   const handleConfirmLogout = () => {
-    console.log('StudentDashboardPage: Executing logout after confirmation');
     logout();
     setShowLogoutConfirmation(false);
   };
@@ -541,16 +362,6 @@ function StudentDashboardPage() {
     setShowDropdown(!showDropdown);
   };
 
-  const getMenuIcon = (name) => {
-    switch(name) {
-      case 'dashboard': return '🏠';
-      case 'exams': return '📝';
-      case 'results': return '📊';
-      case 'settings': return '⚙️';
-      case 'signout': return '🚪';
-      default: return '•';
-    }
-  };
 
   const handle2FAToggle = async () => {
     if (!user || !user.id) {
@@ -567,10 +378,8 @@ function StudentDashboardPage() {
       let response;
       if (newTwoFAState) {
         response = await authService.enable2FA();
-        console.log('Enabling 2FA response:', response);
       } else {
         response = await authService.disable2FA();
-        console.log('Disabling 2FA response:', response);
       }
       
       // Update the local state
@@ -604,17 +413,14 @@ function StudentDashboardPage() {
     setNicknames(prev => ({ ...prev, [classId]: value }));
   };
 
-  // Function to check if a route is active
-  const isRouteActive = (path) => {
-    return location.pathname.startsWith(path);
-  };
-
   return (
     <>
-      <ThemeStyles />
-      <DashboardContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+      <DashboardContainer>
         <Sidebar theme={theme}>
-          <Logo>logo</Logo>
+          <Logo>
+            <span>ST</span>
+            Student
+          </Logo>
           <SidebarMenu>
             <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
               <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
@@ -632,7 +438,7 @@ function StudentDashboardPage() {
               to="/ai-assistant"
               className={isRouteActive('/ai-assistant') ? 'active' : ''}
             >
-              <NavIcon>🤖</NavIcon>
+              <NavIcon>{getMenuIcon('assistant')}</NavIcon>
               AI Assistant
             </NavItem>
           </SidebarMenu>
@@ -660,23 +466,32 @@ function StudentDashboardPage() {
             
             <HeaderRight>
               <ThemeToggle />
-              <NotificationIcon />
+              <NotificationIcon type="button" aria-label="Notifications">
+                <NotificationsNoneOutlinedIcon fontSize="small" />
+              </NotificationIcon>
               <DropdownContainer ref={dropdownRef}>
-                <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+                <UserAvatar type="button" onClick={toggleDropdown} aria-label="User menu">
+                  {getUserInitial()}
+                </UserAvatar>
                 {showDropdown && (
                   <Dropdown>
                     <DropdownItem onClick={goToSettings}>
-                      <span>👤</span> Profile
+                      <PersonOutlineOutlinedIcon fontSize="small" />
+                      Profile
                     </DropdownItem>
                     <DropdownItem onClick={goToSettings}>
-                      <span>⚙️</span> Settings
+                      <SettingsOutlinedIcon fontSize="small" />
+                      Settings
                     </DropdownItem>
-                    <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
-                      <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
+                    <DropdownItem
+                      onClick={!updating2FA ? handle2FAToggle : undefined}
+                      style={{ opacity: updating2FA ? 0.6 : 1, cursor: updating2FA ? 'not-allowed' : 'pointer' }}
+                    >
                       {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
                     </DropdownItem>
                     <DropdownItem onClick={handleLogout}>
-                      <span>🚪</span> Sign out
+                      <LogoutOutlinedIcon fontSize="small" />
+                      Sign out
                     </DropdownItem>
                   </Dropdown>
                 )}

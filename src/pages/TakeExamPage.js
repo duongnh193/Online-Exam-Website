@@ -10,16 +10,18 @@ import { useLoading } from '../contexts/LoadingContext';
 import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import { SPACING_SCALE, RADIUS_SCALE, TYPOGRAPHY_SCALE } from '../theme/tokens';
 
 
 // Styled Components for the new design
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   height: 100vh;
   background-color: var(--bg-primary);
   transition: background-color 0.3s ease;
-  overflow-x: hidden;
+  overflow: hidden;
 `;
 
 const Header = styled.header`
@@ -27,10 +29,10 @@ const Header = styled.header`
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   background-color: var(--bg-secondary);
-  padding: 0.5rem 2rem;
+  padding: ${SPACING_SCALE.sm} ${SPACING_SCALE.xl};
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   transition: background-color 0.3s ease;
-  gap: 0.75rem;
+  gap: ${SPACING_SCALE.sm};
   top: 0;
   position: sticky;
   z-index: 10;
@@ -39,12 +41,12 @@ const Header = styled.header`
 const ExamInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: ${SPACING_SCALE.xs};
   align-items: flex-start;
 `;
 
 const ExamTitle = styled.h1`
-  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-size: clamp(${TYPOGRAPHY_SCALE.md}, 3vw, ${TYPOGRAPHY_SCALE.lg});
   font-weight: 700;
   margin: 0;
   color: #6a7efc;
@@ -55,24 +57,32 @@ const ExamTitle = styled.h1`
 const ExamMetaRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  font-size: 1rem;
-  font-weight: 800;
+  gap: ${SPACING_SCALE.sm};
+  font-size: ${TYPOGRAPHY_SCALE.base};
+  font-weight: 600;
   color: var(--text-secondary);
 `;
 
 const SubmitQuizButton = styled.button`
-  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
+  background: linear-gradient(120deg, #4A4AFF, #6A7EFC);
   color: white;
   border: none;
-  border-radius: 28px;
-  padding: 0.9rem 1.2rem;
-  font-size: 0.8rem;
+  border-radius: var(--radius-pill, ${RADIUS_SCALE.pill});
+  padding: ${SPACING_SCALE.xs} ${SPACING_SCALE.lg};
+  font-size: ${TYPOGRAPHY_SCALE.sm};
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 12px 24px rgba(74, 74, 255, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   
   &:hover {
-    background-color: ${props => props.theme === 'dark' ? '#7d37ef' : '#586df5'};
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(74, 74, 255, 0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
@@ -80,21 +90,21 @@ const HeaderActions = styled.div`
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: ${SPACING_SCALE.md};
 `;
 
 const UserProfile = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
+  gap: ${SPACING_SCALE.xs};
+  font-size: ${TYPOGRAPHY_SCALE.base};
   color: var(--text-primary);
 `;
 
 const UserAvatar = styled.div`
   width: 32px;
   height: 32px;
-  border-radius: ${props => props.$variant === 'unanswered' ? '6px' : '50%'};
+  border-radius: ${({ $variant }) => ($variant === 'unanswered' ? '6px' : '50%')};
   background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a7efc'};
   color: white;
   display: flex;
@@ -107,14 +117,26 @@ const MainContent = styled.main`
   flex: 1;
   width: 100%;
   max-width: 100%;
-  margin: 0;
-  padding: 0;
+  margin: 0 auto;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  padding-bottom: clamp(2rem, 4vw, 3rem);
   color: var(--text-primary);
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex-direction: ${({ $split }) => ($split ? 'row' : 'column')};
+  gap: ${({ $split }) => ($split ? SPACING_SCALE.sm : SPACING_SCALE.md)};
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+
+  & > * {
+    min-height: ${({ $split }) => ($split ? '0' : 'auto')};
+    flex: ${({ $split }) => ($split ? '1 1 auto' : 'initial')};
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+  }
 `;
 
 const TimerDisplay = styled.div`
@@ -155,17 +177,7 @@ const TimerToggleButton = styled.button`
 `;
 
 const SectionDivider = styled.div`
-  width: 100%;
-  margin: 0;
-  height: 4px;
-  background: repeating-linear-gradient(
-    to right,
-    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.35)' : '#959bb8'},
-    ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.35)' : '#959bb8'} 12px,
-    transparent 12px,
-    transparent 22px
-  );
-  border-radius: 999px;
+  display: none;
 `;
 
 const BottomSection = styled.div`
@@ -178,6 +190,8 @@ const BottomSection = styled.div`
   position: sticky;
   bottom: 0;
   z-index: 10;
+  background-color: var(--bg-primary);
+  padding-top: 0.5rem;
 `;
 
 const FooterContainer = styled.footer`
@@ -312,23 +326,6 @@ const FooterActionButton = styled.button`
   }
 `;
 
-const QuizContent = styled.div`
-  background-color: var(--bg-secondary);
-  border-radius: 0 0 1.25rem 1.25rem;
-  box-shadow: var(--card-shadow);
-  padding: clamp(1.5rem, 2vw, 2.25rem);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-  width: 100%;
-  margin: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  border-top: 3px dashed ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : '#cdd1e4'};
-`;
 
 const QuestionNavigation = styled.div`
   display: flex;
@@ -610,84 +607,114 @@ const InstructionActions = styled.div`
   padding-right: 20px;
 `;
 
-const QuestionContent = styled.div`
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  min-height: 0;
-  position: relative;
-  overflow: hidden;
-
-  & > * {
-    min-height: 0;
-    flex: 1 1 auto;
-    overflow: hidden;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-  }
-`;
-
 const QuestionImage = styled.div`
   width: 100%;
-  border-radius: 0.9rem;
-  overflow: hidden;
-  border: 1px solid ${props => props.theme === 'dark' ? '#2e3347' : '#FFFFFF'};
-  background: ${props => props.theme === 'dark' ? '#24273a' : '#FFFFFF'};
+  border-radius: 0.5rem;
+  overflow: visible;
+  border: none;
+  background: transparent;
   align-self: stretch;
   display: ${props => props.hasImage ? 'flex' : 'none'};
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   min-height: ${props => props.hasImage ? '180px' : '0'};
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  margin-bottom: 1rem;
   
   img {
     width: 100%;
     height: auto;
-    max-width: none;
-    max-height: none;
+    max-width: 100%;
+    max-height: clamp(300px, 50vh, 600px);
     object-fit: contain;
+    border-radius: 0.5rem;
+    box-shadow: ${props => props.theme === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)'};
   }
 `;
 
 const QuestionText = styled.div`
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 1rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 `;
 
 const PromptPanel = styled.div`
-  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgb(255, 255, 255)'};
-  border-radius: 1rem;
-  padding: clamp(1.25rem, 2vw, 2rem);
-  border: 1px solid ${props => props.theme === 'dark' ? '#2f3346' : '#e4e8f6'};
-  box-shadow: ${props => props.theme === 'dark' ? '0 8px 24px rgba(0, 0, 0, 0.35)' : '0 10px 30px rgba(106, 126, 252, 0.12)'};
+  background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#ffffff'};
+  border-radius: 0.85rem;
+  padding: clamp(1rem, 1.5vw, 1.5rem);
+  border: 1px solid ${props => props.theme === 'dark' ? '#2f3346' : '#dfe3f4'};
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
   min-height: 0;
-  overflow: hidden;
   min-width: 0;
   box-sizing: border-box;
-  min-width: 280px;
+  min-width: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100vh - 200px);
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.05)'};
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+    border-radius: 4px;
+    
+    &:hover {
+      background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+    }
+  }
 `;
 
 const AnswerPanel = styled.div`
-  background-color: ${props => props.theme === 'dark' ? 'rgba(11, 14, 26, 0.7)' : 'rgba(245, 247, 255, 0.85)'};
-  border-radius: 1rem;
+  background-color: ${props => props.theme === 'dark' ? 'rgba(11, 14, 26, 0.65)' : 'rgba(247, 249, 255, 0.92)'};
+  border-radius: 0.85rem;
   border: 1px solid ${props => props.theme === 'dark' ? '#383d52' : '#d7dcf0'};
-  padding: clamp(1.25rem, 2vw, 2rem);
-  box-shadow: ${props => props.theme === 'dark' ? '0 8px 24px rgba(0, 0, 0, 0.35)' : '0 12px 34px rgba(106, 126, 252, 0.18)'};
+  padding: clamp(1rem, 1.5vw, 1.5rem);
+  box-shadow: ${props => props.theme === 'dark' ? '0 6px 18px rgba(0, 0, 0, 0.3)' : '0 10px 24px rgba(106, 126, 252, 0.15)'};
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
   min-height: 0;
-  overflow: hidden;
   min-width: 0;
   box-sizing: border-box;
-  min-width: 280px;
+  min-width: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100vh - 200px);
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.05)'};
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+    border-radius: 4px;
+    
+    &:hover {
+      background: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+    }
+  }
 `;
 
 const AnswerOptions = styled.div`
@@ -932,27 +959,6 @@ const Resizer = styled.div`
   }
 `;
 
-const PromptScrollArea = styled.div`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 0.75rem;
-  height: 100%;
-`;
-
-const AnswerScrollArea = styled.div`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-left: 0.75rem;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: stretch;
-`;
 
 const CenteredContent = styled.div`
   flex: 1;
@@ -1125,7 +1131,7 @@ function TakeExamPage() {
   const [questionLoading, setQuestionLoading] = useState(false);
   const [panelRatio, setPanelRatio] = useState(0.5);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
-  const questionContentRef = useRef(null);
+  const mainContentRef = useRef(null);
   const [isTimerHidden, setIsTimerHidden] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
@@ -1741,7 +1747,6 @@ function TakeExamPage() {
     const handleTabSwitch = async () => {
       try {
         await studentExamService.checkTab(studentExamId);
-        // console.log('Tab switch recorded successfully');
       } catch (error) {
         console.error('Failed to record tab switch:', error);
       }
@@ -1751,19 +1756,16 @@ function TakeExamPage() {
       const isHidden = document.hidden || document.visibilityState === 'hidden';
       
       if (isHidden && isTabActive) {
-        console.log('👁️ Page became hidden - tab switch detected');
         isTabActive = false;
         
         handleTabSwitch();
       } else if (!isHidden && !isTabActive) {
-        console.log('👁️ Page became visible again');
         isTabActive = true;
       }
     };
 
     const handleWindowBlur = () => {
       if (isTabActive) {
-        // console.log('Window lost focus - tab switch detected');
         isTabActive = false;
         
         handleTabSwitch();
@@ -1771,7 +1773,6 @@ function TakeExamPage() {
     };
 
     const handleWindowFocus = () => {
-      // console.log('🔄 Window gained focus');
       isTabActive = true;
     };
 
@@ -1787,16 +1788,16 @@ function TakeExamPage() {
   }, [studentExamId, showResults, examCompleted, loading]);
   
   const formatTime = (seconds) => {
-    if (!seconds && seconds !== 0) return '--:--Mins';
+    if (!seconds && seconds !== 0) return '--:--';
     
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
     
     if (hours > 0) {
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}Mins`;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     } else {
-      return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}Mins`;
+      return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
   };
 
@@ -2022,13 +2023,13 @@ function TakeExamPage() {
     if (!isResizingPanels) return;
 
     const handlePointerMove = (event) => {
-      if (!questionContentRef.current) return;
+      if (!mainContentRef.current) return;
       if (event.touches) {
         event.preventDefault();
       }
 
       const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-      const rect = questionContentRef.current.getBoundingClientRect();
+      const rect = mainContentRef.current.getBoundingClientRect();
       const rawRatio = (clientX - rect.left) / rect.width;
 
       const clampedRatio = Math.min(0.75, Math.max(0.25, rawRatio));
@@ -2101,11 +2102,8 @@ function TakeExamPage() {
       
       localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
       
-      console.log('Submitting entire exam to server...', 'Current student exam ID:', studentExamId);
       const response = await studentExamService.submitExam(studentExamId);
-      console.log('Exam submitted successfully:', response.data);
       
-      console.log('Raw response data:', JSON.stringify(response.data, null, 2));
       
       if (response.data) {
         const result = {
@@ -2116,7 +2114,6 @@ function TakeExamPage() {
           duration: response.data.duration || 0
         };
         
-        console.log('Final exam result being set:', result);
         
         setExamResult(result);
         setShowResults(true);
@@ -2473,13 +2470,13 @@ function TakeExamPage() {
 
   const handleResizeStart = (event) => {
     event.preventDefault();
-    if (!questionContentRef.current) {
+    if (!mainContentRef.current) {
       setIsResizingPanels(true);
       return;
     }
     
     const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-    const rect = questionContentRef.current.getBoundingClientRect();
+    const rect = mainContentRef.current.getBoundingClientRect();
     const rawRatio = (clientX - rect.left) / rect.width;
     const clampedRatio = Math.min(0.75, Math.max(0.25, rawRatio));
     setPanelRatio(clampedRatio);
@@ -2592,28 +2589,27 @@ function TakeExamPage() {
     <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
       {renderHeader()}
       <SectionDivider theme={theme} />
-      <MainContent>
-        {currentQuestion ? (
-            <QuestionContent ref={questionContentRef}>
+      <MainContent $split ref={mainContentRef}>
+          {currentQuestion ? (
+            <>
               <PromptPanel
                 theme={theme}
                 style={{
                   flexBasis: `${panelRatio * 100}%`,
                   maxWidth: `${panelRatio * 100}%`,
-                  flexGrow: 0,
-                  flexShrink: 0
+                  flexGrow: 1,
+                  flexShrink: 1,
+                  width: '100%'
                 }}
               >
-                <PromptScrollArea>
-                  <QuestionText>
-                    {currentQuestion.text || 'Loading question...'}
-                  </QuestionText>
-                  <QuestionImage theme={theme} hasImage={Boolean(currentQuestion.imageUrl)}>
-                    {currentQuestion.imageUrl && (
-                      <img src={currentQuestion.imageUrl} alt="Quiz question illustration" />
-                    )}
+                <QuestionText>
+                  {currentQuestion.text || 'Loading question...'}
+                </QuestionText>
+                {currentQuestion.imageUrl && (
+                  <QuestionImage theme={theme} hasImage={true}>
+                    <img src={currentQuestion.imageUrl} alt="Quiz question illustration" />
                   </QuestionImage>
-                </PromptScrollArea>
+                )}
               </PromptPanel>
 
               <Resizer
@@ -2627,53 +2623,49 @@ function TakeExamPage() {
                 style={{
                   flexBasis: `${(1 - panelRatio) * 100}%`,
                   maxWidth: `${(1 - panelRatio) * 100}%`,
-                  flexGrow: 0,
-                  flexShrink: 0
+                  flexGrow: 1,
+                  flexShrink: 1,
+                  width: '100%'
                 }}
               >
-                <AnswerScrollArea>
-                  <Instructions>
-                    <span style={{fontWeight: '800', fontSize: '1.4rem'}}>Question {displayedQuestionNumber}</span>
-                    {instructionLabel}
-                    <InstructionActions>
-                      {isChoiceQuestion && (
-                        <EliminationModeButton
-                          type="button"
-                          theme={theme}
-                          $active={isEliminationModeEnabled}
-                          onClick={toggleEliminationMode}
-                          aria-pressed={isEliminationModeEnabled}
-                        >
-                          <span>ABC</span>
-                        </EliminationModeButton>
-                      )}
-                      {currentQuestion?.id && (
-                        <ReviewToggleButton
-                          type="button"
-                          theme={theme}
-                          $active={currentQuestionReview}
-                          onClick={() => toggleReviewFlag(currentQuestion.id)}
-                        >
-                          {currentQuestionReview
-                            ? <BookmarkIcon style={{ fontSize: '1.2rem', marginRight: '0.25rem', color: "#ff0000"}} />
-                            : <BookmarkBorderIcon style={{ fontSize: '1.2rem', marginRight: '0.25rem'}} />}
-                          {currentQuestionReview ? 'Remove Review' : 'Mark for Review'}
-                        </ReviewToggleButton>
-                      )}
-                    </InstructionActions>
-                  </Instructions>
-                  {renderQuestionInput()}
-                </AnswerScrollArea>
+                <Instructions>
+                  <span style={{fontWeight: '800', fontSize: '1.4rem'}}>Question {displayedQuestionNumber}</span>
+                  {instructionLabel}
+                  <InstructionActions>
+                    {isChoiceQuestion && (
+                      <EliminationModeButton
+                        type="button"
+                        theme={theme}
+                        $active={isEliminationModeEnabled}
+                        onClick={toggleEliminationMode}
+                        aria-pressed={isEliminationModeEnabled}
+                      >
+                        <span>ABC</span>
+                      </EliminationModeButton>
+                    )}
+                    {currentQuestion?.id && (
+                      <ReviewToggleButton
+                        type="button"
+                        theme={theme}
+                        $active={currentQuestionReview}
+                        onClick={() => toggleReviewFlag(currentQuestion.id)}
+                      >
+                        {currentQuestionReview
+                          ? <BookmarkIcon style={{ fontSize: '1.2rem', marginRight: '0.25rem', color: "#ff0000"}} />
+                          : <BookmarkBorderIcon style={{ fontSize: '1.2rem', marginRight: '0.25rem'}} />}
+                        {currentQuestionReview ? 'Remove Review' : 'Mark for Review'}
+                      </ReviewToggleButton>
+                    )}
+                  </InstructionActions>
+                </Instructions>
+                {renderQuestionInput()}
               </AnswerPanel>
-            </QuestionContent>
-          // </QuizContent>
-        ) : (
-          <QuizContent>
+            </>
+          ) : (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <p>Loading question data... If this takes too long, please refresh the page.</p>
             </div>
-          </QuizContent>
-        )}
+          )}
       </MainContent>
       <BottomSection>
         <SectionDivider theme={theme} />

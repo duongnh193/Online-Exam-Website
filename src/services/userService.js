@@ -13,10 +13,7 @@ const config = {
 // Log API requests for debugging
 const logRequest = (method, url, headers, data = null) => {
   if (config.debugMode) {
-    console.log(`🔄 ${method} request to: ${url}`);
-    console.log('🔑 Headers:', headers);
     if (data) {
-      console.log('📦 Data:', data);
     }
   }
 };
@@ -33,13 +30,6 @@ const mergeHeaders = (additionalHeaders = {}) => {
     'Content-Type': 'application/json'
   };
   
-  // Log auth header info for debugging
-  console.log('Auth header info:', {
-    tokenType: localStorage.getItem('token_type') || 'Bearer',
-    tokenPresent: !!localStorage.getItem('token'),
-    tokenFirstChars: localStorage.getItem('token')?.substring(0, 10) + '...' || 'none'
-  });
-  
   // Merge all headers
   return {
     ...contentTypeHeader,
@@ -51,7 +41,6 @@ const mergeHeaders = (additionalHeaders = {}) => {
 // Helper to generate realistic mock data if needed
 const getMockData = (type) => {
   if (config.debugMode) {
-    console.log(`📦 Using mock data for ${type}`);
   }
   
   switch (type) {
@@ -94,25 +83,21 @@ class UserService {
   // Configuration methods
   disableMockData() {
     config.useMockData = false;
-    console.log('🚫 Mock data fallbacks have been disabled. Using real API only.');
     return this; // For method chaining
   }
   
   enableMockData() {
     config.useMockData = true;
-    console.log('✅ Mock data fallbacks have been enabled.');
     return this; // For method chaining
   }
   
   setUseMockData(value) {
     config.useMockData = value;
-    console.log(`${value ? '✅ Mock data fallbacks have been enabled.' : '🚫 Mock data fallbacks have been disabled. Using real API only.'}`);
     return this; // For method chaining
   }
   
   setDebugMode(enabled) {
     config.debugMode = enabled;
-    console.log(`${enabled ? '🔍 Debug mode enabled' : '🔕 Debug mode disabled'}`);
     return this; // For method chaining
   }
   
@@ -122,32 +107,12 @@ class UserService {
     const originalMockSetting = config.useMockData;
     config.useMockData = false;
     
-    console.log('🧪 Testing API connection...');
     try {
       // Try to get a list of users with minimal data
       const response = await axios.get(`${API_URL}?page=0&size=1`, {
         headers: mergeHeaders(),
         timeout: 5000 // Short timeout for quick feedback
       });
-      
-      console.log('✅ API connection successful!', {
-        status: response.status,
-        statusText: response.statusText,
-        dataReceived: !!response.data
-      });
-      
-      // Log the actual data structure for debugging
-      console.log('API Response Structure:', {
-        hasData: !!response.data,
-        isArray: Array.isArray(response.data),
-        hasContent: response.data && response.data.content,
-        contentIsArray: response.data && Array.isArray(response.data.content),
-        keys: response.data ? Object.keys(response.data) : [],
-        firstRecord: response.data && response.data.content && response.data.content.length > 0 
-          ? response.data.content[0] 
-          : (Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : null)
-      });
-      
       // Restore original mock setting
       config.useMockData = originalMockSetting;
       return {
@@ -212,7 +177,6 @@ class UserService {
         return Promise.reject('Invalid user data');
       }
       
-      console.log('Getting current user data using ID:', user.id);
       return this.getUserById(user.id);
     } catch (error) {
       console.error('Error getting current user:', error.message);
@@ -228,11 +192,6 @@ class UserService {
     
     return axios.get(url, { headers })
       .then(response => {
-        console.log('Admin response data format:', {
-          hasContent: !!(response.data && response.data.content), 
-          isArray: Array.isArray(response.data),
-          keys: response.data ? Object.keys(response.data) : []
-        });
         return response;
       })
       .catch(error => {
@@ -246,7 +205,6 @@ class UserService {
         if (!config.useMockData) {
           throw error;
         }
-        console.log('Falling back to mock admin data');
         return getMockData('admin');
       });
   }
@@ -259,11 +217,6 @@ class UserService {
     
     return axios.get(url, { headers })
       .then(response => {
-        console.log('Lecturer response data format:', {
-          hasContent: !!(response.data && response.data.content), 
-          isArray: Array.isArray(response.data),
-          keys: response.data ? Object.keys(response.data) : []
-        });
         return response;
       })
       .catch(error => {
@@ -277,7 +230,6 @@ class UserService {
         if (!config.useMockData) {
           throw error;
         }
-        console.log('Falling back to mock lecturer data');
         return getMockData('lecturer');
       });
   }
@@ -290,11 +242,6 @@ class UserService {
     
     return axios.get(url, { headers })
       .then(response => {
-        console.log('Student response data format:', {
-          hasContent: !!(response.data && response.data.content), 
-          isArray: Array.isArray(response.data),
-          keys: response.data ? Object.keys(response.data) : []
-        });
         return response;
       })
       .catch(error => {
@@ -308,7 +255,6 @@ class UserService {
         if (!config.useMockData) {
           throw error;
         }
-        console.log('Falling back to mock student data');
         return getMockData('student');
       });
   }
@@ -323,11 +269,9 @@ class UserService {
     const url = `${API_URL}/${id}`;
     const headers = mergeHeaders();
     logRequest('GET', url, headers);
-    console.log(`Getting user with ID: ${id}`);
     
     return axios.get(url, { headers })
       .then(response => {
-        console.log(`Successfully retrieved user with ID ${id}:`, response.data);
         return response;
       })
       .catch(error => {
@@ -402,11 +346,9 @@ class UserService {
     const url = `${API_URL}`;
     const headers = mergeHeaders();
     logRequest('POST', url, headers, userData);
-    console.log('Creating user with data:', userData);
     
     return axios.post(url, userData, { headers })
       .then(response => {
-        console.log('User created successfully:', response);
         return response;
       })
       .catch(error => {
@@ -438,11 +380,9 @@ class UserService {
     const url = `${API_URL}/${id}`;
     const headers = mergeHeaders();
     logRequest('PUT', url, headers, userData);
-    console.log(`Updating user ${id} with data:`, userData);
     
     return axios.put(url, userData, { headers })
       .then(response => {
-        console.log('User updated successfully:', response);
         return response;
       })
       .catch(error => {
@@ -473,23 +413,8 @@ class UserService {
     const url = `${API_URL}/${id}/password`;
     const headers = mergeHeaders();
     
-    console.log('Updating password with data:', {
-      userId: id,
-      url: url,
-      headers: {
-        Authorization: headers.Authorization?.substring(0, 15) + '...',
-        contentType: headers['Content-Type']
-      },
-      requestFields: Object.keys(passwordData),
-      requestDataExample: {
-        currentPassword: '***',
-        newPassword: '***'
-      }
-    });
-    
     return axios.put(url, passwordData, { headers })
       .then(response => {
-        console.log('Password updated successfully:', response.status);
         return response;
       })
       .catch(error => {
@@ -570,11 +495,9 @@ class UserService {
     const url = `${API_URL}/login-history/${userId}?page=${page}&size=${size}`;
     const headers = mergeHeaders();
     logRequest('GET', url, headers);
-    console.log(`Getting login history for user ID: ${userId}, page: ${page}, size: ${size}`);
     
     return axios.get(url, { headers })
       .then(response => {
-        console.log(`Successfully retrieved login history for user ${userId}:`, response.data);
         return response;
       })
       .catch(error => {
@@ -622,4 +545,5 @@ class UserService {
 const userService = new UserService();
 
 // Export the instance
-export { userService }; 
+export { userService };
+export default userService;

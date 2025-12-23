@@ -10,7 +10,6 @@ import ConfirmationModal from '../components/common/ConfirmationModal';
 import examService from '../services/examService';
 import classService from '../services/classService';
 import {
-  ThemeStyles,
   DashboardContainer,
   Sidebar,
   Logo,
@@ -63,6 +62,16 @@ import {
   TabsContainer,
   TabButton
 } from '../components/dashboard/DashboardStyles';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
 
 function LecturerDashboardPage() {
   const { user, logout } = useAuth();
@@ -94,6 +103,17 @@ function LecturerDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const pageSize = 10;
+  const isRouteActive = (path) => location.pathname === path;
+  const menuIcons = {
+    dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+    exams: <QuizOutlinedIcon fontSize="small" />,
+    class: <ClassOutlinedIcon fontSize="small" />,
+    reports: <AssessmentOutlinedIcon fontSize="small" />,
+    assistant: <SmartToyOutlinedIcon fontSize="small" />,
+    settings: <SettingsOutlinedIcon fontSize="small" />,
+    signout: <LogoutOutlinedIcon fontSize="small" />,
+  };
+  const getMenuIcon = (name) => menuIcons[name] || <CircleOutlinedIcon fontSize="small" />;
 
   
   useEffect(() => {
@@ -102,11 +122,9 @@ function LecturerDashboardPage() {
         // Load exam count
         const examCountData = await dashboardService.getExamCount(user.id);
         setExamCount(examCountData);
-        // console.log('Exam count data:', examCountData);
         
         const classCountData = await dashboardService.getClassCount(user.id);
         setClassCount(classCountData);
-        // console.log('Class count data:', classCountData);
 
         // Load exam chart data
         const examChartResponse = await dashboardService.getExamChartData(user.id);
@@ -116,7 +134,6 @@ function LecturerDashboardPage() {
             count: item.count
           }));
           setExamChartData(examData);
-          // console.log('Exam chart data:', examData);
         }
 
         // Load class chart data
@@ -127,7 +144,6 @@ function LecturerDashboardPage() {
             count: item.count
           }));
           setClassChartData(classData);
-          // console.log('Class chart data:', classData);
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -183,7 +199,6 @@ function LecturerDashboardPage() {
   const handleLogout = () => {
     setShowLogoutConfirmation(true);
     setShowDropdown(false);
-    localStorage.removeItem("theme"); 
   };
   
   const handleConfirmLogout = () => {
@@ -213,17 +228,6 @@ function LecturerDashboardPage() {
     setShowDropdown(!showDropdown);
   };
 
-  const getMenuIcon = (name) => {
-    switch(name) {
-      case 'dashboard': return '🏠';
-      case 'exams': return '📝';
-      case 'class': return '📋';
-      case 'reports': return '📊';
-      case 'settings': return '⚙️';
-      case 'signout': return '🚪';
-      default: return '•';
-    }
-  };
 
   const handle2FAToggle = async () => {
     if (!user || !user.id) {
@@ -704,24 +708,23 @@ function LecturerDashboardPage() {
 
   return (
     <>
-      <ThemeStyles />
-      <DashboardContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
-        <Sidebar theme={theme}>
+      <DashboardContainer>
+        <Sidebar>
           <Logo>logo</Logo>
           <SidebarMenu>
-            <NavItem to="/lecturer-dashboard" className="active">
+            <NavItem to="/lecturer-dashboard" className={isRouteActive('/lecturer-dashboard') ? 'active' : ''}>
               <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
               Dashboard
             </NavItem>
-            <NavItem to="/exams">
+            <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
               <NavIcon>{getMenuIcon('exams')}</NavIcon>
               Exams
             </NavItem>
-            <NavItem to="/class">
+            <NavItem to="/class" className={isRouteActive('/class') ? 'active' : ''}>
               <NavIcon>{getMenuIcon('class')}</NavIcon>
               Class
             </NavItem>
-            <NavItem to="/reports">
+            <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
               <NavIcon>{getMenuIcon('reports')}</NavIcon>
               Reports
             </NavItem>
@@ -729,12 +732,12 @@ function LecturerDashboardPage() {
               to="/ai-assistant"
               className={location.pathname.startsWith('/ai-assistant') ? 'active' : ''}
             >
-              <NavIcon>🤖</NavIcon>
+              <NavIcon>{getMenuIcon('assistant')}</NavIcon>
               AI Assistant
             </NavItem>
           </SidebarMenu>
           <BottomMenu>
-            <NavItem to="/settings">
+            <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>
               <NavIcon>{getMenuIcon('settings')}</NavIcon>
               Settings
             </NavItem>
@@ -757,23 +760,29 @@ function LecturerDashboardPage() {
             
             <HeaderRight>
               <ThemeToggle />
-              <NotificationIcon />
+              <NotificationIcon type="button" aria-label="Notifications">
+                <NotificationsNoneOutlinedIcon fontSize="small" />
+              </NotificationIcon>
               <DropdownContainer ref={dropdownRef}>
-                <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+                <UserAvatar type="button" onClick={toggleDropdown} aria-label="User menu">
+                  {getUserInitial()}
+                </UserAvatar>
                 {showDropdown && (
                   <Dropdown>
                     <DropdownItem onClick={goToSettings}>
-                      <span>👤</span> Profile
+                      <PersonOutlineOutlinedIcon fontSize="small" />
+                      Profile
                     </DropdownItem>
                     <DropdownItem onClick={goToSettings}>
-                      <span>⚙️</span> Settings
+                      <SettingsOutlinedIcon fontSize="small" />
+                      Settings
                     </DropdownItem>
                     <DropdownItem onClick={handle2FAToggle} disabled={updating2FA}>
-                      <span>{twoFactorEnabled ? '🔒' : '🔓'}</span> 
-                      {updating2FA ? 'Updating...' : (twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA')}
+                      {twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
                     </DropdownItem>
                     <DropdownItem onClick={handleLogout}>
-                      <span>🚪</span> Sign out
+                      <LogoutOutlinedIcon fontSize="small" />
+                      Sign out
                     </DropdownItem>
                   </Dropdown>
                 )}

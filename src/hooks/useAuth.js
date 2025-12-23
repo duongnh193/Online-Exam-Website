@@ -37,15 +37,12 @@ export const AuthProvider = ({ children }) => {
           try {
             // Get user data from localStorage
             const userData = JSON.parse(localStorage.getItem('user'));
-            console.log('Initial auth check - user data from localStorage:', userData);
             
             if (userData && userData.role) {
-              console.log('Found authenticated user with role:', userData.role);
               setUser(userData);
               setIsAuthenticated(true);
             } else {
               console.warn('User data missing or incomplete in localStorage');
-              console.log('userData object:', userData);
               
               // Try to extract role from token if userData exists but role is missing
               if (userData && !userData.role && token) {
@@ -58,10 +55,8 @@ export const AuthProvider = ({ children }) => {
                   }).join(''));
                   
                   const decodedToken = JSON.parse(jsonPayload);
-                  console.log('Decoded token during auth check:', decodedToken);
                   
                   if (decodedToken && decodedToken.role) {
-                    console.log('Found role in token:', decodedToken.role);
                     
                     // Update user data with role
                     const updatedUserData = {
@@ -69,7 +64,6 @@ export const AuthProvider = ({ children }) => {
                       role: decodedToken.role
                     };
                     
-                    console.log('Updated user data with role:', updatedUserData);
                     localStorage.setItem('user', JSON.stringify(updatedUserData));
                     
                     setUser(updatedUserData);
@@ -109,7 +103,6 @@ export const AuthProvider = ({ children }) => {
       const hasLogoutParam = queryParams.has('logout');
       
       if (hasLogoutParam) {
-        console.log('Auth provider detected return from logout, clearing any lingering state');
         // Double-check that all auth data is cleared
         localStorage.removeItem('token');
         localStorage.removeItem('token_type');
@@ -130,35 +123,27 @@ export const AuthProvider = ({ children }) => {
   // Login function
   const login = async (credentials) => {
     try {
-      console.log('useAuth: Starting login process for:', credentials.username);
       const response = await authService.login(credentials);
-      console.log('useAuth: Login response received:', response);
       
       if (response.success && response.user) {
-        console.log('useAuth: Login successful with user data:', response.user);
         
         // Normalize role for comparison (uppercase)
         const role = response.user?.role?.toUpperCase();
-        console.log('useAuth: Normalized user role for redirection:', role);
         
         setUser(response.user);
         setIsAuthenticated(true);
         
         // Add direct navigation based on normalized role
         if (role === 'ROLE_LECTURER' || role === 'ROLE_ADMIN') {
-          console.log('useAuth: Navigating to dashboard (admin/lecturer)');
           
           // Use window.location for hard refresh navigation
           setTimeout(() => {
-            console.log('useAuth: Executing navigation to dashboard');
             window.location.href = '/dashboard';
           }, 100);
         } else if (role === 'ROLE_STUDENT') {
-          console.log('useAuth: Navigating to student dashboard');
           
           // Use window.location for hard refresh navigation
           setTimeout(() => {
-            console.log('useAuth: Executing navigation to student dashboard');
             window.location.href = '/student-dashboard';
           }, 100);
         } else {
@@ -166,7 +151,6 @@ export const AuthProvider = ({ children }) => {
           window.location.href = '/';
         }
       } else if (response.requiresOtp) {
-        console.log('useAuth: OTP required for login');
       } else {
         console.warn('useAuth: Login response success but missing user or unusual format:', response);
       }
@@ -181,35 +165,27 @@ export const AuthProvider = ({ children }) => {
   // Verify OTP function
   const verifyOtp = async (verificationData) => {
     try {
-      console.log('useAuth: Starting OTP verification for:', verificationData.username);
       const response = await authService.verifyOtp(verificationData);
-      console.log('useAuth: OTP verification response received:', response);
       
       if (response.success && response.user) {
-        console.log('useAuth: OTP verification successful with user data:', response.user);
         
         // Normalize role for comparison (uppercase)
         const role = response.user?.role?.toUpperCase();
-        console.log('useAuth: Normalized user role after OTP:', role);
         
         setUser(response.user);
         setIsAuthenticated(true);
         
         // Add direct navigation based on normalized role
         if (role === 'ROLE_LECTURER' || role === 'ROLE_ADMIN') {
-          console.log('useAuth: Navigating to dashboard after OTP (admin/lecturer)');
           
           // Use window.location for hard refresh navigation
           setTimeout(() => {
-            console.log('useAuth: Executing navigation to dashboard after OTP');
             window.location.href = '/dashboard';
           }, 100);
         } else if (role === 'ROLE_STUDENT') {
-          console.log('useAuth: Navigating to student dashboard after OTP');
           
           // Use window.location for hard refresh navigation
           setTimeout(() => {
-            console.log('useAuth: Executing navigation to student dashboard after OTP');
             window.location.href = '/student-dashboard';
           }, 100);
         } else {
@@ -233,7 +209,6 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.register(userData);
       
       if (response.success && response.user) {
-        console.log('Registration successful with user data:', response.user);
         setUser(response.user);
         setIsAuthenticated(true);
       }
@@ -247,10 +222,10 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = () => {
-    console.log('useAuth: Logout called, clearing all auth data');
     
     // Clear all auth-related data
     authService.logout();
+    localStorage.removeItem('theme');
     
     // Set local state to logged out
     setUser(null);
@@ -264,18 +239,15 @@ export const AuthProvider = ({ children }) => {
   // Add a function to refresh user data from localStorage
   const refreshUser = useCallback(async () => {
     try {
-      console.log('useAuth: Refreshing user data from localStorage');
       const storedUserData = localStorage.getItem('user');
       const token = localStorage.getItem('token');
       
       if (storedUserData && token) {
         const userData = JSON.parse(storedUserData);
-        console.log('useAuth: Refreshed user data:', userData);
         
         // Try to refresh from API if we have a userId
         if (userData && userData.id) {
           try {
-            console.log('useAuth: Attempting to refresh user data from API');
             const userResponse = await fetch(`http://localhost:8080/api/v1/users/${userData.id}`, {
               headers: {
                 'Authorization': `${localStorage.getItem('token_type') || 'Bearer'} ${token}`
@@ -284,7 +256,6 @@ export const AuthProvider = ({ children }) => {
             
             if (userResponse.ok) {
               const apiUserData = await userResponse.json();
-              console.log('useAuth: Successfully refreshed user data from API:', apiUserData);
               
               // Normalize the 2FA status to ensure consistent boolean values
               const twoFactorStatus = apiUserData.twoFactor === true || 
@@ -304,7 +275,6 @@ export const AuthProvider = ({ children }) => {
               
               // Only update if the data is different
               if (JSON.stringify(updatedUserData) !== JSON.stringify(user)) {
-                console.log('useAuth: User data changed, updating state');
                 
                 // Reset any caching mechanisms in the app
                 window.__resetUserDataCache = true;
@@ -322,7 +292,6 @@ export const AuthProvider = ({ children }) => {
         
         // Only update if the data is different
         if (JSON.stringify(userData) !== JSON.stringify(user)) {
-          console.log('useAuth: User data changed, updating state');
           
           // Reset any caching mechanisms in the app
           // This will trigger re-fetches of data that depends on user state
@@ -330,7 +299,6 @@ export const AuthProvider = ({ children }) => {
           
           setUser(userData);
         } else {
-          console.log('useAuth: User data unchanged');
         }
         
         return userData;
@@ -346,7 +314,6 @@ export const AuthProvider = ({ children }) => {
   // Add an effect to refresh user data when navigating to the settings page
   useEffect(() => {
     if (location.pathname === '/settings' && isAuthenticated) {
-      console.log('useAuth: On settings page, refreshing user data');
       // Handle the async refreshUser function properly
       (async () => {
         try {

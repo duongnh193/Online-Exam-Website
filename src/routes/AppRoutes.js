@@ -33,27 +33,14 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
-  console.log('ProtectedRoute: Checking authentication');
-  console.log('ProtectedRoute: isAuthenticated =', isAuthenticated);
-  console.log('ProtectedRoute: isLoading =', isLoading);
-  console.log('ProtectedRoute: user =', user);
-  console.log('ProtectedRoute: location =', location);
-  console.log('ProtectedRoute: localStorage =', {
-    token: localStorage.getItem('token'),
-    user: localStorage.getItem('user')
-  });
-
   if (isLoading) {
-    console.log('ProtectedRoute: Still loading auth state');
     return null;
   }
 
   if (!isAuthenticated) {
-    console.log('ProtectedRoute: Not authenticated, redirecting to home');
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  console.log('ProtectedRoute: Authentication successful, rendering children');
   return children;
 };
 
@@ -62,47 +49,40 @@ const RoleRoute = ({ children, allowedRoles }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
-  console.log('RoleRoute check - user:', user);
-  console.log('RoleRoute check - allowedRoles:', allowedRoles);
   
   // Get user's role and normalize it (ensure it's uppercase for comparison)
-  const userRole = user?.role?.toUpperCase();
-  console.log('RoleRoute check - normalized user role:', userRole);
+  const rawUserRole = user?.role?.toUpperCase();
+  const userRole = rawUserRole
+    ? rawUserRole.startsWith('ROLE_')
+      ? rawUserRole
+      : `ROLE_${rawUserRole}`
+    : null;
   
   // Normalize allowed roles for comparison
   const normalizedAllowedRoles = allowedRoles.map(role => role.toUpperCase());
-  console.log('RoleRoute check - normalized allowed roles:', normalizedAllowedRoles);
   
   // Check if user role is allowed (case-insensitive)
   const isRoleAllowed = userRole ? normalizedAllowedRoles.includes(userRole) : false;
-  console.log('RoleRoute check - is role allowed:', isRoleAllowed);
 
   if (isLoading) {
-    console.log('RoleRoute - Still loading');
     return null;
   }
 
   if (!isAuthenticated) {
-    console.log('RoleRoute - Not authenticated, redirecting to home');
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   if (!isRoleAllowed) {
-    console.log('RoleRoute - User role not allowed:', userRole);
     // Redirect to appropriate dashboard based on role
     if (userRole === 'ROLE_STUDENT') {
-      console.log('RoleRoute - Redirecting to student dashboard');
       return <Navigate to="/student-dashboard" replace />;
     } else if (userRole === 'ROLE_LECTURER' || userRole === 'ROLE_ADMIN') {
-      console.log('RoleRoute - Redirecting to lecturer dashboard');
       return <Navigate to="/dashboard" replace />;
     } else {
-      console.log('RoleRoute - Unknown role, redirecting to home');
       return <Navigate to="/" replace />;
     }
   }
 
-  console.log('RoleRoute - Role allowed, rendering children');
   return children;
 };
 
@@ -112,16 +92,12 @@ const LoginSuccessRoute = () => {
   const location = useLocation();
 
   if (user?.role === 'ROLE_STUDENT') {
-    console.log('LoginSuccessRoute - Redirecting to student dashboard');
     return <Navigate to="/student-dashboard" state={{ from: location }} replace />;
   } else if (user?.role === 'ROLE_LECTURER') {
-    console.log('LoginSuccessRoute - Redirecting to lecturer dashboard');
     return <Navigate to="/lecturer-dashboard" state={{ from: location }} replace />;
   } else if (user?.role === 'ROLE_ADMIN') {
-    console.log('LoginSuccessRoute - Redirecting to admin dashboard');
     return <Navigate to="/admin-dashboard" state={{ from: location }} replace />;
   } else {
-    console.log('LoginSuccessRoute - Unknown role, redirecting to home');
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 };
@@ -288,12 +264,12 @@ const AppRoutes = () => {
         } 
       />
 
-      {/* AI Assistant route - available for lecturers and students */}
+      {/* AI Assistant route - available for lecturers, students, and admins */}
       <Route 
         path="/ai-assistant" 
         element={
           <ProtectedRoute>
-            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_STUDENT']}>
+            <RoleRoute allowedRoles={['ROLE_LECTURER', 'ROLE_STUDENT', 'ROLE_ADMIN']}>
               <AIAssistantPage />
             </RoleRoute>
           </ProtectedRoute>

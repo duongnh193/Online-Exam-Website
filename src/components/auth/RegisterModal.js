@@ -41,7 +41,6 @@ const RegisterModal = ({ show, handleClose, onSwitchToLogin }) => {
       const response = await authService.register(formData);
       
       // Handle successful registration
-      console.log('Registration successful', response);
       setSuccess(true);
       setTimeout(() => {
         handleClose();

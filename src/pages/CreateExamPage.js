@@ -430,7 +430,6 @@ function CreateExamPage() {
   // Redirect if not a lecturer or admin
   useEffect(() => {
     if (user && user.role !== 'ROLE_LECTURER' && user.role !== 'ROLE_ADMIN') {
-      console.log('CreateExamPage: Unauthorized access attempt, user role:', user.role);
       navigate('/student-dashboard');
     }
   }, [user, navigate]);
@@ -497,18 +496,15 @@ function CreateExamPage() {
     if (isEditMode && examId) {
       // Check if examId is valid (not 0 or null)
       if (examId === '0' || examId === 0) {
-        console.log('Invalid exam ID (0). Skipping API call to prevent 409 error.');
         setError('Invalid exam ID. Please create a new exam instead.');
         return;
       }
       
       setLoading(true);
-      console.log(`Fetching exam data for ID: ${examId}`);
       
       examService.getExamById(examId)
         .then(response => {
           const exam = response.data;
-          console.log('Fetched exam data:', exam);
           
           setExamData({
             title: exam.title || '',
@@ -606,14 +602,12 @@ function CreateExamPage() {
     }
     
     try {
-      console.log(`Fetching questions for exam ID: ${targetExamId}`);
       setLoadingQuestions(true);
       const response = await questionService.getQuestionsByExam(targetExamId);
       
       // Check if response is valid
       if (response && response.data) {
         const questionData = response.data.content || response.data || [];
-        console.log(`Successfully fetched ${questionData.length} questions`);
         setQuestions(questionData);
       } else {
         console.warn('Empty or invalid response from questions API');
@@ -658,25 +652,11 @@ function CreateExamPage() {
         password: examData.password.trim(),
         reviewMode: examData.reviewMode || 'NONE'
       };
-      
-      // Log the data being sent to the API
-      console.log('Submitting exam data:', formattedData);
-      console.log('Original local times:', {
-        startAt: examData.startAt,
-        endAt: examData.endAt
-      });
-      console.log('Converted UTC times:', {
-        startAt: formattedData.startAt,
-        endAt: formattedData.endAt
-      });
-      
       let response;
       
       if (isEditMode) {
         // Update existing exam
         response = await examService.updateExam(examId, formattedData);
-        console.log('Exam updated - Full response:', response);
-        console.log('Exam updated - Data:', response.data);
         
         // Continue showing questions for the edited exam
         setCreatedExamId(examId);
@@ -684,8 +664,6 @@ function CreateExamPage() {
       } else {
         // Create new exam
         response = await examService.createExam(formattedData);
-        console.log('Exam created - Full response:', response);
-        console.log('Exam created - Data:', response.data);
         
         // Verify that we have a valid ID in the response
         if (!response.data || !response.data.id) {
@@ -719,7 +697,6 @@ function CreateExamPage() {
   };
   
   const handleAnswerChange = (e, optionValue, optionKey) => {
-    console.log('Single choice selected:', optionKey, optionValue);
     // For single choice questions, we need to store just the optionValue as the answer
     setQuestionData(prev => ({ 
       ...prev, 
@@ -729,7 +706,6 @@ function CreateExamPage() {
   };
   
   const handleMultiAnswerChange = (option, optionValue) => {
-    console.log('Multiple choice toggled:', option, optionValue);
     
     // Track which option keys are currently selected
     let selectedOptionKeys = questionData.answerKeys ? questionData.answerKeys.split(',') : [];
@@ -752,7 +728,6 @@ function CreateExamPage() {
       return choice ? choice.optionValue : '';
     }).filter(val => val); // Filter out empty values
     
-    console.log('Updated selections:', selectedOptionKeys, currentAnswerValues);
     
     // Update the answer with the actual text values
     setQuestionData(prev => ({ 
@@ -856,7 +831,6 @@ function CreateExamPage() {
       }
       
       const targetExamId = createdExamId || examId;
-      console.log(`Adding question to exam ID: ${targetExamId}`);
       
       // Prepare data exactly as expected by the backend CreateQuestionRequest
       const data = {
@@ -906,13 +880,9 @@ function CreateExamPage() {
       }
       
       // Debug logging
-      console.log(`Question submission - Type: ${data.type}, Answer Keys: ${questionData.answerKeys}`);
-      console.log('Formatted choices:', data.choices);
-      console.log('Final answer value:', data.answer);
       
       try {
         const response = await questionService.createQuestion(data);
-        console.log('Question created successfully:', response.data);
         
         // Show success message
         setSuccess('Question added successfully!');
@@ -1035,7 +1005,6 @@ function CreateExamPage() {
       }
       
       const targetExamId = createdExamId || examId;
-      console.log(`Updating question ID: ${editingQuestionId} for exam ID: ${targetExamId}`);
       
       // Prepare data exactly as expected by the backend CreateQuestionRequest
       const data = {
@@ -1086,7 +1055,6 @@ function CreateExamPage() {
       try {
         // Gọi API cập nhật câu hỏi
         const response = await questionService.updateQuestion(editingQuestionId, data);
-        console.log('Question updated successfully:', response.data);
         
         // Show success message
         setSuccess('Question updated successfully!');
@@ -1173,7 +1141,6 @@ function CreateExamPage() {
       setLoading(true);
       setError(null);
       
-      console.log(`Importing CSV file "${selectedFile.name}" (${selectedFile.size} bytes) for exam ID: ${targetExamId}`);
       
       await questionService.importQuestionsFromCsv(selectedFile, targetExamId);
       
@@ -1235,7 +1202,6 @@ function CreateExamPage() {
     
     try {
       setLoading(true);
-      console.log(`Deleting question ID: ${questionToDelete.id}`);
       
       await questionService.deleteQuestion(questionToDelete.id);
       

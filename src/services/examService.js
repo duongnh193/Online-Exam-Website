@@ -6,25 +6,10 @@ const API_URL = buildApiUrl('/v1/exams');
 const QUESTIONS_URL = buildApiUrl('/v1/questions');
 
 // Helper for logging API calls in development
-const logApiCall = (method, url, headers, body = null) => {
-  console.log(`🔄 ${method} ${url}`, { 
-    headers: headers ? { 
-      Authorization: headers.Authorization ? `${headers.Authorization.substring(0, 15)}...` : 'None',
-      'Content-Type': headers['Content-Type'] || 'Not set'
-    } : 'No headers',
-    body: body ? (typeof body === 'object' ? 'Object payload' : body) : 'No body'
-  });
-};
+const logApiCall = () => {};
 
 // Print current authentication state
-const logAuthState = () => {
-  const token = localStorage.getItem('token');
-  console.log('Auth state check - Token exists:', !!token);
-  if (token) {
-    console.log('Token length:', token.length);
-    console.log('Token prefix:', token.substring(0, 10) + '...');
-  }
-};
+const logAuthState = () => {};
 
 // Utility function to calculate exam status based on time
 const calculateExamStatus = (exam) => {
@@ -64,7 +49,6 @@ class ExamService {
       timeout: 10000
     })
     .then(response => {
-      console.log('Exam created successfully:', response.data);
       return response;
     })
     .catch(error => {
@@ -85,7 +69,6 @@ class ExamService {
       timeout: 10000 
     })
     .then(response => {
-      console.log('Exam updated successfully:', response.data);
       return response;
     })
     .catch(error => {
@@ -106,7 +89,6 @@ class ExamService {
     const url = `${API_URL}/${examId}`;
     const headers = authHeader();
     
-    console.log(`Attempting to delete exam with ID: ${examId}`);
     logApiCall('DELETE', url, headers);
     
     return axios.delete(url, { 
@@ -114,7 +96,6 @@ class ExamService {
       timeout: 10000 
     })
     .then(response => {
-      console.log(`Exam ${examId} deleted successfully`);
       return response;
     })
     .catch(error => {
@@ -139,7 +120,6 @@ class ExamService {
     const url = `${API_URL}/${examId}`;
     const headers = authHeader();
     
-    console.log(`Fetching exam with ID: ${examId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, { 
@@ -147,7 +127,6 @@ class ExamService {
       timeout: 10000
     })
     .then(response => {
-      console.log('Exam fetched successfully:', response.data);
       
       // Validate and ensure response has required properties
       if (response.data) {
@@ -216,13 +195,6 @@ class ExamService {
     }
     
     const headers = authHeader();
-    console.log(`Fetching exams for class ${numericClassId}`);
-    console.log(`Full URL: ${url}`);
-    console.log(`Headers:`, {
-      Authorization: headers.Authorization ? 'Set' : 'Not set',
-      'Content-Type': headers['Content-Type'] || 'Not set'
-    });
-    
     logApiCall('GET', url, headers);
     
     return axios.get(url, { 
@@ -230,7 +202,6 @@ class ExamService {
       timeout: 15000 // Increased timeout for potentially larger responses
     })
     .then(response => {
-      console.log('Exams API raw response status:', response.status);
       
       // Transform data to ensure title is properly set
       let processedResponse = { ...response };
@@ -244,12 +215,10 @@ class ExamService {
         };
       }
       
-      console.log('Response data type:', typeof responseData);
       
       // Handle paginated response
       if (responseData && responseData.content) {
         const examCount = responseData.content.length;
-        console.log(`Received ${examCount} exams (paginated)`);
         
         // Process each exam
         if (examCount > 0) {
@@ -276,7 +245,6 @@ class ExamService {
       // Handle array response
       else if (Array.isArray(responseData)) {
         const examCount = responseData.length;
-        console.log(`Received ${examCount} exams (array)`);
         
         if (examCount > 0) {
           const processedArray = responseData.map(exam => {
@@ -298,7 +266,6 @@ class ExamService {
       }
       // Handle single exam response
       else if (responseData && typeof responseData === 'object') {
-        console.log('Received single exam object');
         
         // Calculate the correct status based on time
         const calculatedStatus = calculateExamStatus(responseData);
@@ -365,7 +332,6 @@ class ExamService {
     const url = `${QUESTIONS_URL}?examId=${examId}&page=0&size=1`;
     const headers = authHeader();
     
-    console.log(`Fetching question count for exam ID: ${examId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, { 
@@ -375,19 +341,16 @@ class ExamService {
     .then(response => {
       // If we get a paginated response, we can get the total count
       if (response.data && response.data.totalElements !== undefined) {
-        console.log(`Found ${response.data.totalElements} questions for exam ${examId}`);
         return response.data.totalElements;
       }
       
       // If we get an array response, return its length
       if (Array.isArray(response.data)) {
-        console.log(`Found ${response.data.length} questions for exam ${examId}`);
         return response.data.length;
       }
       
       // If response has content array, return its length
       if (response.data && Array.isArray(response.data.content)) {
-        console.log(`Found ${response.data.content.length} questions for exam ${examId}`);
         return response.data.totalElements || response.data.content.length;
       }
       
@@ -413,7 +376,6 @@ class ExamService {
     const url = `${API_URL}/password/${examId}`;
     const headers = authHeader();
     
-    console.log(`Fetching password for exam ID: ${examId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, { 
@@ -421,7 +383,6 @@ class ExamService {
       timeout: 5000
     })
     .then(response => {
-      console.log('Password fetched successfully');
       return response.data.password;
     })
     .catch(error => {
@@ -436,7 +397,6 @@ class ExamService {
     const url = `${API_URL}/all?page=${page}&size=${size}`;
     const headers = authHeader();
     
-    console.log(`Fetching all exams`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, { 
@@ -444,7 +404,6 @@ class ExamService {
       timeout: 15000 // Increased timeout for potentially larger responses
     })
     .then(response => {
-      console.log('All exams fetched successfully:', response.data);
       
       // Transform data to ensure title is properly set
       let processedResponse = { ...response };
@@ -461,7 +420,6 @@ class ExamService {
       // Handle paginated response
       if (responseData && responseData.content) {
         const examCount = responseData.content.length;
-        console.log(`Received ${examCount} exams (paginated)`);
         
         // Process each exam
         if (examCount > 0) {
@@ -488,7 +446,6 @@ class ExamService {
       // Handle array response
       else if (Array.isArray(responseData)) {
         const examCount = responseData.length;
-        console.log(`Received ${examCount} exams (array)`);
         
         if (examCount > 0) {
           const processedArray = responseData.map(exam => {
@@ -535,7 +492,6 @@ class ExamService {
     const url = `${API_URL}/teacher/${lecturerId}/all?page=${page}&size=${size}`;
     const headers = authHeader();
     
-    console.log(`Fetching all exams by lecturer ID: ${lecturerId}, page: ${page}, size: ${size}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, { 
@@ -543,7 +499,6 @@ class ExamService {
       timeout: 15000 // Increased timeout for potentially larger responses
     })
     .then(response => {
-      console.log('Lecturer exams fetched successfully:', response.data);
       
       // Transform data to ensure title is properly set
       let processedResponse = { ...response };
@@ -560,7 +515,6 @@ class ExamService {
       // Handle paginated response
       if (responseData && responseData.content) {
         const examCount = responseData.content.length;
-        console.log(`Received ${examCount} exams for lecturer (paginated)`);
         
         // Process each exam
         if (examCount > 0) {
@@ -587,7 +541,6 @@ class ExamService {
       // Handle array response
       else if (Array.isArray(responseData)) {
         const examCount = responseData.length;
-        console.log(`Received ${examCount} exams for lecturer (array)`);
         
         if (examCount > 0) {
           const processedArray = responseData.map(exam => {

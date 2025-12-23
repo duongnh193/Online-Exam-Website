@@ -25,20 +25,42 @@ import {
   DropdownItem,
   PageTitle,
 } from '../components/dashboard/DashboardStyles';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
+
+const MENU_ICONS = {
+  dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+  exams: <QuizOutlinedIcon fontSize="small" />,
+  class: <ClassOutlinedIcon fontSize="small" />,
+  reports: <AssessmentOutlinedIcon fontSize="small" />,
+  assistant: <SmartToyOutlinedIcon fontSize="small" />,
+  results: <BarChartOutlinedIcon fontSize="small" />,
+  settings: <SettingsOutlinedIcon fontSize="small" />,
+  signout: <LogoutOutlinedIcon fontSize="small" />,
+};
+
+const getMenuIcon = (key) => MENU_ICONS[key] || <CircleOutlinedIcon fontSize="small" />;
 
 const lecturerNavItems = [
-  { to: '/lecturer-dashboard', label: 'Dashboard', icon: '🏠' },
-  { to: '/exams', label: 'Exams', icon: '📝' },
-  { to: '/class', label: 'Class', icon: '📋' },
-  { to: '/reports', label: 'Reports', icon: '📊' },
-  { to: '/ai-assistant', label: 'AI Assistant', icon: '🤖' },
+  { to: '/lecturer-dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { to: '/exams', label: 'Exams', icon: 'exams' },
+  { to: '/class', label: 'Class', icon: 'class' },
+  { to: '/reports', label: 'Reports', icon: 'reports' },
+  { to: '/ai-assistant', label: 'AI Assistant', icon: 'assistant' },
 ];
 
 const studentNavItems = [
-  { to: '/student-dashboard', label: 'Dashboard', icon: '🏠' },
-  { to: '/exams', label: 'Exams', icon: '📝' },
-  { to: '/results', label: 'Results', icon: '📊' },
-  { to: '/ai-assistant', label: 'AI Assistant', icon: '🤖' },
+  { to: '/student-dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { to: '/exams', label: 'Exams', icon: 'exams' },
+  { to: '/results', label: 'Results', icon: 'results' },
+  { to: '/ai-assistant', label: 'AI Assistant', icon: 'assistant' },
 ];
 
 function AIAssistantPage() {
@@ -154,7 +176,7 @@ function AIAssistantPage() {
                 to={item.to}
                 className={isRouteActive(item.to) ? 'active' : ''}
               >
-                <NavIcon>{item.icon}</NavIcon>
+                <NavIcon>{getMenuIcon(item.icon)}</NavIcon>
                 {item.label}
               </NavItem>
             ))}
@@ -164,7 +186,7 @@ function AIAssistantPage() {
               to="/settings"
               className={isRouteActive('/settings') ? 'active' : ''}
             >
-              <NavIcon>⚙️</NavIcon>
+              <NavIcon>{getMenuIcon('settings')}</NavIcon>
               Settings
             </NavItem>
             <NavItem
@@ -174,7 +196,7 @@ function AIAssistantPage() {
                 handleLogout();
               }}
             >
-              <NavIcon>🚪</NavIcon>
+              <NavIcon>{getMenuIcon('signout')}</NavIcon>
               Sign out
             </NavItem>
           </BottomMenu>

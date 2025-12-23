@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import examService from '../services/examService';
 import classService from '../services/classService';
@@ -9,479 +9,389 @@ import studentExamService from '../services/studentExamService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import {
+  DashboardContainer,
+  Sidebar,
+  Logo,
+  SidebarMenu,
+  NavItem,
+  NavIcon,
+  BottomMenu,
+  MainContent,
+  Header,
+  HeaderRight,
+  NotificationIcon,
+  UserAvatar,
+  DropdownContainer,
+  Dropdown,
+  DropdownItem,
+  PageTitle,
+  SortDropdown,
+} from '../components/dashboard/DashboardStyles';
+import { SPACING_SCALE, RADIUS_SCALE, TYPOGRAPHY_SCALE } from '../theme/tokens';
+import { SEMANTIC } from '../theme/colors';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
+import AppRegistrationOutlinedIcon from '@mui/icons-material/AppRegistrationOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
 
 // Styled Components
-const PageContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  transition: background-color 0.3s ease;
-  
-  /* CSS Variables for better dark mode compatibility */
-  --bg-input: ${props => props.theme === 'dark' ? '#333' : 'white'};
-  --text-input: ${props => props.theme === 'dark' ? '#ffffff' : '#333333'};
-  --hover-bg: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(106, 0, 255, 0.05)'};
-`;
-
-const Sidebar = styled.aside`
-  width: 180px;
-  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
-  position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border-radius: 0 20px 20px 0;
-  transition: background-color 0.3s ease;
-`;
-
-const Logo = styled.div`
-  font-size: 1.25rem;
-  font-weight: 600;
-  padding: 2rem 1.5rem;
+const ToolbarMeta = styled.div`
   display: flex;
   align-items: center;
-  
-  &::before {
-    content: "⦿⦿⦿";
-    letter-spacing: 2px;
-    font-size: 10px;
-    margin-right: 8px;
-    color: white;
-  }
+  gap: ${SPACING_SCALE.sm};
+  color: var(--text-secondary);
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  flex-wrap: wrap;
 `;
 
-const SidebarMenu = styled.div`
-  flex: 1;
-  margin-top: 1rem;
-`;
-
-const NavItem = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
-  text-decoration: none;
-  font-size: 0.9rem;
-  
-  &.active {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  &:hover {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: white;
-  }
-`;
-
-const NavIcon = styled.span`
-  margin-right: 12px;
-  width: 18px;
-  height: 18px;
-  display: flex;
+const RefreshButton = styled.button`
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  opacity: 0.9;
-`;
-
-const BottomMenu = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-  margin-left: 180px;
-  padding: 2rem 3rem;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-`;
-
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-`;
-
-const PageTitle = styled.div`
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--text-primary);
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const NotificationIcon = styled.div`
-  width: 24px;
-  height: 24px;
-  position: relative;
+  gap: ${SPACING_SCALE.xs};
+  padding: ${SPACING_SCALE.xs};
+  border-radius: var(--radius-sm, ${RADIUS_SCALE.sm});
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: #1976d2;
   cursor: pointer;
-  
-  &::before {
-    content: '🔔';
-    font-size: 18px;
-  }
-`;
+  transition: background 0.2s ease, transform 0.2s ease;
 
-const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #6a00ff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-`;
-
-const DropdownContainer = styled.div`
-  position: relative;
-`;
-
-const Dropdown = styled.div`
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
-  width: 180px;
-  z-index: 100;
-  overflow: hidden;
-`;
-
-const DropdownItem = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  
   &:hover {
-    background-color: var(--bg-primary);
+    background-color: rgba(25, 118, 210, 0.1);
   }
-`;
 
-const SortDropdown = styled.select`
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--bg-input);
-  font-size: 0.875rem;
-  color: var(--text-input);
-  cursor: pointer;
-  outline: none;
-  
-  & option {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
+  &:active {
+    transform: translateY(1px);
   }
 `;
 
 const CreateButton = styled.button`
-  background-color: transparent;
-  color: ${props => props.theme === 'dark' ? '#9d70ff' : '#6a00ff'};
-  border: 1px solid ${props => props.theme === 'dark' ? '#9d70ff' : '#6a00ff'};
-  border-radius: 30px;
-  padding: 8px 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  display: flex;
+  background: linear-gradient(120deg, #4A4AFF, #6A7EFC);
+  color: white;
+  border: none;
+  border-radius: var(--radius-pill, ${RADIUS_SCALE.pill});
+  padding: ${SPACING_SCALE.xs} ${SPACING_SCALE.lg};
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  font-weight: 600;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: ${SPACING_SCALE.xs};
   cursor: pointer;
-  transition: all 0.2s;
-  
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 12px 24px rgba(74, 74, 255, 0.25);
+
   &:hover {
-    background-color: var(--hover-bg);
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(74, 74, 255, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
-const TableCard = styled.div`
+const ClassSelector = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${SPACING_SCALE.sm};
+  margin: 0 auto ${SPACING_SCALE.md};
+  flex-wrap: nowrap;
+  width: 100%;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: center;
+  }
+`;
+
+const CompactSortDropdown = styled(SortDropdown)`
+  min-width: 180px;
+  width: clamp(180px, 22vw, 240px);
+  flex: 0 0 auto;
+`;
+
+const SelectorLabel = styled.label`
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  color: var(--text-secondary);
+  white-space: nowrap;
+`;
+
+const InfoMessage = styled.p`
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  color: var(--text-secondary);
+  margin-bottom: ${SPACING_SCALE.md};
+`;
+
+const ErrorMessage = styled(InfoMessage)`
+  color: ${SEMANTIC?.error?.main || '#D14343'};
+  font-weight: 600;
+`;
+
+const ClickHint = styled.span`
+  display: block;
+  font-size: 0.7rem;
+  color: #1976d2;
+  margin-top: 0.25rem;
+  font-weight: 600;
+`;
+
+const TableCard = styled.section`
   background-color: var(--bg-secondary);
-  border-radius: 1.5rem;
-  padding: 1.5rem;
+  border-radius: var(--radius-lg, ${RADIUS_SCALE.lg});
+  padding: ${SPACING_SCALE.lg};
   box-shadow: var(--card-shadow);
-  overflow: hidden;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: ${SPACING_SCALE.md};
+`;
+
+const ResponsiveTable = styled.div`
+  width: 100%;
+  overflow-x: auto;
 `;
 
 const ExamTable = styled.table`
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  min-width: 720px;
+  table-layout: fixed;
 `;
 
 const TableHeader = styled.th`
-  text-align: center;
-  padding: 1rem 1.5rem;
+  text-align: left;
+  padding: ${SPACING_SCALE.sm} ${SPACING_SCALE.md};
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
+  font-size: ${TYPOGRAPHY_SCALE.sm};
   font-weight: 600;
-  font-size: 0.9rem;
-  
-  &:first-child {
-    width: 40px;
-    padding-right: 0;
-    text-align: center;
-  }
-  
-  /* Center align for numeric columns */
-  &:nth-child(3), /* Value */
-  &:nth-child(4), /* Question */
-  &:nth-child(5) { /* Time remains */
+  white-space: nowrap;
+
+  &.numeric {
     text-align: center;
   }
 `;
 
 const TableRow = styled.tr`
+  background-color: ${({ $highlight }) => ($highlight ? 'rgba(106, 126, 252, 0.08)' : 'transparent')};
+  cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
+
   &:last-child td {
     border-bottom: none;
   }
   
   &:hover {
-    background-color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'var(--hover-bg)'};
+    background-color: ${({ $highlight }) => ($highlight ? 'rgba(106, 126, 252, 0.16)' : 'var(--hover-bg)')};
   }
 `;
 
 const TableCell = styled.td`
-  padding: 1rem 1.5rem;
+  padding: ${SPACING_SCALE.sm} ${SPACING_SCALE.md};
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: ${TYPOGRAPHY_SCALE.sm};
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
-  text-align: center;
-  
-  /* Center align for numeric columns */
-  &:nth-child(3), /* Value */
-  &:nth-child(4), /* Question */
-  &:nth-child(5) { /* Time remains */
+  text-align: left;
+
+  &.numeric {
     text-align: center;
   }
 `;
 
-const IndexCell = styled.td`
-  padding: 1rem 0.5rem 1rem 1.5rem;
+const IndexCell = styled(TableCell)`
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  border-bottom: 1px solid var(--border-color);
-  width: 40px;
-  vertical-align: middle;
   text-align: center;
 `;
 
 const ActionCell = styled.td`
-  padding: 1rem 1.5rem;
+  padding: ${SPACING_SCALE.sm};
   display: flex;
-  gap: 12px;
+  gap: ${SPACING_SCALE.xs};
   justify-content: center;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 `;
 
-const EditButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 4px;
-  display: flex;
+const IconActionButton = styled.button`
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-round, ${RADIUS_SCALE.round});
+  border: 1px solid rgba(106, 126, 252, 0.3);
+  background-color: rgba(106, 126, 252, 0.08);
+  color: #6a7efc;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #6a00ff;
-  
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+
   &:hover {
-    opacity: 0.8;
+    background-color: rgba(106, 126, 252, 0.16);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(106, 126, 252, 0.5);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
-const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 4px;
-  display: flex;
+const EmptyState = styled.div`
+  padding: ${SPACING_SCALE.xl};
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+`;
+
+const STATUS_VARIANTS = {
+  IN_PROGRESS: {
+    bg: 'rgba(237, 108, 2, 0.12)',
+    color: SEMANTIC?.warning?.main || '#ED6C02',
+  },
+  COMPLETED: {
+    bg: 'rgba(46, 125, 50, 0.12)',
+    color: SEMANTIC?.success?.main || '#2E7D32',
+  },
+  NOT_STARTED: {
+    bg: 'rgba(86, 98, 116, 0.12)',
+    color: '#566274',
+  },
+  SCHEDULED: {
+    bg: 'rgba(2, 136, 209, 0.12)',
+    color: SEMANTIC?.info?.main || '#0288D1',
+  },
+  default: {
+    bg: 'rgba(86, 98, 116, 0.12)',
+    color: '#566274',
+  },
+};
+
+const getStatusToken = (variant = 'default') =>
+  STATUS_VARIANTS[variant] || STATUS_VARIANTS.default;
+
+const StatusBadge = styled.span`
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #6a00ff;
-  
-  &:hover {
-    opacity: 0.8;
-  }
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill, ${RADIUS_SCALE.pill});
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background-color: ${({ $variant }) => getStatusToken($variant).bg};
+  color: ${({ $variant }) => getStatusToken($variant).color};
 `;
 
 const ExpiryTime = styled.span`
-  color: ${props => props.expired === "true" 
-    ? (props.theme === 'dark' ? '#ff6666' : '#ff3e3e') 
-    : 'inherit'};
+  font-variant-numeric: tabular-nums;
+  color: ${({ $expired }) => ($expired === 'true' ? SEMANTIC?.error?.main || '#D14343' : 'inherit')};
+  font-weight: ${({ $expired }) => ($expired === 'true' ? 600 : 500)};
 `;
 
-// Add a new styled component for the status badge
-const StatusBadge = styled.span`
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  text-transform: capitalize;
-  background-color: ${props => {
-    switch(props.status) {
-      case 'SCHEDULED': return props.theme === 'dark' ? 'rgba(25, 118, 210, 0.2)' : '#e3f2fd';
-      case 'ONGOING': return props.theme === 'dark' ? 'rgba(245, 124, 0, 0.2)' : '#fff8e1';
-      case 'COMPLETED': return props.theme === 'dark' ? 'rgba(56, 142, 60, 0.2)' : '#e8f5e9';
-      case 'CANCELLED': return props.theme === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee';
-      default: return props.theme === 'dark' ? 'rgba(117, 117, 117, 0.2)' : '#f5f5f5';
-    }
-  }};
-  color: ${props => {
-    switch(props.status) {
-      case 'SCHEDULED': return props.theme === 'dark' ? '#90caf9' : '#1976d2';
-      case 'ONGOING': return props.theme === 'dark' ? '#ffcc80' : '#f57c00';
-      case 'COMPLETED': return props.theme === 'dark' ? '#a5d6a7' : '#388e3c';
-      case 'CANCELLED': return props.theme === 'dark' ? '#ef9a9a' : '#d32f2f';
-      default: return props.theme === 'dark' ? '#bdbdbd' : '#757575';
-    }
-  }};
-`;
-
-// SVG icons for better quality
-const EditIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6a00ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-  </svg>
-);
-
-const DeleteIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6a00ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 6h18" />
-    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-  </svg>
-);
-
-const ViewStudentsButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6a00ff;
-  
-  &:hover {
-    opacity: 0.8;
-  }
-`;
-
-const ViewStudentsIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6a00ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
 
 // Modal Components
 const ModalOverlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: ${SPACING_SCALE.md};
 `;
 
 const ModalContainer = styled.div`
   background-color: var(--bg-secondary);
-  border-radius: 1rem;
-  width: 90%;
-  max-width: 800px;
+  border-radius: var(--radius-lg, ${RADIUS_SCALE.lg});
+  width: min(800px, 95%);
   max-height: 80vh;
-  overflow: hidden;
   box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
 `;
 
-const ModalHeader = styled.div`
-  padding: 1.5rem;
+const ModalHeader = styled.header`
+  padding: ${SPACING_SCALE.md};
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: ${SPACING_SCALE.sm};
 `;
 
 const ModalTitle = styled.h2`
   color: var(--text-primary);
-  font-size: 1.25rem;
+  font-size: ${TYPOGRAPHY_SCALE.md};
   font-weight: 600;
   margin: 0;
 `;
 
 const CloseButton = styled.button`
-  background: none;
+  background: rgba(106, 126, 252, 0.1);
   border: none;
-  font-size: 1.5rem;
+  border-radius: var(--radius-round, ${RADIUS_SCALE.round});
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: var(--text-secondary);
-  padding: 0;
+  color: #6a7efc;
+  transition: background 0.2s ease;
   
   &:hover {
-    color: var(--text-primary);
+    background: rgba(106, 126, 252, 0.2);
   }
 `;
 
 const ModalContent = styled.div`
-  padding: 1.5rem;
-  max-height: 60vh;
+  padding: ${SPACING_SCALE.md};
   overflow-y: auto;
 `;
 
 const StudentExamCard = styled.div`
   border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  border-radius: var(--radius-md, ${RADIUS_SCALE.md});
+  padding: ${SPACING_SCALE.md};
+  margin-bottom: ${SPACING_SCALE.sm};
   background-color: var(--bg-primary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  user-select: none;
   
   &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    border-color: #6a00ff;
+    transform: translateY(-2px);
+    border-color: #6a7efc;
   }
 `;
 
@@ -489,7 +399,8 @@ const StudentInfo = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: ${SPACING_SCALE.xs};
+  gap: ${SPACING_SCALE.sm};
 `;
 
 const StudentName = styled.span`
@@ -497,34 +408,17 @@ const StudentName = styled.span`
   color: var(--text-primary);
 `;
 
-const ExamStatus = styled.span`
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  background-color: ${props => {
-    switch(props.status) {
-      case 'IN_PROGRESS': return props.theme === 'dark' ? 'rgba(245, 124, 0, 0.2)' : '#fff8e1';
-      case 'COMPLETED': return props.theme === 'dark' ? 'rgba(56, 142, 60, 0.2)' : '#e8f5e9';
-      case 'NOT_STARTED': return props.theme === 'dark' ? 'rgba(117, 117, 117, 0.2)' : '#f5f5f5';
-      default: return props.theme === 'dark' ? 'rgba(117, 117, 117, 0.2)' : '#f5f5f5';
-    }
-  }};
-  color: ${props => {
-    switch(props.status) {
-      case 'IN_PROGRESS': return props.theme === 'dark' ? '#ffcc80' : '#f57c00';
-      case 'COMPLETED': return props.theme === 'dark' ? '#a5d6a7' : '#388e3c';
-      case 'NOT_STARTED': return props.theme === 'dark' ? '#bdbdbd' : '#757575';
-      default: return props.theme === 'dark' ? '#bdbdbd' : '#757575';
-    }
-  }};
+const ExamStatus = styled(StatusBadge).attrs(({ status }) => ({
+  $variant: status || 'default',
+}))`
+  font-size: 0.75rem;
 `;
 
 const ExamDetails = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: ${SPACING_SCALE.sm};
+  font-size: ${TYPOGRAPHY_SCALE.sm};
   color: var(--text-secondary);
 `;
 
@@ -532,6 +426,7 @@ const DetailItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: ${SPACING_SCALE.xs};
 `;
 
 const DetailLabel = styled.span`
@@ -540,6 +435,25 @@ const DetailLabel = styled.span`
 
 const DetailValue = styled.span`
   color: var(--text-primary);
+  font-weight: 600;
+`;
+
+const ModalEmptyState = styled.div`
+  text-align: center;
+  padding: ${SPACING_SCALE.lg};
+  color: var(--text-secondary);
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+`;
+
+const ModalMetaText = styled.p`
+  margin-bottom: ${SPACING_SCALE.sm};
+  color: var(--text-secondary);
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+`;
+
+const SectionHeading = styled.h3`
+  color: var(--text-primary);
+  margin: ${SPACING_SCALE.md} 0 ${SPACING_SCALE.sm};
 `;
 
 function ExamPage() {
@@ -572,14 +486,6 @@ function ExamPage() {
   const [studentExamDetail, setStudentExamDetail] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // Debug logging
-  console.log('🔄 ExamPage render - State:', {
-    showStudentModal,
-    studentExams: studentExams.length,
-    showDetailModal,
-    selectedClassId
-  });
-  
   // Add a useEffect to handle URL query parameters
   useEffect(() => {
     // Parse query parameters
@@ -587,7 +493,6 @@ function ExamPage() {
     const classIdParam = params.get('classId');
     
     if (classIdParam) {
-      console.log(`Found classId in URL: ${classIdParam}`);
       // Convert to number since IDs from the server are numeric
       const classId = parseInt(classIdParam, 10);
       
@@ -626,7 +531,6 @@ function ExamPage() {
         fetchClassesPromise
           .then(response => {
             const fetchedClasses = response.data.content || response.data;
-            console.log('Fetched classes:', fetchedClasses);
             setClasses(fetchedClasses);
             
             // Only set default selection if there's no classId in the URL and no selected ID yet
@@ -635,7 +539,6 @@ function ExamPage() {
             
             if (!classIdParam && fetchedClasses.length > 0 && !selectedClassId) {
               // Set the first class as selected by default
-              console.log('Setting default selected class:', fetchedClasses[0].id);
               setSelectedClassId(fetchedClasses[0].id);
             }
           })
@@ -687,12 +590,9 @@ function ExamPage() {
     }
     
     try {
-      console.log(`Fetching exams for class ID: ${numericClassId}, page: ${currentPage}, size: ${pageSize}`);
       const response = await examService.getExamsByClass(numericClassId, currentPage, pageSize);
       
       // Log the entire response for debugging
-      console.log('Raw exam response:', response);
-      console.log('Exam response data:', response.data);
       
       // Process exam data with better handling for different response formats
       let fetchedExams = [];
@@ -700,11 +600,9 @@ function ExamPage() {
       if (response.data && response.data.content) {
         // Paginated response
         fetchedExams = response.data.content;
-        console.log(`Processing ${fetchedExams.length} exams from paginated response`);
       } else if (Array.isArray(response.data)) {
         // Array response
         fetchedExams = response.data;
-        console.log(`Processing ${fetchedExams.length} exams from array response`);
       } else if (response.data) {
         // Unknown format but has data
         console.warn('Unexpected response format, attempting to process anyway');
@@ -712,7 +610,6 @@ function ExamPage() {
       }
       
       if (!fetchedExams || fetchedExams.length === 0) {
-        console.log(`No exams found for class ID: ${numericClassId}`);
         setExams([]);
         setLoading(false);
         return;
@@ -720,13 +617,11 @@ function ExamPage() {
       
       // Log the first exam for debugging
       if (fetchedExams.length > 0) {
-        console.log('First exam in processed data:', fetchedExams[0]);
       }
       
       // Get question counts for all exams
       const examsWithQuestionPromises = fetchedExams.map(async (exam) => {
         // Debug the raw exam object
-        console.log('Raw exam object:', JSON.stringify(exam));
         
         // Calculate time remaining until exam end time
         let timeRemains = '00:00:00';
@@ -757,10 +652,8 @@ function ExamPage() {
         }
         
         // Log all available properties in the exam object
-        console.log('Exam object properties:', Object.keys(exam));
         
         // Log specific title values
-        console.log('Exam title from API:', exam.title);
         
         // Fetch question count for this exam
         const questionCount = await examService.getQuestionCount(exam.id);
@@ -780,7 +673,6 @@ function ExamPage() {
       // Wait for all question count requests to complete
       const formattedExams = (await Promise.all(examsWithQuestionPromises)).filter(Boolean); // Remove any null entries
       
-      console.log(`Processed ${formattedExams.length} formatted exams for display`);
       setExams(formattedExams);
     } catch (err) {
       console.error('Error fetching exams:', err);
@@ -834,7 +726,6 @@ function ExamPage() {
   };
 
   const handleConfirmLogout = () => {
-    console.log('ExamPage: Executing logout after confirmation');
     logout();
     setShowLogoutConfirmation(false);
   };
@@ -861,28 +752,28 @@ function ExamPage() {
     setShowDropdown(!showDropdown);
   };
 
-  const getMenuIcon = (name) => {
-    switch(name) {
-      case 'dashboard': return '🏠';
-      case 'exams': return '📝';
-      case 'class': return '📋';
-      case 'reports': return '📊';
-      case 'payment': return '💳';
-      case 'users': return '👥';
-      case 'settings': return '⚙️';
-      case 'signout': return '🚪';
-      case 'myClasses': return '📚';
-      case 'register': return '📋';
-      case 'results': return '📊';
-      case 'assistant': return '🤖';
-      default: return '•';
-    }
+  const menuIconMap = {
+    dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+    exams: <QuizOutlinedIcon fontSize="small" />,
+    class: <ClassOutlinedIcon fontSize="small" />,
+    reports: <AssessmentOutlinedIcon fontSize="small" />,
+    payment: <CreditCardOutlinedIcon fontSize="small" />,
+    users: <GroupOutlinedIcon fontSize="small" />,
+    settings: <SettingsOutlinedIcon fontSize="small" />,
+    signout: <LogoutOutlinedIcon fontSize="small" />,
+    myClasses: <MenuBookOutlinedIcon fontSize="small" />,
+    register: <AppRegistrationOutlinedIcon fontSize="small" />,
+    results: <BarChartOutlinedIcon fontSize="small" />,
+    assistant: <SmartToyOutlinedIcon fontSize="small" />,
   };
+
+  const getMenuIcon = (name) => menuIconMap[name] || <CircleOutlinedIcon fontSize="small" />;
 
   // Determine user role
   const isStudent = user && user.role === 'ROLE_STUDENT';
   const isLecturer = user && user.role === 'ROLE_LECTURER';
   const isAdmin = user && user.role === 'ROLE_ADMIN';
+  const showActionsColumn = isLecturer || isAdmin;
 
   // Check if time is expired (red color)
   const isExpired = (time) => {
@@ -908,10 +799,8 @@ function ExamPage() {
     
     if (window.confirm('Are you sure you want to delete this exam?')) {
       try {
-        console.log(`Attempting to delete exam with ID: ${examId}`);
         setLoading(true);
         const response = await examService.deleteExam(examId);
-        console.log('Delete response:', response);
         alert('Exam deleted successfully');
         
         // Refresh the exam list
@@ -961,7 +850,6 @@ function ExamPage() {
 
   // Add this debug function to the component
   const debugExamData = (exam) => {
-    console.log('Rendering exam row with data:', exam);
     return exam;
   };
 
@@ -973,7 +861,6 @@ function ExamPage() {
   // Add a function to refresh exams without changing the selected class
   const refreshExams = () => {
     if (selectedClassId) {
-      console.log('Auto-refreshing exam statuses...');
       fetchExams(selectedClassId);
       setLastRefresh(new Date());
     }
@@ -998,13 +885,11 @@ function ExamPage() {
         refreshExams();
       }, 60000); // Refresh every minute
       
-      console.log('Auto-refresh interval set up');
     }
     
     // Clean up on component unmount or when autoRefresh changes
     return () => {
       if (refreshIntervalRef.current) {
-        console.log('Cleaning up auto-refresh interval');
         clearInterval(refreshIntervalRef.current);
       }
     };
@@ -1017,7 +902,6 @@ function ExamPage() {
       return;
     }
 
-    console.log(`🎯 Viewing student exams for exam ID: ${exam.id}`);
     setSelectedExamForStudents(exam);
     setShowStudentModal(true);
     setStudentExamsLoading(true);
@@ -1025,15 +909,12 @@ function ExamPage() {
 
     try {
       const response = await studentExamService.getStudentExamsByExamId(exam.id);
-      console.log('🔍 Student exams response:', response.data);
       
       // Process the response data
       const fetchedStudentExams = Array.isArray(response.data) ? response.data : [];
-      console.log('📋 Fetched student exams array:', fetchedStudentExams);
       
       // Format the data for display
       const formattedStudentExams = fetchedStudentExams.map((studentExam, index) => {
-        console.log(`🔄 Processing student exam ${index + 1}:`, studentExam);
         return {
           id: studentExam.studentExamId, // API trả về studentExamId, không phải id
           studentId: studentExam.studentId,
@@ -1047,7 +928,6 @@ function ExamPage() {
         };
       });
 
-      console.log(`✅ Processed ${formattedStudentExams.length} student exams:`, formattedStudentExams);
       setStudentExams(formattedStudentExams);
 
     } catch (error) {
@@ -1073,22 +953,18 @@ function ExamPage() {
 
   // Function to handle viewing detailed student exam information
   const handleViewStudentDetail = async (studentExam) => {
-    console.log('🔍 handleViewStudentDetail called with:', studentExam);
     
     if (!studentExam || !studentExam.id) {
       console.error('handleViewStudentDetail: Invalid studentExam object', studentExam);
       return;
     }
 
-    console.log(`Viewing detail for student exam ID: ${studentExam.id}`);
     setSelectedStudentExam(studentExam);
     setShowDetailModal(true);
     setStudentExamDetail(null);
 
     try {
       const response = await studentExamService.getStudentExamDetail(studentExam.id);
-      console.log('🔍 Student exam detail response:', response.data);
-      console.log('🔍 Response structure:', JSON.stringify(response.data, null, 2));
       
       setStudentExamDetail(response.data);
 
@@ -1144,12 +1020,14 @@ function ExamPage() {
   };
 
   return (
-    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
-      <Sidebar theme={theme}>
-        <Logo>logo</Logo>
+    <DashboardContainer>
+      <Sidebar>
+        <Logo>
+          <span>EX</span>
+          Exam Space
+        </Logo>
         <SidebarMenu>
           {isStudent ? (
-            // Student navigation
             <>
               <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
@@ -1169,7 +1047,6 @@ function ExamPage() {
               </NavItem>
             </>
           ) : isLecturer ? (
-            // Lecturer navigation
             <>
               <NavItem to="/lecturer-dashboard" className={isRouteActive('/lecturer-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
@@ -1193,7 +1070,6 @@ function ExamPage() {
               </NavItem>
             </>
           ) : (
-            // Admin navigation
             <>
               <NavItem to="/admin-dashboard" className={isRouteActive('/admin-dashboard') ? 'active' : ''}>
                 <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
@@ -1211,18 +1087,6 @@ function ExamPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
-                AI Assistant
-              </NavItem>
-              {/* <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('payment')}</NavIcon>
-                Payment
-              </NavItem>
-              <NavItem to="/users" className={isRouteActive('/users') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('users')}</NavIcon>
-                Users
-              </NavItem> */}
             </>
           )}
         </SidebarMenu>
@@ -1240,198 +1104,190 @@ function ExamPage() {
       
       <MainContent>
         <Header>
-          <PageTitle>Exam</PageTitle>
+          <PageTitle>
+            <h1>Exams</h1>
+            <p>Manage exam schedules and track progress in real-time.</p>
+          </PageTitle>
           
           <HeaderRight>
-            {/* <ThemeToggle /> */}
-            
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              marginRight: '1rem', 
-              marginLeft: '1rem',
-              fontSize: '0.8rem',
-              color: '#666'
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                marginRight: '0.5rem', 
-                fontSize: '0.8rem',
-                color: theme === 'dark' ? '#aaa' : '#666'
-              }}>
-                <span>Last updated: {lastRefreshTime.toLocaleTimeString()}</span>
-                <button 
-                  onClick={() => selectedClassId ? fetchExams(selectedClassId) : null}
-                  style={{
-                    marginLeft: '8px',
-                    background: theme === 'dark' ? 'rgba(25, 118, 210, 0.1)' : 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: theme === 'dark' ? '#90caf9' : '#1976d2',
-                    padding: '4px',
-                    borderRadius: '4px',
-                  }}
-                  title="Refresh exams"
-                >
-                  <span style={{ fontSize: '16px' }}>↻</span>
-                </button>
-              </div>
-            </div>
-            {(isLecturer || isAdmin) && (
-              <CreateButton onClick={handleCreateExam}>
+            <ToolbarMeta>
+              <span>Last updated {lastRefreshTime.toLocaleTimeString()}</span>
+              <RefreshButton
+                type="button"
+                onClick={() => selectedClassId ? fetchExams(selectedClassId) : null}
+                aria-label="Refresh exams"
+                disabled={!selectedClassId}
+              >
+                <RefreshOutlinedIcon fontSize="small" />
+                Refresh
+              </RefreshButton>
+            </ToolbarMeta>
+            <ThemeToggle />
+            {showActionsColumn && (
+              <CreateButton type="button" onClick={handleCreateExam}>
                 + Create Exam
               </CreateButton>
             )}
+            <NotificationIcon type="button" aria-label="Notifications">
+              <NotificationsNoneOutlinedIcon fontSize="small" />
+            </NotificationIcon>
+            <DropdownContainer ref={dropdownRef}>
+              <UserAvatar type="button" onClick={toggleDropdown} aria-label="User menu">
+                {getUserInitial()}
+              </UserAvatar>
+              {showDropdown && (
+                <Dropdown>
+                  <DropdownItem onClick={() => { setShowDropdown(false); navigate('/settings'); }}>
+                    <SettingsOutlinedIcon fontSize="small" />
+                    Settings
+                  </DropdownItem>
+                  <DropdownItem onClick={handleLogout}>
+                    <LogoutOutlinedIcon fontSize="small" />
+                    Sign out
+                  </DropdownItem>
+                </Dropdown>
+              )}
+            </DropdownContainer>
           </HeaderRight>
         </Header>
         
-        {/* Class selection dropdown */}
         {classesLoading ? (
-          <div style={{ marginBottom: '1rem' }}>Loading classes...</div>
+          <InfoMessage>Loading classes...</InfoMessage>
         ) : classes.length > 0 ? (
-          <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="classSelect" style={{ marginRight: '0.5rem' }}>Select Class:</label>
-            <SortDropdown 
+          <ClassSelector>
+            <SelectorLabel htmlFor="classSelect">Select class</SelectorLabel>
+            <CompactSortDropdown 
               id="classSelect"
               value={selectedClassId || ''}
               onChange={(e) => {
                 const newClassId = e.target.value ? parseInt(e.target.value, 10) : null;
-                console.log(`Class changed from ${selectedClassId} to ${newClassId}`);
                 setSelectedClassId(newClassId);
               }}
             >
-              <option value="">Select a class</option>
+              <option value="">Choose your class</option>
               {classes.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name || c.title || `Class ${c.id}`}
                 </option>
               ))}
-            </SortDropdown>
-          </div>
+            </CompactSortDropdown>
+          </ClassSelector>
         ) : (
-          <div style={{ marginBottom: '1rem', color: theme === 'dark' ? '#aaa' : '#666' }}>
-            {error ? error : 'No classes available.'}
-            {isLecturer && !error && (
-              <span> Please create a class first to manage exams.</span>
-            )}
-          </div>
+          <InfoMessage>
+            {error ? error : 'No classes available. '}
+            {isLecturer && !error && 'Create a class to start scheduling exams.'}
+          </InfoMessage>
         )}
         
-        {error && <div style={{ color: 'red', margin: '1rem 0' }}>{error}</div>}
+        {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
         
         <TableCard>
           {!selectedClassId ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}>
-              Please select a class to view exams
-            </div>
+            <EmptyState>Please select a class to view exams.</EmptyState>
           ) : loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}>Loading exams...</div>
+            <EmptyState>Loading exams...</EmptyState>
           ) : error ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
-              {error}
-            </div>
+            <ErrorMessage role="alert">{error}</ErrorMessage>
           ) : exams.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: theme === 'dark' ? '#aaa' : '#666' }}>
+            <EmptyState>
               No exams available for this class.
               {isStudent && (
-                <p style={{ 
-                  marginTop: '1rem', 
-                  fontSize: '0.9rem',
-                  color: theme === 'dark' ? '#bbb' : '#888'
-                }}>
-                  If you believe this is an error, please contact your instructor.
-                </p>
+                <ClickHint>If you believe this is a mistake, please contact your instructor.</ClickHint>
               )}
-            </div>
+            </EmptyState>
           ) : (
-            <ExamTable>
-              <thead>
-                <tr>
-                  <TableHeader></TableHeader>
-                  <TableHeader>Exams</TableHeader>
-                  <TableHeader>Value</TableHeader>
-                  <TableHeader>Question</TableHeader>
-                  <TableHeader>Time remains</TableHeader>
-                  <TableHeader>Status</TableHeader>
-                  {(isLecturer || isAdmin) && <TableHeader>Actions</TableHeader>}
-                </tr>
-              </thead>
-              <tbody>
-                {exams.map(exam => {
-                  const currentExam = debugExamData(exam);
-                  return (
-                    <TableRow 
-                      key={currentExam.id || `exam-${Math.random()}`}
-                      style={{
-                        // For student view, highlight ongoing exams with theme-appropriate colors
-                        backgroundColor: isStudent && currentExam.status === 'ONGOING' 
-                          ? (theme === 'dark' ? 'rgba(141, 71, 255, 0.1)' : '#f8f9ff') 
-                          : 'inherit',
-                        cursor: isStudent && currentExam.status === 'ONGOING' ? 'pointer' : 'default',
-                      }}
-                      onClick={() => {
-                                                  // For students, clicking on an ongoing exam row would take them to the exam
-                          if (isStudent && currentExam.status === 'ONGOING') {
-                            // Chỉ lưu studentExamId vào localStorage - các thông tin khác sẽ do API cung cấp
+            <ResponsiveTable>
+              <ExamTable>
+                <colgroup>
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: showActionsColumn ? '30%' : '34%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: showActionsColumn ? '14%' : '18%' }} />
+                  {showActionsColumn && <col style={{ width: '8%' }} />}
+                </colgroup>
+                <thead>
+                  <tr>
+                    <TableHeader className="numeric">ID</TableHeader>
+                    <TableHeader>Exam</TableHeader>
+                    <TableHeader className="numeric">Value</TableHeader>
+                    <TableHeader className="numeric">Questions</TableHeader>
+                    <TableHeader className="numeric">Time left</TableHeader>
+                    <TableHeader>Status</TableHeader>
+                    {showActionsColumn && <TableHeader>Actions</TableHeader>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {exams.map(exam => {
+                    const currentExam = debugExamData(exam);
+                    const highlightRow = isStudent && currentExam.status === 'ONGOING';
+                    return (
+                      <TableRow 
+                        key={currentExam.id || `exam-${Math.random()}`}
+                        $highlight={highlightRow}
+                        $clickable={highlightRow}
+                        onClick={() => {
+                          if (highlightRow) {
                             const studentExamId = `${user.id}-${currentExam.id}`;
-                            console.log(`Storing exam ID: ${currentExam.id} for user: ${user.id}`);
                             localStorage.setItem('currentStudentExamId', studentExamId);
-                            
-                            // Then navigate to start-exam page
                             navigate(`/start-exam/${currentExam.id}`);
                           }
-                      }}
-                    >
-                      <IndexCell>#{currentExam.id || 0}</IndexCell>
-                      <TableCell>{currentExam.title || currentExam.name || `Exam ${currentExam.id || 0}`}</TableCell>
-                      <TableCell>{currentExam.value || 100}</TableCell>
-                      <TableCell>{typeof currentExam.questions === 'number' ? currentExam.questions : (Array.isArray(currentExam.questions) ? currentExam.questions.length : 0)}</TableCell>
-                      <TableCell>
-                        <ExpiryTime expired={isExpired(currentExam.timeRemains || '00:00:00') ? "true" : "false"} theme={theme}>
-                          {currentExam.timeRemains || '00:00:00'}
-                        </ExpiryTime>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={currentExam.status || 'SCHEDULED'} theme={theme}>
-                          {formatStatus(currentExam.status || 'SCHEDULED')}
-                        </StatusBadge>
-                        {isStudent && currentExam.status === 'ONGOING' && (
-                          <div style={{ 
-                            fontSize: '0.7rem', 
-                            color: theme === 'dark' ? '#90caf9' : '#1976d2', 
-                            marginTop: '0.2rem',
-                            fontWeight: '500'
-                          }}>
-                            Click to take exam
-                          </div>
+                        }}
+                      >
+                        <IndexCell>{currentExam.id || 0}</IndexCell>
+                        <TableCell>{currentExam.title || currentExam.name || `Exam ${currentExam.id || 0}`}</TableCell>
+                        <TableCell className="numeric">{currentExam.value || 100}</TableCell>
+                        <TableCell className="numeric">
+                          {typeof currentExam.questions === 'number'
+                            ? currentExam.questions
+                            : Array.isArray(currentExam.questions)
+                              ? currentExam.questions.length
+                              : 0}
+                        </TableCell>
+                        <TableCell className="numeric">
+                          <ExpiryTime $expired={isExpired(currentExam.timeRemains || '00:00:00') ? 'true' : 'false'}>
+                            {currentExam.timeRemains || '00:00:00'}
+                          </ExpiryTime>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge $variant={currentExam.status || 'SCHEDULED'}>
+                            {formatStatus(currentExam.status || 'SCHEDULED')}
+                          </StatusBadge>
+                          {highlightRow && <ClickHint>Click to take exam</ClickHint>}
+                        </TableCell>
+                        {showActionsColumn && (
+                          <ActionCell>
+                            <IconActionButton
+                              type="button"
+                              title="View students"
+                              onClick={() => handleViewStudents(currentExam)}
+                            >
+                              <PeopleAltOutlinedIcon fontSize="small" />
+                            </IconActionButton>
+                            <IconActionButton
+                              type="button"
+                              title="Edit exam"
+                              onClick={() => handleEditExam(currentExam.id)}
+                            >
+                              <EditOutlinedIcon fontSize="small" />
+                            </IconActionButton>
+                            <IconActionButton
+                              type="button"
+                              title="Delete exam"
+                              onClick={() => handleDeleteExam(currentExam.id)}
+                              disabled={loading}
+                            >
+                              <DeleteOutlineOutlinedIcon fontSize="small" />
+                            </IconActionButton>
+                          </ActionCell>
                         )}
-                      </TableCell>
-                      {(isLecturer || isAdmin) && (
-                        <ActionCell>
-                          <ViewStudentsButton 
-                            title="View Students" 
-                            onClick={() => handleViewStudents(currentExam)}
-                          >
-                            <ViewStudentsIcon />
-                          </ViewStudentsButton>
-                          <EditButton title="Edit" onClick={() => handleEditExam(currentExam.id)}>
-                            <EditIcon />
-                          </EditButton>
-                          <DeleteButton 
-                            title="Delete" 
-                            onClick={() => handleDeleteExam(currentExam.id)}
-                            disabled={loading}
-                          >
-                            <DeleteIcon />
-                          </DeleteButton>
-                        </ActionCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-              </tbody>
-            </ExamTable>
+                      </TableRow>
+                    );
+                  })}
+                </tbody>
+              </ExamTable>
+            </ResponsiveTable>
           )}
         </TableCard>
       </MainContent>
@@ -1456,32 +1312,18 @@ function ExamPage() {
             </ModalHeader>
             <ModalContent>
               {studentExamsLoading ? (
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                  Loading student exams...
-                </div>
+                <ModalEmptyState>Loading student exams...</ModalEmptyState>
               ) : studentExams.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  No students have taken this exam yet.
-                </div>
+                <ModalEmptyState>No students have taken this exam yet.</ModalEmptyState>
               ) : (
                 <>
-                  <div style={{ 
-                    marginBottom: '1rem', 
-                    color: 'var(--text-secondary)',
-                    fontSize: '0.9rem'
-                  }}>
+                  <ModalMetaText>
                     {studentExams.length} student{studentExams.length !== 1 ? 's' : ''} found
-                  </div>
+                  </ModalMetaText>
                   {studentExams.map((studentExam) => (
-                    <StudentExamCard 
-                      key={studentExam.id} 
-                      style={{
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        pointerEvents: 'auto'
-                      }}
+                    <StudentExamCard
+                      key={studentExam.id}
                       onClick={(e) => {
-                        console.log('🖱️ StudentExamCard clicked!', studentExam);
                         e.preventDefault();
                         e.stopPropagation();
                         handleViewStudentDetail(studentExam);
@@ -1489,7 +1331,7 @@ function ExamPage() {
                     >
                       <StudentInfo>
                         <StudentName>{studentExam.studentName}</StudentName>
-                        <ExamStatus status={studentExam.status} theme={theme}>
+                        <ExamStatus status={studentExam.status}>
                           {formatExamStatus(studentExam.status)}
                         </ExamStatus>
                       </StudentInfo>
@@ -1501,7 +1343,7 @@ function ExamPage() {
                         <DetailItem>
                           <DetailLabel>Status:</DetailLabel>
                           <DetailValue>
-                            <ExamStatus status={studentExam.status} theme={theme}>
+                            <ExamStatus status={studentExam.status}>
                               {formatExamStatus(studentExam.status)}
                             </ExamStatus>
                           </DetailValue>
@@ -1538,17 +1380,13 @@ function ExamPage() {
             </ModalHeader>
             <ModalContent>
               {!studentExamDetail ? (
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                  Loading exam details...
-                </div>
+                <ModalEmptyState>Loading exam details...</ModalEmptyState>
               ) : (
                 <div>
                   {/* Answer Details */}
                   {studentExamDetail.questions && studentExamDetail.questions.length > 0 && (
                     <div>
-                      <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>
-                        Exam Questions & Answers
-                      </h3>
+                      <SectionHeading>Exam Questions & Answers</SectionHeading>
                       
                       {/* Enhanced Switch Tab Display */}
                       {(() => {
@@ -1906,8 +1744,8 @@ function ExamPage() {
           </ModalContainer>
         </ModalOverlay>
       )}
-    </PageContainer>
+    </DashboardContainer>
   );
 }
 
-export default ExamPage; 
+export default ExamPage;

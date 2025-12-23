@@ -6,15 +6,7 @@ import { buildApiUrl } from './apiConfig';
 const API_URL = buildApiUrl('/v1/student-exams');
 
 // Helper for logging API calls
-const logApiCall = (method, url, headers, body = null) => {
-  console.log(`🔄 ${method} ${url}`, { 
-    headers: headers ? { 
-      Authorization: headers.Authorization ? `${headers.Authorization.substring(0, 15)}...` : 'None',
-      'Content-Type': headers['Content-Type'] || 'Not set'
-    } : 'No headers',
-    body: body ? 'Request payload' : 'No body'
-  });
-};
+const logApiCall = () => {};
 
 class StudentExamService {
   // Start an exam with password
@@ -32,12 +24,10 @@ class StudentExamService {
     const headers = authHeader();
     
     // For debugging
-    console.log(`startExam called with examId=${examId}, password=${password === 'checkonly' ? 'checkonly' : 'provided'}`);
     
     // Trực tiếp gửi mật khẩu đến API, đã loại bỏ phần status_check_only
     const url = `${API_URL}/start?examId=${examId}&password=${encodeURIComponent(password)}`;
     
-    console.log(`Attempting to start exam ${examId}`);
     logApiCall('POST', url, headers);
     
     return axios.post(url, {}, {
@@ -45,23 +35,15 @@ class StudentExamService {
       timeout: 15000  // Increased timeout to allow more time for server processing
     })
     .then(response => {
-      console.log('Exam started successfully:', response.status);
-      console.log('Response data structure:', JSON.stringify(response.data, null, 2));
       
       // Handle time remaining data
       let timeRemainingSeconds = null;
       if (response.data.secondsRemaining !== undefined && response.data.secondsRemaining !== null) {
         timeRemainingSeconds = response.data.secondsRemaining;
-        console.log(`Time remaining from server: ${timeRemainingSeconds} seconds`);
       }
       
       // Store session information  
       if (response.data && response.data.studentExam && response.data.studentExam.id) {
-        console.log('Student Exam ID:', response.data.studentExam.id);
-        console.log('Current question:', response.data.question);
-        console.log('Is last question:', response.data.lastQuestion);
-        console.log('Current question index:', response.data.studentExam.currentQuestion);
-        console.log('Time remaining (seconds):', timeRemainingSeconds);
         
         const examSessionData = {
           studentExamId: response.data.studentExam.id,
@@ -159,7 +141,6 @@ class StudentExamService {
 
     // Check if the exam is being submitted
     if (localStorage.getItem(`exam_submitting_${studentExamId}`) === 'true') {
-      console.log('Exam is being submitted - skipping individual answer submission');
       return Promise.reject(new Error('Exam is being submitted'));
     }
 
@@ -185,7 +166,6 @@ class StudentExamService {
     };
     
     // Xử lý định dạng câu trả lời trước khi gửi
-    console.log(`ANSWER FORMAT CHECK - Type: ${typeof answer}, Value: ${answer}`);
     
     // Lưu lại câu trả lời vào localStorage để debug và khôi phục nếu cần
     try {
@@ -196,21 +176,17 @@ class StudentExamService {
     
     // Kiểm tra các loại câu trả lời
     if (typeof answer === 'string' && answer.includes(',')) {
-      console.log(`Multiple choice detected: ${answer}`);
       try {
         // Lưu lại các giá trị multiple choice để debug
         const selections = answer.split(',');
-        console.log('Selections array:', selections);
         
         // Làm sạch dữ liệu nếu cần
         if (selections.some(s => !s.trim())) {
           // Xóa các giá trị trống
           const cleanSelections = selections.filter(s => s.trim());
-          console.log('Cleaned selections:', cleanSelections);
           
           // Cập nhật câu trả lời với giá trị đã làm sạch
           answer = cleanSelections.join(',');
-          console.log('Updated answer value:', answer);
         }
       } catch (e) {
         console.error('Error processing multiple choice selections:', e);
@@ -232,8 +208,6 @@ class StudentExamService {
       console.warn('Could not save answer payload to localStorage:', e);
     }
     
-    console.log(`Submitting answer for question ${questionId} in exam ${studentExamId}`);
-    console.log('Answer payload:', data);
     logApiCall('POST', `${API_URL}/submit-answer`, headers, data);
     
     return axios.post(`${API_URL}/submit-answer`, data, {
@@ -242,12 +216,10 @@ class StudentExamService {
     })
     .then(response => {
       // Log chi tiết phản hồi để debug
-      console.log(`Submit answer response for question ${questionId}:`, response.data);
       
       // Update the last question flag in local storage if this is the last question
       if (response.data && response.data.lastQuestion) {
         localStorage.setItem(`last_question_${studentExamId}`, 'true');
-        console.log(`Marked question ${questionId} as last question in localStorage`);
       }
       
       return response;
@@ -299,7 +271,6 @@ class StudentExamService {
     // Mark this exam as being submitted to prevent duplicate answer submissions
     localStorage.setItem(`exam_submitting_${studentExamId}`, 'true');
     
-    console.log(`Submitting exam ${studentExamId}`);
     logApiCall('POST', url, headers);
     
     return axios.post(url, {}, {
@@ -307,10 +278,8 @@ class StudentExamService {
       timeout: 15000 // Tăng timeout lên để đảm bảo đủ thời gian xử lý
     })
     .then(response => {
-      console.log('Exam submitted successfully:', response.data);
       
       // Log chi tiết hơn để debug
-      console.log('----- SUBMIT EXAM RESPONSE DETAILS -----');
       
       // Kiểm tra cấu trúc phản hồi
       if (!response.data) {
@@ -383,25 +352,14 @@ class StudentExamService {
         localStorage.setItem('last_exam_result', JSON.stringify(processedResponse));
         
         // Kiểm tra các trường kết quả quan trọng
-        console.log('Processed response structure:', Object.keys(processedResponse));
         
         // Kiểm tra và log số lượng đúng/sai
         if (processedResponse.correctAnswers !== undefined) {
-          console.log(`Correct answers: ${processedResponse.correctAnswers}`);
-          console.log(`Wrong answers: ${processedResponse.wrongAnswers}`);
-          console.log(`Total questions: ${processedResponse.totalQuestions}`);
-          console.log(`Score: ${processedResponse.score}%`);
         }
         
         // Kiểm tra các câu trả lời chi tiết
         if (processedResponse.answerResults) {
-          console.log('ANSWER RESULTS:');
           processedResponse.answerResults.forEach((result, index) => {
-            console.log(`Question ${index + 1}:`);
-            console.log(`  ID: ${result.questionId}`);
-            console.log(`  Your answer: ${result.studentAnswer}`);
-            console.log(`  Correct answer: ${result.correctAnswer}`);
-            console.log(`  Is correct: ${result.correct}`);
           });
         }
         
@@ -409,9 +367,7 @@ class StudentExamService {
         try {
           const answerKeys = Object.keys(localStorage).filter(key => key.startsWith(`answer_${studentExamId}`));
           if (answerKeys.length > 0) {
-            console.log('Locally stored answers:');
             answerKeys.forEach(key => {
-              console.log(`  ${key}: ${localStorage.getItem(key)}`);
             });
           }
         } catch (e) {
@@ -455,7 +411,6 @@ class StudentExamService {
     const headers = authHeader();
     const url = `${API_URL}/${studentExamId}`;
     
-    console.log(`Fetching exam result for ${studentExamId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, {
@@ -463,7 +418,6 @@ class StudentExamService {
       timeout: 5000
     })
     .then(response => {
-      console.log('Exam result fetched:', response.status);
       return response;
     })
     .catch(error => {
@@ -506,7 +460,6 @@ class StudentExamService {
     const headers = authHeader();
     const url = `${API_URL}/exam/${examId}`;
     
-    console.log(`Fetching student exams for exam ID: ${examId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, {
@@ -514,8 +467,6 @@ class StudentExamService {
       timeout: 10000
     })
     .then(response => {
-      console.log('Student exams fetched:', response.status);
-      console.log('Student exams data:', response.data);
       return response;
     })
     .catch(error => {
@@ -537,7 +488,6 @@ class StudentExamService {
     const headers = authHeader();
     const url = `${API_URL}/detail/${studentExamId}`;
     
-    console.log(`Fetching student exam detail for ID: ${studentExamId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, {
@@ -545,8 +495,6 @@ class StudentExamService {
       timeout: 10000
     })
     .then(response => {
-      console.log('Student exam detail fetched:', response.status);
-      console.log('Student exam detail data:', response.data);
       return response;
     })
     .catch(error => {
@@ -565,7 +513,6 @@ class StudentExamService {
       return Promise.reject(new Error('Missing student exam ID'));
     }
 
-    console.log(`Getting question ${questionIndex} for exam ${studentExamId}`);
     return this.getQuestion(studentExamId, questionIndex);
   }
 
@@ -579,7 +526,6 @@ class StudentExamService {
     const headers = authHeader();
     const url = `${API_URL}/switch-tab/${encodeURIComponent(studentExamId)}`;
     
-    console.log(`Recording tab switch for exam ${studentExamId}`);
     logApiCall('PUT', url, headers);
     
     return axios.put(url, {}, {
@@ -587,7 +533,6 @@ class StudentExamService {
       timeout: 5000
     })
     .then(response => {
-      console.log('Tab switch recorded successfully:', response.data);
       
       // Update local storage with tab switch count if provided
       if (response.data && typeof response.data.switchTabCount === 'number') {
@@ -620,7 +565,6 @@ class StudentExamService {
     const headers = authHeader();
     const url = `${API_URL}/student/detail/${studentExamId}`;
     
-    console.log(`Fetching student exam details for studentExamId: ${studentExamId}`);
     logApiCall('GET', url, headers);
     
     return axios.get(url, {
@@ -628,8 +572,6 @@ class StudentExamService {
       timeout: 10000
     })
     .then(response => {
-      console.log('Student exam details fetched:', response.status);
-      console.log('Student exam details data:', response.data);
       return response;
     })
     .catch(error => {

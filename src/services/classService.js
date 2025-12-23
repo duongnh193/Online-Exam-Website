@@ -3,20 +3,9 @@ import authHeader from './authHeader';
 import API_BASE, { buildApiUrl } from './apiConfig';
 
 const API_URL = buildApiUrl('/v1/classes');
-console.log('🌐 ClassService API_URL:', API_URL);
-console.log('🌐 Environment variables:', {
-  REACT_APP_API_URL: process.env.REACT_APP_API_URL,
-  API_BASE
-});
 
 // Helper function to log API requests
-const logApiCall = (method, url, headers, data = null) => {
-  console.log(`🔍 ClassService API Call: ${method} ${url}`);
-  console.log('🔑 Headers:', headers);
-  if (data) {
-    console.log('📦 Request Data:', data);
-  }
-};
+const logApiCall = () => {};
 
 class ClassService {
   // Get all classes (admin)
@@ -79,17 +68,13 @@ class ClassService {
       timeout: 5000 // 5 second timeout
     })
     .then(response => {
-      console.log(`Successfully retrieved student count for class ${classId}`);
-      
       // If it's a paginated response, return the total elements count
       if (response.data && response.data.totalElements !== undefined) {
-        console.log(`Student count for class ${classId}: ${response.data.totalElements}`);
         return { data: response.data.totalElements };
       }
       
       // If it's just an array, return its length
       if (Array.isArray(response.data)) {
-        console.log(`Student count for class ${classId}: ${response.data.length}`);
         return { data: response.data.length };
       }
       
@@ -147,10 +132,7 @@ class ClassService {
     logApiCall('GET', url, headers);
     
     return axios.get(url, { headers })
-      .then(response => {
-        console.log(`Successfully retrieved students for class ${classId}:`, response.data);
-        return response;
-      })
+      .then(response => response)
       .catch(error => {
         console.error(`Error fetching students for class ${classId}:`, error);
         console.error(`Error details:`, error.response?.data || error.message);
@@ -167,36 +149,13 @@ class ClassService {
     
     const url = `${API_URL}/by-student?studentId=${studentId}&page=${page}&size=${size}`;
     const headers = authHeader();
-    
-    console.log(`Fetching classes for student ${studentId} with URL: ${url}`);
-    console.log('Auth header present:', !!headers.Authorization);
     logApiCall('GET', url, headers);
     
     return axios.get(url, { 
       headers,
       timeout: 10000 // 10 second timeout
     })
-    .then(response => {
-      console.log('Student classes raw API response:', response);
-      console.log('Student classes fetched successfully:', response.data);
-      
-      // Add detailed logging to debug the response
-      if (response.data && response.data.content) {
-        console.log(`Received ${response.data.content.length} classes (paginated)`);
-        if (response.data.content.length > 0) {
-          console.log('First class in response:', response.data.content[0]);
-        }
-      } else if (Array.isArray(response.data)) {
-        console.log(`Received ${response.data.length} classes (array)`);
-        if (response.data.length > 0) {
-          console.log('First class in response:', response.data[0]);
-        }
-      } else {
-        console.warn('Unexpected response format for student classes:', response.data);
-      }
-      
-      return response;
-    })
+    .then(response => response)
     .catch(error => {
       console.error('Error fetching student classes:', error);
       
@@ -208,7 +167,6 @@ class ClassService {
         
         // Specific error handling based on status codes
         if (error.response.status === 404) {
-          console.log('No classes found for this student (404)');
           // Return an empty response instead of throwing
           return { data: { content: [] } };
         } else if (error.response.status === 401) {

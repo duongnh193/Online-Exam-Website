@@ -74,7 +74,6 @@ const OTPModal = ({ show, handleClose, otpData, onSuccess, onSubmit, onSwitchToL
     setError('');
     
     try {
-      console.log('OTPModal: Submitting OTP:', otpValue);
       
       // Use the onSubmit prop if available, otherwise use the direct service call
       if (onSubmit) {
@@ -90,14 +89,12 @@ const OTPModal = ({ show, handleClose, otpData, onSuccess, onSubmit, onSwitchToL
         // Success is handled by the parent component
       } else {
         // Fallback to direct service call
-        console.log('OTPModal: Using direct service call for OTP verification');
         const response = await authService.verifyOtp({
           usernameOrEmail: otpData?.username,
           otp: otpValue,
           password: otpData?.password
         });
         
-        console.log('OTPModal: OTP verification response:', response);
         setIsLoading(false);
         
         if (onSuccess) {
@@ -119,10 +116,8 @@ const OTPModal = ({ show, handleClose, otpData, onSuccess, onSubmit, onSwitchToL
     setResendSuccess(false);
     
     try {
-      console.log('OTPModal: Resending OTP for:', otpData?.username);
       const response = await authService.resendOtp(otpData?.username);
       
-      console.log('OTPModal: Resend OTP response:', response);
       setTimeLeft(60);
       setResendSuccess(true);
       

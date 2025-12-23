@@ -1,214 +1,83 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/userService';
 import authService from '../services/authService';
 import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import {
+  DashboardContainer,
+  Sidebar,
+  Logo,
+  SidebarMenu,
+  NavItem,
+  NavIcon,
+  BottomMenu,
+  MainContent,
+  Header,
+  HeaderRight,
+  NotificationIcon,
+  UserAvatar,
+  DropdownContainer,
+  Dropdown,
+  DropdownItem,
+  PageTitle,
+} from '../components/dashboard/DashboardStyles';
+import { SPACING_SCALE, TYPOGRAPHY_SCALE, RADIUS_SCALE } from '../theme/tokens';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
 
 // Styled Components
-const PageContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  transition: background-color 0.3s ease;
-  
-  /* Add CSS Variables for new components */
-  --bg-disabled: ${props => props.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
-  --bg-input: ${props => props.theme === 'dark' ? '#333' : 'white'};
-  --highlight-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a00ff'};
-  --error-bg: ${props => props.theme === 'dark' ? '#331515' : '#ffecec'};
-  --error-color: ${props => props.theme === 'dark' ? '#ff6b6b' : '#d32f2f'};
-  --success-bg: ${props => props.theme === 'dark' ? '#113323' : '#d1fae5'};
-  --success-color: ${props => props.theme === 'dark' ? '#34d399' : '#10b981'};
-  --info-bg: ${props => props.theme === 'dark' ? '#0f2942' : '#e0f2fe'};
-  --info-color: ${props => props.theme === 'dark' ? '#60a5fa' : '#0891b2'};
-  --text-input: ${props => props.theme === 'dark' ? '#ffffff' : '#333333'};
-  --text-input-disabled: ${props => props.theme === 'dark' ? '#bbbbbb' : '#666666'};
+const PageContainer = styled(DashboardContainer)`
+  --bg-disabled: ${({ theme }) => (theme === 'dark' ? '#2a2a2a' : '#f5f5f5')};
+  --bg-input: ${({ theme }) => (theme === 'dark' ? '#333' : 'white')};
+  --highlight-color: ${({ theme }) => (theme === 'dark' ? '#8d47ff' : '#6a00ff')};
+  --error-bg: ${({ theme }) => (theme === 'dark' ? '#331515' : '#ffecec')};
+  --error-color: ${({ theme }) => (theme === 'dark' ? '#ff6b6b' : '#d32f2f')};
+  --success-bg: ${({ theme }) => (theme === 'dark' ? '#113323' : '#d1fae5')};
+  --success-color: ${({ theme }) => (theme === 'dark' ? '#34d399' : '#10b981')};
+  --info-bg: ${({ theme }) => (theme === 'dark' ? '#0f2942' : '#e0f2fe')};
+  --info-color: ${({ theme }) => (theme === 'dark' ? '#60a5fa' : '#0891b2')};
+  --text-input: ${({ theme }) => (theme === 'dark' ? '#ffffff' : '#333333')};
+  --text-input-disabled: ${({ theme }) => (theme === 'dark' ? '#bbbbbb' : '#666666')};
 `;
 
-const Sidebar = styled.aside`
-  width: 180px;
-  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
-  position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border-radius: 0 20px 20px 0;
-  transition: background-color 0.3s ease;
-`;
-
-const Logo = styled.div`
-  font-size: 1.25rem;
-  font-weight: 600;
-  padding: 2rem 1.5rem;
-  display: flex;
-  align-items: center;
-  
-  &::before {
-    content: "⦿⦿⦿";
-    letter-spacing: 2px;
-    font-size: 10px;
-    margin-right: 8px;
-    color: white;
-  }
-`;
-
-const SidebarMenu = styled.div`
-  flex: 1;
-  margin-top: 1rem;
-`;
-
-const NavItem = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
-  text-decoration: none;
-  font-size: 0.9rem;
-  
-  &.active {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  &:hover {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: white;
-  }
-`;
-
-const NavIcon = styled.span`
-  margin-right: 12px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  opacity: 0.9;
-`;
-
-const BottomMenu = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-  margin-left: 180px;
-  padding: 2rem 3rem;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-`;
-
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const PageTitle = styled.div`
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--text-primary);
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #6a00ff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-`;
-
-const DropdownContainer = styled.div`
-  position: relative;
-`;
-
-const Dropdown = styled.div`
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
-  width: 180px;
-  z-index: 100;
-  overflow: hidden;
-`;
-
-const DropdownItem = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: var(--bg-primary);
-  }
-`;
 
 const TabContainer = styled.div`
-  margin-bottom: 1.5rem;
+  margin-bottom: ${SPACING_SCALE.lg};
   display: flex;
+  flex-wrap: wrap;
+  gap: ${SPACING_SCALE.sm};
   border-bottom: 1px solid var(--border-color);
+  padding-bottom: ${SPACING_SCALE.xs};
 `;
 
-const Tab = styled.div`
-  padding: 1rem 1.5rem;
-  font-size: 1rem;
-  font-weight: ${props => props.active ? 600 : 400};
-  color: ${props => props.active ? 'var(--highlight-color)' : 'var(--text-secondary)'};
+const Tab = styled.button`
+  padding: ${SPACING_SCALE.sm} ${SPACING_SCALE.md};
+  font-size: ${TYPOGRAPHY_SCALE.base};
+  font-weight: ${({ $active }) => ($active ? 600 : 500)};
+  color: ${({ $active }) => ($active ? 'var(--highlight-color)' : 'var(--text-secondary)')};
   cursor: pointer;
+  background: none;
+  border: none;
   position: relative;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background-color: ${props => props.active ? 'var(--highlight-color)' : 'transparent'};
-  }
+  border-bottom: 3px solid ${({ $active }) => ($active ? 'var(--highlight-color)' : 'transparent')};
+  border-radius: ${RADIUS_SCALE.sm} ${RADIUS_SCALE.sm} 0 0;
+  transition: color 0.2s ease, border-color 0.2s ease;
   
   &:hover {
-    color: ${props => props.active ? 'var(--highlight-color)' : 'var(--text-primary)'};
+    color: var(--highlight-color);
   }
 `;
 
@@ -1446,13 +1315,11 @@ function SettingsPage() {
   // Add a function to explicitly update the 2FA UI state from localStorage
   const updateTwoFactorStateFromStorage = useCallback(() => {
     const is2FAEnabled = authService.is2FAEnabled();
-    console.log('Updating 2FA UI state from storage, current status:', is2FAEnabled);
     setTwoFactorEnabled(is2FAEnabled);
   }, []);
   
   // Memoize refreshUser to prevent it from changing on each render
   const memoizedRefreshUser = useCallback(async () => {
-    console.log('Memoized refreshUser called');
     try {
       await refreshUser();
       // After refreshing user data, update the 2FA state from storage
@@ -1474,23 +1341,19 @@ function SettingsPage() {
     
     // Check for global cache reset flag
     if (window.__resetUserDataCache) {
-      console.log('Detected cache reset flag, will refresh users');
       usersLoadedRef.current = false;
       window.__resetUserDataCache = false;
     }
     
     // Only fetch users if the user is an admin and we haven't loaded users yet
     if (user && (user.role === 'ROLE_ADMIN' || user.role === 'ROLE_LECTURER') && !usersLoadedRef.current) {
-      console.log('Initial fetch of users triggered');
     fetchUsers();
     }
     
     // Test API connection on component mount
     async function testConnection() {
       try {
-        console.log('Testing API connection...');
         const result = await userService.testApiConnection();
-        console.log('API connection test result:', result);
       } catch (error) {
         console.error('API connection test failed:', error);
       }
@@ -1500,7 +1363,6 @@ function SettingsPage() {
     
     // Cleanup function
     return () => {
-      console.log('Settings page unmounted, resetting fetch state');
       isFetchingRef.current = false;
       // Don't reset usersLoadedRef here to avoid refetching when component remounts
     };
@@ -1538,12 +1400,10 @@ function SettingsPage() {
   const fetchUsers = async (forceRefresh = false) => {
     // Don't fetch if already fetching or if we already have users and not forcing refresh
     if (isFetchingRef.current) {
-      console.log('Fetch already in progress, skipping duplicate call');
       return;
     }
     
     if (users.length > 0 && !forceRefresh && usersLoadedRef.current) {
-      console.log('Using cached users list, set forceRefresh=true to reload');
       return;
     }
     
@@ -1552,40 +1412,20 @@ function SettingsPage() {
     setError(null);
     
     try {
-      console.log('Fetching users from API...');
       
       // Debug auth headers
-      console.log('Auth headers:', authService.getAuthHeader());
-      console.log('User data in localStorage:', localStorage.getItem('user'));
-      console.log('Token in localStorage:', localStorage.getItem('token')?.substring(0, 10) + '...');
       
       // Create promises for fetching different user roles
-      console.log('Fetching admin users...');
       const adminPromise = userService.getAllAdmins();
       
-      console.log('Fetching lecturer users...');
       const lecturerPromise = userService.getAllLecturers();
       
-      console.log('Fetching student users...');
       const studentPromise = userService.getAllStudents();
       
       // Wait for all promises to resolve
       const [adminResponse, lecturerResponse, studentResponse] = await Promise.all([
         adminPromise, lecturerPromise, studentPromise
       ]);
-      
-      console.log('Admin response:', adminResponse);
-      console.log('Lecturer response:', lecturerResponse);
-      console.log('Student response:', studentResponse);
-      
-      // Extract data from each response and combine into a single array
-      console.log('Admin response structure:', {
-        hasData: !!adminResponse.data,
-        hasContent: !!(adminResponse.data && adminResponse.data.content),
-        isArray: Array.isArray(adminResponse.data),
-        dataKeys: adminResponse.data ? Object.keys(adminResponse.data) : [],
-        firstItem: adminResponse.data?.content?.[0] || (Array.isArray(adminResponse.data) ? adminResponse.data[0] : null)
-      });
       
       // Handle various response formats safely
       let adminUsers = [];
@@ -1632,29 +1472,6 @@ function SettingsPage() {
         ...studentUsers
       ];
       
-      console.log('Users extracted:', {
-        adminUsers: adminUsers.length,
-        lecturerUsers: lecturerUsers.length,
-        studentUsers: studentUsers.length,
-        total: allUsers.length
-      });
-      
-      console.log('Users received:', allUsers);
-      
-      // Verify users have required properties
-      if (allUsers.length > 0) {
-        const sampleUser = allUsers[0];
-        console.log('Sample user structure:', {
-          hasId: 'id' in sampleUser,
-          hasUsername: 'username' in sampleUser,
-          hasEmail: 'email' in sampleUser,
-          hasRole: 'role' in sampleUser,
-          allKeys: Object.keys(sampleUser)
-        });
-      } else {
-        console.warn('No users were found or extracted from the API responses');
-      }
-      
       setUsers(allUsers);
       usersLoadedRef.current = true;
       setError(null);
@@ -1683,7 +1500,6 @@ function SettingsPage() {
   };
   
   const handleConfirmLogout = () => {
-    console.log('SettingsPage: Executing logout after confirmation');
     logout();
     setShowLogoutConfirmation(false);
   };
@@ -1708,23 +1524,18 @@ function SettingsPage() {
     setShowDropdown(!showDropdown);
   };
 
-  const getMenuIcon = (name) => {
-    switch(name) {
-      case 'dashboard': return '🏠';
-      case 'exams': return '📝';
-      case 'class': return '📋';
-      case 'reports': return '📊';
-      case 'payment': return '💳';
-      case 'users': return '👥';
-      case 'settings': return '⚙️';
-      case 'signout': return '🚪';
-      case 'myClasses': return '📚';
-      case 'register': return '📋';
-      case 'results': return '📊';
-      case 'assistant': return '🤖';
-      default: return '•';
-    }
+  const MENU_ICONS = {
+    dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+    exams: <QuizOutlinedIcon fontSize="small" />,
+    class: <ClassOutlinedIcon fontSize="small" />,
+    reports: <AssessmentOutlinedIcon fontSize="small" />,
+    settings: <SettingsOutlinedIcon fontSize="small" />,
+    assistant: <SmartToyOutlinedIcon fontSize="small" />,
+    results: <BarChartOutlinedIcon fontSize="small" />,
+    signout: <LogoutOutlinedIcon fontSize="small" />,
   };
+
+  const getMenuIcon = (name) => MENU_ICONS[name] || <CircleOutlinedIcon fontSize="small" />;
 
   // Determine user role
   const isStudent = user && user.role === 'ROLE_STUDENT';
@@ -1962,7 +1773,6 @@ function SettingsPage() {
     setIsPasswordLoading(true);
     
     try {
-      console.log('Submitting password change request using auth service...');
       
       // Use the auth service method to update password
       await authService.updatePassword(
@@ -2029,13 +1839,9 @@ function SettingsPage() {
       // Call the API to update 2FA using authService
       let response;
       if (newTwoFAState) {
-        console.log('Enabling 2FA for user:', user.username);
         response = await authService.enable2FA();
-        console.log('Enabling 2FA response:', response);
       } else {
-        console.log('Disabling 2FA for user:', user.username);
         response = await authService.disable2FA();
-        console.log('Disabling 2FA response:', response);
       }
       
       // Update the local state
@@ -2052,10 +1858,6 @@ function SettingsPage() {
       
       // Double check local storage was updated correctly
       const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      console.log('User data after 2FA update:', {
-        twoFactorEnabled: userData.twoFactorEnabled,
-        twoFactor: userData.twoFactor
-      });
     } catch (error) {
       console.error('Error updating 2FA:', error);
       
@@ -2080,7 +1882,6 @@ function SettingsPage() {
       // Make sure UI state is refreshed to match actual state
       const actualState = authService.is2FAEnabled();
       if (twoFactorEnabled !== actualState) {
-        console.log('Correcting 2FA UI state to match actual state:', actualState);
         setTwoFactorEnabled(actualState);
       }
     } finally {
@@ -2126,7 +1927,6 @@ function SettingsPage() {
     setLoginHistoryError(null);
 
     try {
-      console.log(`Fetching login history for user ${userId}, page ${page}`);
       const response = await userService.getLoginHistory(userId, page, loginHistoryPageSize);
       
       if (response && response.data) {
@@ -2146,7 +1946,6 @@ function SettingsPage() {
         
         setLoginHistoryData(historyEntries);
         setLoginHistoryPage(page);
-        console.log(`Successfully loaded ${historyEntries.length} login history entries`);
       } else {
         setLoginHistoryData([]);
         setLoginHistoryTotalPages(0);
@@ -2206,9 +2005,12 @@ function SettingsPage() {
   };
 
   return (
-    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
-      <Sidebar theme={theme}>
-        <Logo>logo</Logo>
+    <PageContainer>
+      <Sidebar>
+        <Logo>
+          <span>ST</span>
+          Settings
+        </Logo>
         <SidebarMenu>
           {isStudent ? (
             // Student navigation
@@ -2273,18 +2075,6 @@ function SettingsPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/ai-assistant" className={isRouteActive('/ai-assistant') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
-                AI Assistant
-              </NavItem>
-              {/* <NavItem to="/payment" className={isRouteActive('/payment') ? 'active' : ''}>
-            <NavIcon>{getMenuIcon('payment')}</NavIcon>
-            Payment
-          </NavItem>
-              <NavItem to="/users" className={isRouteActive('/users') ? 'active' : ''}>
-                <NavIcon>{getMenuIcon('users')}</NavIcon>
-                Users
-              </NavItem> */}
             </>
           )}
         </SidebarMenu>
@@ -2302,24 +2092,33 @@ function SettingsPage() {
       
       <MainContent>
         <Header>
-          <PageTitle>Settings</PageTitle>
+          <PageTitle>
+            <h1>Settings</h1>
+            <p>Quản lý thông tin tài khoản và tùy chỉnh hệ thống.</p>
+          </PageTitle>
           
           <HeaderRight>
-            {/* Add ThemeToggle component */}
-            {/* <ThemeToggle /> */}
-            
+            <ThemeToggle />
+            <NotificationIcon type="button" aria-label="Notifications">
+              <NotificationsNoneOutlinedIcon fontSize="small" />
+            </NotificationIcon>
             <DropdownContainer ref={dropdownRef}>
-              <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+              <UserAvatar type="button" onClick={toggleDropdown} aria-label="User menu">
+                {getUserInitial()}
+              </UserAvatar>
               {showDropdown && (
                 <Dropdown>
                   <DropdownItem>
-                    <span>👤</span> Profile
+                    <PersonOutlineOutlinedIcon fontSize="small" />
+                    Profile
                   </DropdownItem>
                   <DropdownItem>
-                    <span>⚙️</span> Settings
+                    <SettingsOutlinedIcon fontSize="small" />
+                    Settings
                   </DropdownItem>
                   <DropdownItem onClick={handleLogout}>
-                    <span>🚪</span> Sign out
+                    <LogoutOutlinedIcon fontSize="small" />
+                    Sign out
                   </DropdownItem>
                 </Dropdown>
               )}
@@ -2330,31 +2129,31 @@ function SettingsPage() {
         <TabContainer>
           {isAdmin && (
           <Tab 
-              data-active={activeTab === 'users'} 
-            active={activeTab === 'users'} 
+            type="button"
+            $active={activeTab === 'users'} 
             onClick={() => setActiveTab('users')}
           >
             User Management
           </Tab>
           )}
           <Tab 
-            data-active={activeTab === 'profile'} 
-            active={activeTab === 'profile'} 
+            type="button"
+            $active={activeTab === 'profile'} 
             onClick={() => setActiveTab('profile')}
           >
             My Profile
           </Tab>
           <Tab 
-            data-active={activeTab === 'security'} 
-            active={activeTab === 'security'} 
+            type="button"
+            $active={activeTab === 'security'} 
             onClick={() => setActiveTab('security')}
           >
             Security
           </Tab>
           {(isStudent || isLecturer) && (
             <Tab 
-              data-active={activeTab === 'twofa'} 
-              active={activeTab === 'twofa'} 
+              type="button"
+              $active={activeTab === 'twofa'} 
               onClick={() => setActiveTab('twofa')}
             >
               Two-Factor Authentication

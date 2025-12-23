@@ -2,7 +2,8 @@
 
 // Primary colors
 export const PRIMARY = {
-  purple: '#4A4AFF',  // Main purple color
+  purple: '#4A4AFF',  // Main primary color
+  indigo: '#5138EE',
 };
 
 // Neutral colors
@@ -19,6 +20,30 @@ export const NEUTRAL = {
   color300: '#E2E8F0',
   color200: '#EDF2F7',
   white: '#FFFFFF',
+};
+
+// Semantic colors for status indications
+export const SEMANTIC = {
+  success: {
+    light: '#E8F5E9',
+    main: '#2E7D32',
+    dark: '#1B5E20',
+  },
+  warning: {
+    light: '#FFF4E5',
+    main: '#ED6C02',
+    dark: '#B45309',
+  },
+  error: {
+    light: '#FEECEC',
+    main: '#D14343',
+    dark: '#9B2C2C',
+  },
+  info: {
+    light: '#E3F2FD',
+    main: '#0288D1',
+    dark: '#01579B',
+  },
 };
 
 // Theme combinations
@@ -45,11 +70,13 @@ export const ADDITIONAL = {
 export const COLORS = {
   ...PRIMARY,
   ...NEUTRAL,
+  semantic: SEMANTIC,
 };
 
 export default {
   PRIMARY,
   NEUTRAL,
+  SEMANTIC,
   THEME,
   COLORS,
-}; 
+};

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import dashboardService from '../services/dashboardService';
@@ -9,7 +10,6 @@ import ThemeToggle from '../components/common/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import {
-  ThemeStyles,
   DashboardContainer,
   Sidebar,
   Logo,
@@ -65,10 +65,20 @@ import {
   SearchIcon,
   SearchInput
 } from '../components/dashboard/DashboardStyles';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
 
 function AdminDashboardPage() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
+  const location = useLocation();
   const [sortOption, setSortOption] = useState('recent');
   const [examCount, setExamCount] = useState(0);
   const [studentCount, setStudentCount] = useState(0);
@@ -158,7 +168,6 @@ function AdminDashboardPage() {
     
     // Hiển thị modal xác nhận thay vì gọi logout trực tiếp
     setShowLogoutConfirmation(true);
-    localStorage.removeItem("theme"); 
   };
   
   const handleConfirmLogout = () => {
@@ -188,19 +197,17 @@ function AdminDashboardPage() {
     setShowDropdown(!showDropdown);
   };
 
-  const getMenuIcon = (name) => {
-    switch(name) {
-      case 'dashboard': return '🏠';
-      case 'exams': return '📝';
-      case 'class': return '📋';
-      case 'reports': return '📊';
-      // case 'payment': return '💳';
-      // case 'users': return '👥';
-      case 'settings': return '⚙️';
-      case 'signout': return '🚪';
-      default: return '•';
-    }
+  const menuIcons = {
+    dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+    exams: <QuizOutlinedIcon fontSize="small" />,
+    class: <ClassOutlinedIcon fontSize="small" />,
+    reports: <AssessmentOutlinedIcon fontSize="small" />,
+    settings: <SettingsOutlinedIcon fontSize="small" />,
+    signout: <LogoutOutlinedIcon fontSize="small" />,
   };
+  const getMenuIcon = (name) => menuIcons[name] || <CircleOutlinedIcon fontSize="small" />;
+
+  const isRouteActive = (path) => location.pathname === path;
 
   // Hàm xử lý mở modal và load dữ liệu
   const handleOpenModal = async (type) => {
@@ -919,36 +926,31 @@ function AdminDashboardPage() {
   
   return (
     <DashboardContainer>
-      <Sidebar theme={theme}>
-        <Logo>logo</Logo>
+      <Sidebar>
+        <Logo>
+          <span>AD</span>
+          Admin
+        </Logo>
         <SidebarMenu>
-          <NavItem to="/admin-dashboard" className="active">
+          <NavItem to="/admin-dashboard" className={isRouteActive('/admin-dashboard') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
             Dashboard
           </NavItem>
-          <NavItem to="/exams">
+          <NavItem to="/exams" className={isRouteActive('/exams') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('exams')}</NavIcon>
             Exams
           </NavItem>
-          <NavItem to="/class">
+          <NavItem to="/class" className={isRouteActive('/class') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('class')}</NavIcon>
             Class
           </NavItem>
-          <NavItem to="/reports">
+          <NavItem to="/reports" className={isRouteActive('/reports') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('reports')}</NavIcon>
             Reports
           </NavItem>
-          {/* <NavItem to="/payment">
-            <NavIcon>{getMenuIcon('payment')}</NavIcon>
-            Payment
-          </NavItem>
-          <NavItem to="/users">
-            <NavIcon>{getMenuIcon('users')}</NavIcon>
-            Users
-          </NavItem> */}
         </SidebarMenu>
         <BottomMenu>
-          <NavItem to="/settings">
+          <NavItem to="/settings" className={isRouteActive('/settings') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('settings')}</NavIcon>
             Settings
           </NavItem>
@@ -971,19 +973,26 @@ function AdminDashboardPage() {
           
           <HeaderRight>
             <ThemeToggle />
-            <NotificationIcon />
+            <NotificationIcon type="button" aria-label="Notifications">
+              <NotificationsNoneOutlinedIcon fontSize="small" />
+            </NotificationIcon>
             <DropdownContainer ref={dropdownRef}>
-              <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+              <UserAvatar type="button" onClick={toggleDropdown} aria-label="User menu">
+                {getUserInitial()}
+              </UserAvatar>
               {showDropdown && (
                 <Dropdown>
                   <DropdownItem>
-                    <span>👤</span> Profile
+                    <PersonOutlineOutlinedIcon fontSize="small" />
+                    Profile
                   </DropdownItem>
                   <DropdownItem>
-                    <span>⚙️</span> Settings
+                    <SettingsOutlinedIcon fontSize="small" />
+                    Settings
                   </DropdownItem>
                   <DropdownItem onClick={handleLogout}>
-                    <span>🚪</span> Sign out
+                    <LogoutOutlinedIcon fontSize="small" />
+                    Sign out
                   </DropdownItem>
                 </Dropdown>
               )}

@@ -1,211 +1,69 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import classService from '../services/classService';
 import ThemeToggle from '../components/common/ThemeToggle';
-import { useTheme } from '../contexts/ThemeContext';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import {
+  DashboardContainer,
+  Sidebar,
+  Logo,
+  SidebarMenu,
+  NavItem,
+  NavIcon,
+  BottomMenu,
+  MainContent,
+  Header,
+  HeaderRight,
+  NotificationIcon,
+  UserAvatar,
+  DropdownContainer,
+  Dropdown,
+  DropdownItem,
+  PageTitle,
+} from '../components/dashboard/DashboardStyles';
+import {
+  SPACING_SCALE,
+  TYPOGRAPHY_SCALE,
+  RADIUS_SCALE,
+} from '../theme/tokens';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 
-// Styled Components
-const PageContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  transition: background-color 0.3s ease;
-  
-  /* CSS Variables for dark mode compatibility */
-  --bg-secondary: ${props => props.theme === 'dark' ? '#222' : 'white'};
-  --text-primary: ${props => props.theme === 'dark' ? '#fff' : '#333'};
-  --text-secondary: ${props => props.theme === 'dark' ? '#ccc' : '#666'};
-  --border-color: ${props => props.theme === 'dark' ? '#444' : '#ddd'};
-  --card-shadow: ${props => props.theme === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)'};
-  --hover-bg: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f9f9f9'};
-`;
-
-const Sidebar = styled.aside`
-  width: 180px;
-  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
-  position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border-radius: 0 20px 20px 0;
-  transition: background-color 0.3s ease;
-`;
-
-const Logo = styled.div`
-  font-size: 1.25rem;
-  font-weight: 600;
-  padding: 2rem 1.5rem;
-  display: flex;
-  align-items: center;
-  
-  &::before {
-    content: "⦿⦿⦿";
-    letter-spacing: 2px;
-    font-size: 10px;
-    margin-right: 8px;
-    color: white;
-  }
-`;
-
-const SidebarMenu = styled.div`
-  flex: 1;
-  margin-top: 1rem;
-`;
-
-const NavItem = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
-  text-decoration: none;
-  font-size: 0.9rem;
-  
-  &.active {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  &:hover {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: white;
-  }
-`;
-
-const NavIcon = styled.span`
-  margin-right: 12px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  opacity: 0.9;
-`;
-
-const BottomMenu = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-  margin-left: 180px;
-  padding: 2rem 3rem;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-`;
-
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-`;
-
-const PageTitle = styled.div`
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--text-primary);
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const NotificationIcon = styled.div`
-  width: 24px;
-  height: 24px;
-  position: relative;
-  cursor: pointer;
-  margin-right: 15px;
-  
-  &::before {
-    content: '🔔';
-    font-size: 18px;
-  }
-`;
-
-const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #6a00ff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-`;
-
-const DropdownContainer = styled.div`
-  position: relative;
-`;
-
-const Dropdown = styled.div`
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  background-color: var(--bg-secondary);
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
-  width: 180px;
-  z-index: 100;
-  overflow: hidden;
-`;
-
-const DropdownItem = styled.div`
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: var(--bg-primary);
-  }
-`;
 
 const ContentHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  gap: ${SPACING_SCALE.sm};
+  margin-bottom: ${SPACING_SCALE.lg};
+  flex-wrap: wrap;
 `;
 
 const SortDropdown = styled.select`
-  padding: 0.5rem 1rem;
+  padding: ${SPACING_SCALE.xs} ${SPACING_SCALE.sm};
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-sm, ${RADIUS_SCALE.sm});
   background-color: var(--bg-secondary);
-  font-size: 0.875rem;
-  color: var(--text-primary);
+  font-size: ${TYPOGRAPHY_SCALE.sm};
+  color: var(--text-secondary);
   cursor: pointer;
   outline: none;
+`;
+
+const ActionsRow = styled.div`
+  display: flex;
+  gap: ${SPACING_SCALE.sm};
+  align-items: center;
 `;
 
 const ImportButton = styled.button`
@@ -443,13 +301,11 @@ const DeleteIcon = () => (
 
 function ClassPage() {
   const { logout, user } = useAuth();
-  const { theme } = useTheme();
   const navigate = useNavigate();
   
   // Redirect if not a lecturer or admin
   useEffect(() => {
     if (user && user.role !== 'ROLE_LECTURER' && user.role !== 'ROLE_ADMIN') {
-      console.log('ClassPage: Unauthorized access attempt, user role:', user.role);
       navigate('/student-dashboard');
     }
   }, [user, navigate]);
@@ -509,24 +365,18 @@ function ClassPage() {
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      console.log('fetchClasses: Starting to fetch classes for user:', user);
-      console.log('fetchClasses: User role:', user.role);
-      console.log('fetchClasses: User ID:', user.id);
       
       let response;
       
       // Call different API based on user role
       if (user.role === 'ROLE_ADMIN') {
         // Admin can see all classes
-        console.log('fetchClasses: User is admin, fetching all classes');
         response = await classService.getAllClasses();
       } else if (user.role === 'ROLE_LECTURER') {
         // Lecturer can only see their own classes
-        console.log('fetchClasses: User is lecturer, fetching classes for teacher ID:', user.id);
         response = await classService.getClassesByTeacher(user.id);
       } else if (user.role === 'ROLE_STUDENT') {
         // Student can only see enrolled classes
-        console.log('fetchClasses: User is student, fetching enrolled classes for student ID:', user.id);
         response = await classService.getStudentClasses(user.id);
       } else {
         console.warn('fetchClasses: Unknown user role:', user.role);
@@ -535,7 +385,6 @@ function ClassPage() {
         return;
       }
       
-      console.log('fetchClasses: API Response:', response);
       
       // Handle potential different response formats
       let classesData = [];
@@ -549,7 +398,6 @@ function ClassPage() {
         }
       }
       
-      console.log('fetchClasses: Classes data:', classesData);
       
       if (classesData.length === 0) {
         setClasses([]);
@@ -562,11 +410,9 @@ function ClassPage() {
         // Fetch student counts for each class
         const classesWithStudentCounts = await Promise.all(classesData.map(async (classItem) => {
           try {
-            console.log(`fetchClasses: Fetching student count for class ID ${classItem.id}`);
             const countResponse = await classService.getStudentCountForClass(classItem.id);
             
             // Log the response to help with debugging
-            console.log(`fetchClasses: Student count API response for class ${classItem.id}:`, countResponse);
             
             // Make sure we handle different formats and potential undefined values
             let studentCount = 0;
@@ -574,7 +420,6 @@ function ClassPage() {
               studentCount = typeof countResponse.data === 'number' ? countResponse.data : 0;
             }
             
-            console.log(`fetchClasses: Student count for class ${classItem.id}: ${studentCount}`);
             
             return {
               ...classItem,
@@ -625,7 +470,6 @@ function ClassPage() {
     
     try {
       const response = await classService.importStudentsFromCsv(selectedClassForImport.id, file);
-      console.log('Import response:', response);
       setImportSuccess(response.data || `Students successfully imported to ${selectedClassForImport.name}`);
       
       // Refresh the class list to update student counts
@@ -722,7 +566,6 @@ function ClassPage() {
   };
 
   const handleConfirmLogout = () => {
-    console.log('ClassPage: Executing logout after confirmation');
     logout();
     setShowLogoutConfirmation(false);
   };
@@ -738,23 +581,17 @@ function ClassPage() {
     setShowDropdown(!showDropdown);
   };
 
-  const getMenuIcon = (name) => {
-    switch (name) {
-      case 'dashboard': return '🏠';
-      case 'exams': return '📝';
-      case 'class': return '📋';
-      case 'reports': return '📊';
-      case 'payment': return '💳';
-      case 'users': return '👥';
-      case 'settings': return '⚙️';
-      case 'signout': return '🚪';
-      case 'myClasses': return '📚';
-      case 'register': return '📋';
-      case 'results': return '📊';
-      case 'assistant': return '🤖';
-      default: return '•';
-    }
+  const menuIconMap = {
+    dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+    exams: <QuizOutlinedIcon fontSize="small" />,
+    class: <ClassOutlinedIcon fontSize="small" />,
+    reports: <AssessmentOutlinedIcon fontSize="small" />,
+    assistant: <SmartToyOutlinedIcon fontSize="small" />,
+    settings: <SettingsOutlinedIcon fontSize="small" />,
+    signout: <LogoutOutlinedIcon fontSize="small" />,
   };
+
+  const getMenuIcon = (name) => menuIconMap[name] || <PeopleOutlineOutlinedIcon fontSize="small" />;
 
   // Determine user role
   const isLecturer = user && user.role === 'ROLE_LECTURER';
@@ -779,7 +616,6 @@ function ClassPage() {
     try {
       setImportLoading(true);
       const response = await classService.getStudentsInClass(classId);
-      console.log('Students in class:', response.data);
       
       // Handle different response formats
       let students = [];
@@ -811,7 +647,6 @@ function ClassPage() {
     
     try {
       const response = await classService.addStudentToClass(selectedClassForImport.id, usernameOrEmail);
-      console.log('Add student response:', response);
       setImportSuccess(`Student ${usernameOrEmail} successfully added to ${selectedClassForImport.name}`);
       
       // Clear the input
@@ -843,7 +678,6 @@ function ClassPage() {
     try {
       const identifier = student.username || student.email;
       const response = await classService.removeStudentFromClass(selectedClassForImport.id, identifier);
-      console.log('Remove student response:', response);
       
       // Refresh the class list to update student counts
       fetchClasses();
@@ -861,9 +695,12 @@ function ClassPage() {
   };
 
   return (
-    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
-      <Sidebar theme={theme}>
-        <Logo>logo</Logo>
+    <DashboardContainer>
+      <Sidebar>
+        <Logo>
+          <span>CL</span>
+          Class Center
+        </Logo>
         <SidebarMenu>
           {isAdmin ? (
             // Admin navigation
@@ -884,18 +721,6 @@ function ClassPage() {
                 <NavIcon>{getMenuIcon('reports')}</NavIcon>
                 Reports
               </NavItem>
-              <NavItem to="/ai-assistant">
-                <NavIcon>{getMenuIcon('assistant')}</NavIcon>
-                AI Assistant
-              </NavItem>
-              {/* <NavItem to="/payment">
-                <NavIcon>{getMenuIcon('payment')}</NavIcon>
-                Payment
-              </NavItem>
-              <NavItem to="/users">
-                <NavIcon>{getMenuIcon('users')}</NavIcon>
-                Users
-              </NavItem> */}
             </>
           ) : (
             // Lecturer navigation
@@ -937,22 +762,31 @@ function ClassPage() {
 
       <MainContent>
         <Header>
-          <PageTitle>Classes</PageTitle>
+          <PageTitle>
+            <h1>Classes</h1>
+            <p>Quản lý lớp học và thành viên trong hệ thống.</p>
+          </PageTitle>
           <HeaderRight>
-            {/* <ThemeToggle /> */}
-            <NotificationIcon />
+            <ThemeToggle />
+            <NotificationIcon type="button" aria-label="Notifications">
+              <NotificationsNoneOutlinedIcon fontSize="small" />
+            </NotificationIcon>
             <DropdownContainer ref={dropdownRef}>
-              <UserAvatar onClick={toggleDropdown}>{getUserInitial()}</UserAvatar>
+              <UserAvatar type="button" onClick={toggleDropdown} aria-label="User menu">
+                {getUserInitial()}
+              </UserAvatar>
               {showDropdown && (
                 <Dropdown>
-                  <DropdownItem>
-                    <span>👤</span> Profile
-                  </DropdownItem>
-                  <DropdownItem>
-                    <span>⚙️</span> Settings
+                  <DropdownItem onClick={() => {
+                    setShowDropdown(false);
+                    navigate('/settings');
+                  }}>
+                    <SettingsOutlinedIcon fontSize="small" />
+                    Settings
                   </DropdownItem>
                   <DropdownItem onClick={handleLogout}>
-                    <span>🚪</span> Sign out
+                    <LogoutOutlinedIcon fontSize="small" />
+                    Sign out
                   </DropdownItem>
                 </Dropdown>
               )}
@@ -974,9 +808,9 @@ function ClassPage() {
               <option value="This Year">This Year</option>
             </SortDropdown>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <ActionsRow>
             <Button onClick={handleAddClass}>
-              <span>➕</span> Add Class
+              <AddOutlinedIcon fontSize="small" /> Add Class
             </Button>
             <input 
               type="file" 
@@ -985,7 +819,7 @@ function ClassPage() {
               style={{ display: 'none' }}
               accept=".csv" 
             />
-          </div>
+          </ActionsRow>
         </ContentHeader>
 
         {loading ? (
@@ -1314,7 +1148,7 @@ function ClassPage() {
         onConfirm={handleConfirmLogout}
         message="Are you sure you want to logout?"
       />
-    </PageContainer>
+    </DashboardContainer>
   );
 }
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../contexts/ThemeContext';
 import statisticsService from '../services/statisticsService';
@@ -10,138 +10,37 @@ import studentExamService from '../services/studentExamService';
 import examService from '../services/examService';
 import { toast } from 'react-hot-toast';
 import { Spinner, Button } from 'react-bootstrap';
+import ThemeToggle from '../components/common/ThemeToggle';
+import {
+  DashboardContainer,
+  Sidebar,
+  Logo,
+  SidebarMenu,
+  NavItem,
+  NavIcon,
+  BottomMenu,
+  MainContent,
+  Header,
+  HeaderRight,
+  NotificationIcon,
+  UserAvatar,
+  DropdownContainer,
+  Dropdown,
+  DropdownItem,
+  PageTitle,
+} from '../components/dashboard/DashboardStyles';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 
 // Styled Components
-const PageContainer = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  transition: background-color 0.3s ease;
-`;
-
-const Sidebar = styled.aside`
-  width: 180px;
-  background-color: ${props => props.theme === 'dark' ? 'var(--bg-sidebar)' : '#6a00ff'};
-  position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border-radius: 0 20px 20px 0;
-  transition: background-color 0.3s ease;
-`;
-
-const Logo = styled.div`
-  font-size: 1.25rem;
-  font-weight: 600;
-  padding: 2rem 1.5rem;
-  display: flex;
-  align-items: center;
-  
-  &::before {
-    content: "⦿⦿⦿";
-    letter-spacing: 2px;
-    font-size: 10px;
-    margin-right: 8px;
-    color: white;
-  }
-`;
-
-const SidebarMenu = styled.div`
-  flex: 1;
-  margin-top: 1rem;
-`;
-
-const NavItem = styled(Link)`
-  padding: 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
-  text-decoration: none;
-  font-size: 0.9rem;
-  
-  &.active {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  &:hover {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  
-  &.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background-color: white;
-  }
-`;
-
-const NavIcon = styled.span`
-  margin-right: 12px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  opacity: 0.9;
-`;
-
-const BottomMenu = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-  margin-left: 180px;
-  padding: 2rem 3rem;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-`;
-
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const PageTitle = styled.div`
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--text-primary);
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: ${props => props.theme === 'dark' ? '#8d47ff' : '#6a00ff'};
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-`;
-
 const StatsContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -523,6 +422,8 @@ function ResultsPage() {
   const [selectedExam, setSelectedExam] = useState(null);
   const [examDetailLoading, setExamDetailLoading] = useState(false);
   const [examDetail, setExamDetail] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Fetch results when component mounts
   useEffect(() => {
@@ -536,16 +437,12 @@ function ResultsPage() {
       try {
         setLoading(true);
         const response = await statisticsService.getStudentScoreByClasses(user.id);
-        console.log('🔍 Full API response:', response.data);
-        console.log('🔍 Response structure:', JSON.stringify(response.data, null, 2));
-        console.log('🔍 ClassResults array:', response.data.classResults);
         setResults(response.data);
         setError(null);
         
         // Fetch class names for all classes
         if (response.data.classResults && response.data.classResults.length > 0) {
           const classIds = response.data.classResults.map(classResult => classResult.classId);
-          console.log('🔍 Fetching names for class IDs:', classIds);
           await fetchClassNames(classIds);
         }
       } catch (err) {
@@ -567,7 +464,6 @@ function ResultsPage() {
     try {
       // Thay vì gọi getClassById cho từng class (bị permission denied),
       // ta sẽ gọi getStudentClasses một lần để lấy tất cả classes của student
-      console.log('🔍 Fetching all student classes to get class names...');
       const response = await classService.getStudentClasses(user.id, 0, 100); // Large size to get all classes
       
       if (response.data && response.data.content) {
@@ -575,7 +471,6 @@ function ResultsPage() {
         response.data.content.forEach(classData => {
           if (classIds.includes(classData.id)) {
             newClassNames[classData.id] = classData.name || `Class ${classData.id}`;
-            console.log(`📚 Found class name for ${classData.id}:`, classData.name);
           }
         });
       }
@@ -584,12 +479,10 @@ function ResultsPage() {
       classIds.forEach(classId => {
         if (!newClassNames[classId]) {
           newClassNames[classId] = `Class ${classId}`;
-          console.log(`📚 Using fallback name for class ${classId}`);
         }
       });
       
       setClassNames(prev => ({ ...prev, ...newClassNames }));
-      console.log('📚 All class names updated:', newClassNames);
     } catch (err) {
       console.error('❌ Error fetching class names:', err);
       // Set fallback names for all classes
@@ -603,11 +496,11 @@ function ResultsPage() {
 
   const handleLogout = (e) => {
     e.preventDefault();
+    setShowDropdown(false);
     setShowLogoutConfirmation(true);
   };
 
   const handleConfirmLogout = () => {
-    console.log('ResultsPage: Executing logout after confirmation');
     logout();
     setShowLogoutConfirmation(false);
   };
@@ -620,14 +513,8 @@ function ResultsPage() {
     return 'S';
   };
 
-  // Get user's full name
-  const getFullName = () => {
-    if (user) {
-      const firstName = user.firstName || '';
-      const lastName = user.lastName || '';
-      return `${firstName} ${lastName}`.trim() || user.username || 'Student';
-    }
-    return 'Student';
+  const toggleDropdown = () => {
+    setShowDropdown((prev) => !prev);
   };
 
   // Calculate average score across all classes
@@ -660,21 +547,20 @@ function ResultsPage() {
   };
 
   // Function to get icon for menu items
-  const getMenuIcon = (name) => {
-    switch(name) {
-      case 'dashboard': return '🏠';
-      case 'exams': return '📝';
-      case 'results': return '📊';
-      case 'assistant': return '🤖';
-      case 'settings': return '⚙️';
-      case 'signout': return '🚪';
-      default: return '•';
-    }
+  const menuIcons = {
+    dashboard: <SpaceDashboardOutlinedIcon fontSize="small" />,
+    exams: <QuizOutlinedIcon fontSize="small" />,
+    results: <BarChartOutlinedIcon fontSize="small" />,
+    assistant: <SmartToyOutlinedIcon fontSize="small" />,
+    settings: <SettingsOutlinedIcon fontSize="small" />,
+    signout: <LogoutOutlinedIcon fontSize="small" />,
   };
+  const getMenuIcon = (name) => menuIcons[name] || <CircleOutlinedIcon fontSize="small" />;
+  const isRouteActive = (path) => location.pathname === path;
 
-  // Function to check if a route is active
-  const isRouteActive = (path) => {
-    return location.pathname.startsWith(path);
+  const handleSettingsNavigate = () => {
+    setShowDropdown(false);
+    navigate('/settings');
   };
 
   // Function to get letter grade from 4-point scale score
@@ -735,7 +621,6 @@ function ResultsPage() {
 
       // Get exam details with student answers using studentId and examId
       const response = await studentExamService.getStudentExamDetailForStudent(user.id, exam.id);
-      console.log('Exam detail response:', response.data);
 
       if (response.data) {
         setExamDetail(response.data);
@@ -757,9 +642,12 @@ function ResultsPage() {
   };
 
   return (
-    <PageContainer className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
-      <Sidebar theme={theme}>
-        <Logo>logo</Logo>
+    <DashboardContainer>
+      <Sidebar>
+        <Logo>
+          <span>RS</span>
+          Results
+        </Logo>
         <SidebarMenu>
           <NavItem to="/student-dashboard" className={isRouteActive('/student-dashboard') ? 'active' : ''}>
             <NavIcon>{getMenuIcon('dashboard')}</NavIcon>
@@ -792,10 +680,37 @@ function ResultsPage() {
       
       <MainContent>
         <Header>
-          <PageTitle>My Results</PageTitle>
+          <PageTitle>
+            <h1>My Results</h1>
+            <p>Review your performance across classes and exams.</p>
+          </PageTitle>
           
           <HeaderRight>
-            <UserAvatar theme={theme}>{getUserInitial()}</UserAvatar>
+            <ThemeToggle />
+            <NotificationIcon type="button" aria-label="Notifications">
+              <NotificationsNoneOutlinedIcon fontSize="small" />
+            </NotificationIcon>
+            <DropdownContainer ref={dropdownRef}>
+              <UserAvatar type="button" onClick={toggleDropdown} aria-label="User menu">
+                {getUserInitial()}
+              </UserAvatar>
+              {showDropdown && (
+                <Dropdown>
+                  <DropdownItem onClick={handleSettingsNavigate}>
+                    <PersonOutlineOutlinedIcon fontSize="small" />
+                    Profile
+                  </DropdownItem>
+                  <DropdownItem onClick={handleSettingsNavigate}>
+                    <SettingsOutlinedIcon fontSize="small" />
+                    Settings
+                  </DropdownItem>
+                  <DropdownItem onClick={handleLogout}>
+                    <LogoutOutlinedIcon fontSize="small" />
+                    Sign out
+                  </DropdownItem>
+                </Dropdown>
+              )}
+            </DropdownContainer>
           </HeaderRight>
         </Header>
         
@@ -1076,7 +991,7 @@ function ResultsPage() {
           </LargeModalContainer>
         </ModalOverlay>
       )}
-    </PageContainer>
+    </DashboardContainer>
   );
 }
 
