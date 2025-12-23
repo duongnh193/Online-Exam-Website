@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import SendIcon from '@mui/icons-material/Send';
+import HistoryIcon from '@mui/icons-material/History';
+import AddIcon from '@mui/icons-material/Add';
 import statisticsService from '../../services/statisticsService';
 import dashboardService from '../../services/dashboardService';
 import assistantService from '../../services/assistantService';
+import chatHistoryService from '../../services/chatHistoryService';
+import ChatHistoryPanel from './ChatHistoryPanel';
 import {
   usageGuides,
   studentStudyTips,
@@ -18,23 +24,58 @@ const WidgetContainer = styled.section`
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-height: 0;
+  height: calc(100vh - 200px);
+  max-height: calc(100vh - 200px);
 `;
 
 const ChatSurface = styled.div`
   flex: 1;
   background: var(--bg-secondary, #ffffff);
   border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(80, 72, 229, 0.15);
+  box-shadow: var(--card-shadow, 0 16px 40px rgba(80, 72, 229, 0.15));
   padding: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-height: 0;
+  overflow: hidden;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const WidgetHeader = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: center;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
+const IconButton = styled.button`
+  background: var(--hover-bg, rgba(106, 0, 255, 0.08));
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--highlight-color, #6a00ff);
+  transition: background 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    background: var(--hover-bg, rgba(106, 0, 255, 0.14));
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 `;
 
 const Title = styled.div`
@@ -63,35 +104,64 @@ const Suggestions = styled.div`
 
 const SuggestionChip = styled.button`
   border: none;
-  background: rgba(106, 0, 255, 0.08);
-  color: #6a00ff;
+  background: var(--hover-bg, rgba(106, 0, 255, 0.08));
+  color: var(--highlight-color, #6a00ff);
   border-radius: 999px;
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, color 0.3s ease;
 
   &:hover {
-    background: rgba(106, 0, 255, 0.14);
+    background: var(--hover-bg, rgba(106, 0, 255, 0.14));
     transform: translateY(-1px);
   }
 
   &:disabled {
-    background: rgba(106, 0, 255, 0.18);
+    background: var(--hover-bg, rgba(106, 0, 255, 0.18));
     cursor: not-allowed;
     transform: none;
+    opacity: 0.6;
   }
 `;
 
 const ConversationPane = styled.div`
   flex: 1;
-  background: rgba(106, 0, 255, 0.05);
+  background: ${props => {
+    // Light theme: light purple tint
+    // Dark theme: slightly lighter than bg-secondary for contrast
+    return 'var(--bg-primary, rgba(106, 0, 255, 0.05))';
+  }};
   border-radius: 16px;
   padding: 1.25rem;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  min-height: 0;
+  max-height: 100%;
+  transition: background-color 0.3s ease;
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(106, 0, 255, 0.3);
+    border-radius: 10px;
+    transition: background 0.2s ease;
+    
+    &:hover {
+      background: rgba(106, 0, 255, 0.5);
+    }
+  }
 `;
 
 const Message = styled.div`
@@ -103,13 +173,17 @@ const Message = styled.div`
   line-height: 1.4;
   text-align: left;
   background: ${({ role }) =>
-    role === 'user' ? '#6a00ff' : 'white'};
-  color: ${({ role }) => (role === 'user' ? 'white' : '#333')};
+    role === 'user' ? 'var(--highlight-color, #6a00ff)' : 'var(--bg-secondary, #ffffff)'};
+  color: ${({ role }) => 
+    role === 'user' 
+      ? 'white' 
+      : 'var(--text-primary, #333)'};
   box-shadow: ${({ role }) =>
     role === 'user'
       ? '0 6px 16px rgba(106, 0, 255, 0.25)'
-      : '0 4px 12px rgba(15, 23, 42, 0.08)'};
+      : 'var(--card-shadow, 0 4px 12px rgba(15, 23, 42, 0.08))'};
   white-space: pre-line;
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const SourceBadge = styled.span`
@@ -123,23 +197,68 @@ const SourceBadge = styled.span`
 
 const InputRow = styled.form`
   display: flex;
-  gap: 0.85rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, rgba(15, 23, 42, 0.08));
+`;
+
+const InputContainer = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, rgba(15, 23, 42, 0.08));
+  padding: 0.5rem 1rem;
+  background: var(--input-bg, var(--bg-secondary, #ffffff));
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+
+  &:focus-within {
+    border-color: var(--highlight-color, #6a00ff);
+    box-shadow: 0 0 0 3px rgba(106, 0, 255, 0.16);
+  }
 `;
 
 const ChatInput = styled.input`
   flex: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  padding: 0.65rem 1rem;
+  border: none;
+  outline: none;
+  padding: 0.25rem 0;
   font-size: 0.9rem;
-  background: white;
+  background: transparent;
   color: var(--text-primary, #1f1f1f);
+  transition: color 0.3s ease;
 
-  &:focus {
-    outline: none;
-    border-color: #6a00ff;
-    box-shadow: 0 0 0 3px rgba(106, 0, 255, 0.16);
+  &::placeholder {
+    color: var(--text-secondary, #6f6f6f);
+  }
+`;
+
+const FileInput = styled.input`
+  display: none;
+`;
+
+const UploadButton = styled.button`
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #6f6f6f);
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s ease, color 0.3s ease;
+
+  &:hover {
+    background: var(--hover-bg, rgba(106, 0, 255, 0.1));
+    color: var(--highlight-color, #6a00ff);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
 
@@ -148,13 +267,18 @@ const SendButton = styled.button`
   border: none;
   background: #6a00ff;
   color: white;
-  padding: 0.65rem 1.4rem;
+  padding: 0.65rem 1.2rem;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   transition: background 0.2s ease, transform 0.2s ease;
+  min-width: 80px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #5a00d4;
     transform: translateY(-1px);
   }
@@ -166,6 +290,35 @@ const SendButton = styled.button`
   }
 `;
 
+const FilePreview = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--hover-bg, rgba(106, 0, 255, 0.1));
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--highlight-color, #6a00ff);
+  margin-bottom: 0.5rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  
+  button {
+    background: none;
+    border: none;
+    color: var(--highlight-color, #6a00ff);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.5rem;
+    font-size: 1rem;
+    line-height: 1;
+    transition: opacity 0.2s ease;
+    
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+`;
+
 const EmptyState = styled.div`
   color: rgba(15, 23, 42, 0.7);
   font-size: 0.9rem;
@@ -174,28 +327,28 @@ const EmptyState = styled.div`
 
 const INTRO_MESSAGES = {
   student:
-    'Chao ban! Toi co the phan tich diem cua ban de goi y huong hoc va cung cap huong dan su dung he thong.',
+    'Hello! I can analyze your scores to suggest study directions and provide system usage guidance.',
   lecturer:
-    'Chao giang vien! Toi ho tro tong quan lop, xay dung de va tao ke hoach bo tro cho sinh vien.'
+    'Hello lecturer! I help you overview classes, build exams, and create support plans for students.'
 };
 
 const SECONDARY_HINT =
-  'Hay chon mot nut goi y hoac nhap tu khoa nhu "Goi y hoc tap", "Huong dan su dung", "Bao cao lop".';
+  'Please select a suggestion button or type keywords like "Study suggestions", "Usage guide", "Class report".';
 
 const SUGGESTIONS = {
   student: [
-    { label: 'Goi y hoc tap', intent: 'learning' },
-    { label: 'Toi muon xem diem yeu', intent: 'learning_focus' },
-    { label: 'Huong dan su dung', intent: 'guide' }
+    { label: 'Study Suggestions', intent: 'learning' },
+    { label: 'View Weak Scores', intent: 'learning_focus' },
+    { label: 'Usage Guide', intent: 'guide' }
   ],
   lecturer: [
-    { label: 'Tong quan lop', intent: 'lecturer_overview' },
-    { label: 'Cai thien chat luong de', intent: 'lecturer_quality' },
-    { label: 'Huong dan su dung', intent: 'guide' }
+    { label: 'Class Overview', intent: 'lecturer_overview' },
+    { label: 'Improve Exam Quality', intent: 'lecturer_quality' },
+    { label: 'Usage Guide', intent: 'guide' }
   ],
   default: [
-    { label: 'Huong dan su dung', intent: 'guide' },
-    { label: 'Goi y hoc tap', intent: 'learning' }
+    { label: 'Usage Guide', intent: 'guide' },
+    { label: 'Study Suggestions', intent: 'learning' }
   ]
 };
 
@@ -223,9 +376,10 @@ const normalizeCount = (value) => {
 const detectIntent = (text, role) => {
   const lower = text.toLowerCase();
   if (
-    lower.includes('huong dan') ||
-    lower.includes('cach su dung') ||
-    lower.includes('dang nhap') ||
+    lower.includes('guide') ||
+    lower.includes('usage') ||
+    lower.includes('how to') ||
+    lower.includes('login') ||
     lower.includes('website') ||
     lower.includes('help')
   ) {
@@ -233,25 +387,26 @@ const detectIntent = (text, role) => {
   }
 
   if (
-    lower.includes('hoc tap') ||
-    lower.includes('diem') ||
-    lower.includes('ket qua') ||
-    lower.includes('on tap') ||
-    lower.includes('mon') ||
-    lower.includes('thanh tich')
+    lower.includes('study') ||
+    lower.includes('score') ||
+    lower.includes('result') ||
+    lower.includes('review') ||
+    lower.includes('subject') ||
+    lower.includes('achievement') ||
+    lower.includes('grade')
   ) {
     return 'learning';
   }
 
   if (
     role === 'lecturer' &&
-    (lower.includes('lop') ||
-      lower.includes('bao cao') ||
-      lower.includes('quan ly') ||
-      lower.includes('chat luong') ||
-      lower.includes('de thi')))
+    (lower.includes('class') ||
+      lower.includes('report') ||
+      lower.includes('manage') ||
+      lower.includes('quality') ||
+      lower.includes('exam')))
    {
-    return lower.includes('chat luong') ? 'lecturer_quality' : 'lecturer_overview';
+    return lower.includes('quality') ? 'lecturer_quality' : 'lecturer_overview';
   }
 
   return 'unknown';
@@ -272,7 +427,7 @@ const buildStudentAdvice = (data, focusLowOnly = false) => {
       item.className ||
       item.name ||
       item.classTitle ||
-      (item.classId ? `Lop ${item.classId}` : 'Lop chua ro ten');
+      (item.classId ? `Class ${item.classId}` : 'Unnamed Class');
     return {
       ...item,
       score10: Number(score.toFixed(2)),
@@ -291,14 +446,14 @@ const buildStudentAdvice = (data, focusLowOnly = false) => {
 
   const lines = [];
   lines.push(
-    `Tong quan: diem trung binh hien tai cua ban khoang ${overall.toFixed(1)}/10 tren ${sorted.length} lop co diem.`
+    `Overview: Your current average score is approximately ${overall.toFixed(1)}/10 across ${sorted.length} classes with scores.`
   );
 
   if (!focusLowOnly && strongest.length) {
     const bestList = strongest
       .map((item) => `${item.label} (${item.score10.toFixed(1)})`)
       .join('; ');
-    lines.push(`Mon manh hien tai: ${bestList}. Hay giu phong do va chia se kinh nghiem cho ban cung lop neu duoc.`);
+    lines.push(`Strong subjects: ${bestList}. Keep up the good work and share your experience with classmates if possible.`);
   }
 
   if (lowSubjects.length) {
@@ -306,20 +461,20 @@ const buildStudentAdvice = (data, focusLowOnly = false) => {
       .map((item) => `${item.label} (${item.score10.toFixed(1)})`)
       .join('; ');
     lines.push(
-      `Mon can uu tien on tap: ${lowList}. Thu tach nho muc tieu va lap lich on lai trong tuan nay.`
+      `Subjects to prioritize: ${lowList}. Try breaking down goals and schedule review sessions this week.`
     );
     lines.push(
-      `De cai thien nhanh: ${studentStudyTips.lowScoreAdvice.slice(0, 3).join('; ')}.`
+      `To improve quickly: ${studentStudyTips.lowScoreAdvice.slice(0, 3).join('; ')}.`
     );
   } else if (weakest.length) {
     const weakList = weakest
       .map((item) => `${item.label} (${item.score10.toFixed(1)})`)
       .join('; ');
-    lines.push(`Mon co diem thap nhat hien tai: ${weakList}. Ban nen xem lai bai ghi va hoi giang vien som.`);
+    lines.push(`Lowest scoring subjects: ${weakList}. You should review your notes and ask your lecturer early.`);
   }
 
   if (!focusLowOnly) {
-    lines.push(`Meo duoc de xuat: ${studentStudyTips.defaultAdvice.join('; ')}.`);
+    lines.push(`Suggested tips: ${studentStudyTips.defaultAdvice.join('; ')}.`);
   }
 
   return lines.join('\n');
@@ -327,7 +482,7 @@ const buildStudentAdvice = (data, focusLowOnly = false) => {
 
 const buildGuideResponse = (role) => {
   const sections = usageGuides[role] || usageGuides.student;
-  const lines = ['Huong dan nhanh:'];
+  const lines = ['Quick Guide:'];
 
   sections.forEach((section) => {
     lines.push(`${section.title}:`);
@@ -342,7 +497,7 @@ const buildGuideResponse = (role) => {
     .slice(0, 4);
 
   if (faqEntries.length) {
-    lines.push('Cau hoi pho bien:');
+    lines.push('Frequently Asked Questions:');
     faqEntries.forEach((entry, index) => {
       lines.push(`  ${index + 1}. ${entry.question} -> ${entry.answer}`);
     });
@@ -356,19 +511,19 @@ const buildLecturerResponse = (stats, includeQuality = false) => {
   const lines = [];
 
   lines.push(
-    `Tong quan: ban dang quan ly khoang ${classCount} lop va ${examCount} bai thi. Nen kiem tra muc Reports hang tuan de theo doi diem.`
+    `Overview: You are currently managing approximately ${classCount} classes and ${examCount} exams. Check the Reports section weekly to track scores.`
   );
   lines.push(
-    'Hay su dung tab Class de thong bao nhanh cho sinh vien va cap nhat tai lieu trong muc Resources hoac Files.'
+    'Use the Class tab to quickly notify students and update materials in the Resources or Files section.'
   );
 
-  lines.push(`Goi y hanh dong nhanh: ${lecturerQualityTips.quickWins.join('; ')}.`);
+  lines.push(`Quick action suggestions: ${lecturerQualityTips.quickWins.join('; ')}.`);
 
   if (includeQuality) {
     lines.push(
-      `Cai thien kho cau hoi: ${lecturerQualityTips.questionBank.join('; ')}.`
+      `Improve question bank: ${lecturerQualityTips.questionBank.join('; ')}.`
     );
-    lines.push(`Ke hoach bo tro sau thi: ${lecturerQualityTips.followUp.join('; ')}.`);
+    lines.push(`Post-exam support plan: ${lecturerQualityTips.followUp.join('; ')}.`);
   }
 
   return lines.join('\n');
@@ -412,14 +567,14 @@ const callGenerativeModel = async (conversationSnapshot, roleLabel = 'student') 
     }
 
     return {
-      text: 'Khong nhan duoc phan hoi tu mo hinh AI. Vui long kiem tra backend cau hinh.',
+      text: 'No response received from AI model. Please check backend configuration.',
       source: 'Gemini (API)'
     };
   } catch (error) {
     console.error('Failed to connect Gemini assistant:', error);
-    let errorMessage = 'Khong ket noi duoc voi mo hinh AI. Hay thu lai sau.';
+    let errorMessage = 'Unable to connect to AI model. Please try again later.';
     if (error.response?.status === 401 || error.response?.status === 403) {
-      errorMessage = 'Chua cau hinh API key hop le cho mo hinh AI.';
+      errorMessage = 'No valid API key configured for AI model.';
     }
     return {
       text: errorMessage,
@@ -430,15 +585,63 @@ const callGenerativeModel = async (conversationSnapshot, roleLabel = 'student') 
 
 const ChatbotWidget = ({ userRole = 'student', user = null }) => {
   const normalizedRole = userRole === 'lecturer' ? 'lecturer' : 'student';
-  const [messages, setMessages] = useState(() => [
-    { role: 'assistant', text: INTRO_MESSAGES[normalizedRole], source: 'intro' },
-    { role: 'assistant', text: SECONDARY_HINT, source: 'guide' }
-  ]);
+  
+  // Initialize conversation ID
+  const [currentConversationId, setCurrentConversationId] = useState(() => {
+    // Try to load current conversation ID from storage
+    const savedId = chatHistoryService.getCurrentConversationId();
+    if (savedId) {
+      const conversation = chatHistoryService.getConversation(savedId);
+      if (conversation && conversation.messages.length > 0) {
+        return savedId;
+      }
+    }
+    // Create new conversation ID
+    return chatHistoryService.generateConversationId();
+  });
+
+  const [messages, setMessages] = useState(() => {
+    // Try to load messages from current conversation
+    const savedId = chatHistoryService.getCurrentConversationId();
+    if (savedId) {
+      const conversation = chatHistoryService.getConversation(savedId);
+      if (conversation && conversation.messages.length > 0) {
+        return conversation.messages;
+      }
+    }
+    // Default intro messages
+    return [
+      { role: 'assistant', text: INTRO_MESSAGES[normalizedRole], source: 'intro' },
+      { role: 'assistant', text: SECONDARY_HINT, source: 'guide' }
+    ];
+  });
+  
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const fileInputRef = useRef(null);
+  const conversationEndRef = useRef(null);
 
   const activeSuggestions =
     SUGGESTIONS[normalizedRole] || SUGGESTIONS.default;
+
+  // Auto scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (conversationEndRef.current) {
+      conversationEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Auto-save conversation when messages change
+  useEffect(() => {
+    // Don't save intro messages only
+    const userMessages = messages.filter(m => m.role === 'user');
+    if (userMessages.length > 0) {
+      chatHistoryService.saveConversation(currentConversationId, messages);
+      chatHistoryService.setCurrentConversationId(currentConversationId);
+    }
+  }, [messages, currentConversationId]);
 
   const appendAssistantMessage = (text, source = 'assistant') => {
     setMessages((prev) => [...prev, { role: 'assistant', text, source }]);
@@ -461,7 +664,7 @@ const handleIntent = async (intent, conversationSnapshot) => {
           return { text: advice, source: 'Analytics' };
         }
         return {
-          text: 'Ban co the xem bao cao diem cua sinh vien tai muc Reports va loc theo lop de gui phan hoi ca nhan hoa.',
+          text: 'You can view student score reports in the Reports section and filter by class to send personalized feedback.',
           source: 'Guide'
         };
       }
@@ -476,7 +679,7 @@ const handleIntent = async (intent, conversationSnapshot) => {
         }
         if (!user?.id) {
           return {
-            text: 'Khong tim thay ma giang vien. Hay dang xuat va dang nhap lai.',
+            text: 'Lecturer ID not found. Please logout and login again.',
             source: 'System'
           };
         }
@@ -507,12 +710,12 @@ const handleIntent = async (intent, conversationSnapshot) => {
     console.error('Chatbot intent error:', error);
     if (intent === 'learning' || intent === 'learning_focus') {
       return {
-        text: 'Khong lay duoc du lieu diem. Hay thu lai sau vai phut.',
+        text: 'Unable to retrieve score data. Please try again in a few minutes.',
         source: 'Analytics'
       };
     }
     return {
-      text: 'Toi gap loi khi xu ly yeu cau nay. Ban vui long thu lai nhe.',
+      text: 'I encountered an error processing this request. Please try again.',
       source: 'Assistant'
     };
   }
@@ -558,16 +761,107 @@ const handleIntent = async (intent, conversationSnapshot) => {
     processUserMessage(inputValue);
   };
 
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Optionally, you can process the file immediately or wait for send
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSendWithFile = async () => {
+    if (!inputValue.trim() && !selectedFile) return;
+    
+    let messageText = inputValue.trim();
+    if (selectedFile) {
+      messageText = messageText 
+        ? `${messageText} [Attached file: ${selectedFile.name}]`
+        : `[Attached file: ${selectedFile.name}]`;
+    }
+    
+    if (messageText) {
+      await processUserMessage(messageText);
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleNewChat = () => {
+    const newConversationId = chatHistoryService.generateConversationId();
+    setCurrentConversationId(newConversationId);
+    chatHistoryService.setCurrentConversationId(newConversationId);
+    setMessages([
+      { role: 'assistant', text: INTRO_MESSAGES[normalizedRole], source: 'intro' },
+      { role: 'assistant', text: SECONDARY_HINT, source: 'guide' }
+    ]);
+    setInputValue('');
+    setSelectedFile(null);
+  };
+
+  const handleSelectConversation = (conversationId) => {
+    const conversation = chatHistoryService.getConversation(conversationId);
+    if (conversation) {
+      setCurrentConversationId(conversationId);
+      chatHistoryService.setCurrentConversationId(conversationId);
+      setMessages(conversation.messages);
+      setIsHistoryOpen(false);
+    }
+  };
+
+  const handleDeleteConversation = (conversationId) => {
+    if (conversationId === currentConversationId) {
+      // If deleting current conversation, start a new one
+      handleNewChat();
+    }
+  };
+
   return (
-    <WidgetContainer>
-      <ChatSurface>
+    <>
+      <ChatHistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        currentConversationId={currentConversationId}
+        onSelectConversation={handleSelectConversation}
+        onDeleteConversation={handleDeleteConversation}
+      />
+      <WidgetContainer>
+        <ChatSurface>
         <WidgetHeader>
           <Title>
             <h2>AI Assistant (beta)</h2>
             <span>
-              Tro ly ao giup {normalizedRole === 'lecturer' ? 'giang vien quan ly lop va cai thien chat luong de' : 'sinh vien dinh huong on tap va lam quen he thong'}
+              Virtual assistant helping {normalizedRole === 'lecturer' ? 'lecturers manage classes and improve exam quality' : 'students orient study and get familiar with the system'}
             </span>
           </Title>
+          <HeaderActions>
+            <IconButton
+              onClick={handleNewChat}
+              title="New Chat"
+              aria-label="Start new conversation"
+            >
+              <AddIcon style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+            <IconButton
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+              title="Chat History"
+              aria-label="Toggle chat history"
+            >
+              <HistoryIcon style={{ fontSize: '1.25rem' }} />
+            </IconButton>
+          </HeaderActions>
         </WidgetHeader>
 
         <Suggestions>
@@ -585,35 +879,76 @@ const handleIntent = async (intent, conversationSnapshot) => {
 
         <ConversationPane>
           {messages.length === 0 ? (
-            <EmptyState>Hay dat cau hoi de bat dau cuoc tro chuyen.</EmptyState>
+            <EmptyState>Please ask a question to start the conversation.</EmptyState>
           ) : (
-            messages.map((message, idx) => (
-              <Message role={message.role} key={`${message.role}-${idx}`}>
-                {message.text}
-                {message.role === 'assistant' && message.source && (
-                  <SourceBadge role={message.role}>
-                    {message.source.toUpperCase()}
-                  </SourceBadge>
-                )}
-              </Message>
-            ))
+            <>
+              {messages.map((message, idx) => (
+                <Message role={message.role} key={`${message.role}-${idx}`}>
+                  {message.text}
+                  {message.role === 'assistant' && message.source && (
+                    <SourceBadge role={message.role}>
+                      {message.source.toUpperCase()}
+                    </SourceBadge>
+                  )}
+                </Message>
+              ))}
+              <div ref={conversationEndRef} />
+            </>
           )}
         </ConversationPane>
 
+        {selectedFile && (
+          <FilePreview>
+            <AttachFileIcon style={{ fontSize: '1rem' }} />
+            <span>{selectedFile.name}</span>
+            <button type="button" onClick={handleRemoveFile} aria-label="Remove file">
+              ×
+            </button>
+          </FilePreview>
+        )}
+        
         <InputRow onSubmit={handleSubmit}>
-          <ChatInput
-            type="text"
-            placeholder="Viet cau hoi hoac yeu cau cua ban..."
-            value={inputValue}
-            onChange={(event) => setInputValue(event.target.value)}
-            disabled={isSending}
-          />
-          <SendButton type="submit" disabled={isSending}>
-            Gui
+          <InputContainer>
+            <UploadButton
+              type="button"
+              onClick={handleFileSelect}
+              disabled={isSending}
+              aria-label="Upload file"
+            >
+              <AttachFileIcon style={{ fontSize: '1.25rem' }} />
+            </UploadButton>
+            <FileInput
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg"
+            />
+            <ChatInput
+              type="text"
+              placeholder="Type your question or request..."
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              disabled={isSending}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+          </InputContainer>
+          <SendButton
+            type="submit"
+            disabled={isSending || (!inputValue.trim() && !selectedFile)}
+            onClick={handleSendWithFile}
+          >
+            <SendIcon style={{ fontSize: '1rem' }} />
+            Send
           </SendButton>
         </InputRow>
       </ChatSurface>
     </WidgetContainer>
+    </>
   );
 };
 

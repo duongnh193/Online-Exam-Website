@@ -1,53 +1,53 @@
 export const usageGuides = {
   student: [
     {
-      title: 'Bat dau voi he thong',
+      title: 'Getting Started',
       steps: [
-        'Dang nhap bang tai khoan duoc cap',
-        'Vao muc Exams de xem bai thi sap dien ra',
-        'Kiem tra muc Results sau moi bai thi de theo doi tien do'
+        'Login with your provided account',
+        'Go to Exams section to view upcoming exams',
+        'Check Results section after each exam to track progress'
       ]
     },
     {
-      title: 'Lam quen voi giao dien',
+      title: 'Getting Familiar with Interface',
       steps: [
-        'Thanh ben trai giup di chuyen giua Dashboard, Exams va Results',
-        'Nut Theme o goc tren phai dung de chuyen che do sang toi sang',
-        'Thong bao se hien o goc tren khi co lich thi moi hoac nhac nho'
+        'Left sidebar helps navigate between Dashboard, Exams and Results',
+        'Theme button at top right switches between light and dark mode',
+        'Notifications appear at top when there are new exam schedules or reminders'
       ]
     },
     {
-      title: 'Khi gap kho khan',
+      title: 'When Facing Difficulties',
       steps: [
-        'Dung muc Huong dan trong dashboard de xem video huong dan',
-        'Lien he giang vien neu khong vao duoc bai thi',
-        'Su dung nut Support neu muon gui yeu cau ho tro'
+        'Use Guide section in dashboard to watch tutorial videos',
+        'Contact lecturer if unable to access exam',
+        'Use Support button if you want to send support request'
       ]
     }
   ],
   lecturer: [
     {
-      title: 'Thiet lap nhanh',
+      title: 'Quick Setup',
       steps: [
-        'Vao Exams > Tao de de tao bai kiem tra moi',
-        'Gan lop hoc tu muc Class va moi sinh vien',
-        'Dat thoi gian mo va dong bai thi ro rang'
+        'Go to Exams > Create Exam to create new test',
+        'Assign classes from Class section and invite students',
+        'Set clear open and close times for exams'
       ]
     },
     {
-      title: 'Quan ly lop',
+      title: 'Class Management',
       steps: [
-        'Su dung tab Class de xem thong ke si so va trang thai',
-        'Ket hop Reports de xem diem trung binh theo lop',
-        'Nho cap nhat noi dung lop trong muc Settings'
+        'Use Class tab to view enrollment statistics and status',
+        'Combine with Reports to view average scores by class',
+        'Remember to update class content in Settings section'
       ]
     },
     {
-      title: 'Khi can ho tro',
+      title: 'When You Need Support',
       steps: [
-        'Dung muc FAQ trong trang chu he thong',
-        'Gui yeu cau cho bo phan ky thuat neu gap loi',
-        'Lap ke hoach on tap bang cach tai chia se file huong dan'
+        'Use FAQ section on system homepage',
+        'Send request to technical department if encountering errors',
+        'Create review plans by downloading and sharing guide files'
       ]
     }
   ]
@@ -57,58 +57,58 @@ export const studentStudyTips = {
   outstandingThreshold: 8,
   warningThreshold: 6.5,
   defaultAdvice: [
-    'Lap lich on tap theo tuan, uu tien mon co diem thap truoc',
-    'Bo sung tai lieu tu muc Results > Class Results > View detail',
-    'Chia nho muc tieu thanh cac buoc nho, danh gia lai moi tuan'
+    'Schedule weekly review sessions, prioritize subjects with low scores first',
+    'Supplement materials from Results > Class Results > View detail',
+    'Break down goals into small steps, review weekly'
   ],
   lowScoreAdvice: [
-    'On lai ghi chu cua lop va xem lai dap an mau trong Results',
-    'Hoi giang vien ve phan gap kho hoac gap tro giang',
-    'Tham gia nhom hoc chung de chia se kinh nghiem'
+    'Review class notes and check sample answers in Results',
+    'Ask lecturer about difficult parts or request tutoring',
+    'Join study groups to share experiences'
   ],
   highlightAdvice: [
-    'Tiep tuc duoc phong do hien tai bang cach on dinh thoi gian hoc',
-    'Co the ho tro ban cung lop bang cach chia se kinh nghiem',
-    'Thu nghiem lam bai nang cao neu giang vien cung cap tai lieu'
+    'Maintain current momentum by stabilizing study schedule',
+    'Can help classmates by sharing experiences',
+    'Try advanced exercises if lecturer provides materials'
   ]
 };
 
 export const lecturerQualityTips = {
   quickWins: [
-    'Su dung muc Reports de xem lop co diem duoi trung binh va tao ke hoach bo tro',
-    'Cap nhat ngan gon de cuong cho moi lop trong muc Class > View',
-    'Giu trang Thai exam ro rang: Scheduled, Ongoing, Completed'
+    'Use Reports section to view classes with below average scores and create support plans',
+    'Update concise syllabus for each class in Class > View section',
+    'Keep exam Status clear: Scheduled, Ongoing, Completed'
   ],
   questionBank: [
-    'Sau moi ky thi, danh danh sach cau hoi co ty le sai cao de chinh sua',
-    'Su dung spreadsheet chuan hoa muc tieu cua tung cau hoi',
-    'Thuc hien review de bang cach doi giang vien trong bo mon'
+    'After each exam period, list questions with high error rates for revision',
+    'Use standardized spreadsheet for objectives of each question',
+    'Perform peer review by exchanging with lecturers in the department'
   ],
   followUp: [
-    'Gui thong bao tu Dashboard cho sinh vien co diem thap',
-    'Tang cuong bu gioi thieu tai lieu on tap truoc cac bai thi lon',
-    'Luu tru thong ke trong ngoai bang de so sanh qua cac ky'
+    'Send notifications from Dashboard to students with low scores',
+    'Strengthen introduction of review materials before major exams',
+    'Store statistics in external tables to compare across periods'
   ]
 };
 
 export const websiteFaq = [
   {
-    question: 'Toi tao hoac doi mat khau o dau?',
-    answer: 'Vao Settings > Account > Change password, nhap mat khau cu va moi.'
+    question: 'Where do I create or change password?',
+    answer: 'Go to Settings > Account > Change password, enter old and new password.'
   },
   {
-    question: 'Lam sao de xem diem chi tiet?',
-    answer: 'Sinh vien vao Results > Class Results > chon lop > View detail de xem tung bai.'
+    question: 'How to view detailed scores?',
+    answer: 'Students go to Results > Class Results > select class > View detail to see each exam.'
   },
   {
-    question: 'Khong vao duoc bai thi?',
-    answer: 'Kiem tra thoi gian mo bai, refresh lai trang, neu van gap loi thi lien he ho tro ky thuat.'
+    question: 'Cannot access exam?',
+    answer: 'Check exam open time, refresh the page, if still encountering errors then contact technical support.'
   }
 ];
 
 export const fallbackMessages = {
   generic:
-    'Toi chua hieu ro yeu cau. Ban co the thu cac tu khoa: "Goi y hoc tap", "Huong dan su dung", "Bao cao lop", hoac chon nut goi y ben tren.',
+    'I did not fully understand your request. You can try keywords: "Study suggestions", "Usage guide", "Class report", or select suggestion buttons above.',
   missingScores:
-    'Chua co du lieu diem de phan tich. Hay hoan thanh it nhat mot bai thi hoac kiem tra lai trang Results.'
+    'No score data available for analysis. Please complete at least one exam or check Results page again.'
 };

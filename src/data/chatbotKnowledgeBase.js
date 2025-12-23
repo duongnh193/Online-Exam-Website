@@ -18,7 +18,7 @@ const flattenGuideEntries = () => {
         title: section.title,
         question: section.title,
         answer: `${section.title}:\n${section.steps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}`,
-        tags: ['guide', 'huong dan', 'bat dau', 'website'],
+        tags: ['guide', 'getting started', 'tutorial', 'website', 'help'],
         rawText: `${section.title} ${content}`
       });
     });
@@ -31,7 +31,7 @@ const flattenGuideEntries = () => {
       title: faq.question,
       question: faq.question,
       answer: faq.answer,
-      tags: ['faq', 'hoi dap', 'tro giup', 'su co'],
+      tags: ['faq', 'question', 'help', 'support', 'issue'],
       rawText: `${faq.question} ${faq.answer}`
     });
   });
@@ -40,30 +40,30 @@ const flattenGuideEntries = () => {
   entries.push({
     id: 'student_default_tips',
     role: 'student',
-    title: 'Meo on tap chung',
-    question: 'Goi y on tap cho sinh vien',
-    answer: `Meo on tap chung:\n${studentStudyTips.defaultAdvice.map((tip, idx) => `${idx + 1}. ${tip}`).join('\n')}`,
-    tags: ['hoc tap', 'ket qua', 'study'],
+    title: 'General Study Tips',
+    question: 'Study suggestions for students',
+    answer: `General Study Tips:\n${studentStudyTips.defaultAdvice.map((tip, idx) => `${idx + 1}. ${tip}`).join('\n')}`,
+    tags: ['study', 'results', 'learning', 'tips'],
     rawText: studentStudyTips.defaultAdvice.join(' ')
   });
 
   entries.push({
     id: 'student_low_score_tips',
     role: 'student',
-    title: 'Khac phuc diem thap',
-    question: 'Toi diem thap thi lam sao?',
-    answer: `Khac phuc diem thap:\n${studentStudyTips.lowScoreAdvice.map((tip, idx) => `${idx + 1}. ${tip}`).join('\n')}`,
-    tags: ['diem thap', 'cai thien', 'study'],
+    title: 'Improving Low Scores',
+    question: 'What should I do if I have low scores?',
+    answer: `Improving Low Scores:\n${studentStudyTips.lowScoreAdvice.map((tip, idx) => `${idx + 1}. ${tip}`).join('\n')}`,
+    tags: ['low score', 'improve', 'study', 'help'],
     rawText: studentStudyTips.lowScoreAdvice.join(' ')
   });
 
   entries.push({
     id: 'lecturer_quality_followup',
     role: 'lecturer',
-    title: 'Cai thien chat luong de va lop',
-    question: 'Lam sao cai thien ket qua lop?',
-    answer: `Cac buoc goi y:\n${lecturerQualityTips.followUp.map((tip, idx) => `${idx + 1}. ${tip}`).join('\n')}`,
-    tags: ['lecturer', 'quality', 'lop', 'bao cao'],
+    title: 'Improving Exam and Class Quality',
+    question: 'How to improve class results?',
+    answer: `Suggested Steps:\n${lecturerQualityTips.followUp.map((tip, idx) => `${idx + 1}. ${tip}`).join('\n')}`,
+    tags: ['lecturer', 'quality', 'class', 'report', 'improvement'],
     rawText: lecturerQualityTips.followUp.join(' ')
   });
 
