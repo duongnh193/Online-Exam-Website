@@ -114,3 +114,19 @@ CREATE TABLE exam_submission
     FOREIGN KEY (student_exam_id) REFERENCES student_exam (id) ON DELETE CASCADE,
     FOREIGN KEY (question_id) REFERENCES question (id) ON DELETE CASCADE
 );
+
+CREATE TABLE chat_history
+(
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id         BIGINT NOT NULL,
+    conversation_id VARCHAR(100) NOT NULL UNIQUE,
+    title           VARCHAR(255),
+    messages        TEXT NOT NULL,
+    message_count   INT DEFAULT 0,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_conversation_id (conversation_id),
+    INDEX idx_updated_at (updated_at)
+);

@@ -49,6 +49,7 @@ desktop.ini
 # === Docker / container-related ===
 *.env
 .env.*
+geminiapi.env
 .dockerignore
 docker-compose.override.yml
 
