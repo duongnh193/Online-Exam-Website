@@ -120,7 +120,7 @@ class ChatHistoryService {
     // Sync to backend (async, don't wait)
     if (SYNC_ENABLED) {
       chatHistoryApiService.saveConversation(conversationId, messages, title)
-        .then(backendConv => {
+        .then(async (backendConv) => {
           // Update localStorage with backend data if successful
           if (backendConv) {
             const updatedHistories = await this.getAllHistories(false);
