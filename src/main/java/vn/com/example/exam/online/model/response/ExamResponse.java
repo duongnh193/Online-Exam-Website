@@ -8,7 +8,7 @@ import lombok.experimental.FieldDefaults;
 import vn.com.example.exam.online.model.ExamStatus;
 import vn.com.example.exam.online.model.entity.Question;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +23,8 @@ public class ExamResponse {
     Long teacherId;
     String title;
     Integer duration;
-    LocalDateTime startAt;
-    LocalDateTime endAt;
+    OffsetDateTime startAt;
+    OffsetDateTime endAt;
     String password;
     ExamStatus status;
     long totalQuestions;

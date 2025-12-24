@@ -12,7 +12,7 @@ import lombok.experimental.FieldDefaults;
 import vn.com.example.exam.online.model.ExamReviewMode;
 import vn.com.example.exam.online.model.ExamStatus;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @NoArgsConstructor
@@ -30,9 +30,9 @@ public class CreateExamRequest {
     @Min(value = 1)
     Integer duration;
     @NotNull
-    LocalDateTime startAt;
+    OffsetDateTime startAt;
     @NotNull
-    LocalDateTime endAt;
+    OffsetDateTime endAt;
     @NotNull
     @Pattern(
             regexp = "^[a-zA-Z0-9!@#$%^&*()_+=\\-\\[\\]{}|:;\"',.<>?/`~\\\\]+$",

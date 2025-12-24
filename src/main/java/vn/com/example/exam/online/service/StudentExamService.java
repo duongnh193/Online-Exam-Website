@@ -28,7 +28,6 @@ import vn.com.example.exam.online.repository.StudentExamRepository;
 import vn.com.example.exam.online.repository.UserRepository;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,7 +67,7 @@ public class StudentExamService {
         if (!password.equals(exam.getPassword())) {
             throw new RuntimeException("Wrong password");
         }
-        LocalDateTime timeNow = LocalDateTime.now();
+        OffsetDateTime timeNow = OffsetDateTime.now();
         if (timeNow.isBefore(exam.getStartAt())) {
             throw new RuntimeException("The exam has not started yet.");
         }

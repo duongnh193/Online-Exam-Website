@@ -21,7 +21,7 @@ import lombok.experimental.FieldDefaults;
 import vn.com.example.exam.online.model.ExamReviewMode;
 import vn.com.example.exam.online.model.ExamStatus;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,8 +48,8 @@ public class Exam {
     User teacher;
     String title;
     Integer duration;
-    LocalDateTime startAt;
-    LocalDateTime endAt;
+    OffsetDateTime startAt;
+    OffsetDateTime endAt;
     String password;
     @Enumerated(EnumType.STRING)
     ExamStatus status;

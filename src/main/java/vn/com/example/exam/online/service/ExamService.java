@@ -18,7 +18,7 @@ import vn.com.example.exam.online.model.response.PasswordExamResponse;
 import vn.com.example.exam.online.repository.ExamRepository;
 import vn.com.example.exam.online.util.Constants;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -46,8 +46,8 @@ public class ExamService {
         return Exam2ExamResponseMapper.INSTANCE.map(examRepository.save(exam));
     }
 
-    private void validateTime(LocalDateTime startAt, LocalDateTime endAt) {
-        LocalDateTime now = LocalDateTime.now();
+    private void validateTime(OffsetDateTime startAt, OffsetDateTime endAt) {
+        OffsetDateTime now = OffsetDateTime.now();
 
         if (startAt.isBefore(now)) {
             throw new IllegalArgumentException("startAt must be greater than or equal to the current time.");
