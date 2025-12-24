@@ -1394,10 +1394,6 @@ function ReportPage() {
                   <NavIcon>{getMenuIcon('reports')}</NavIcon>
                   Reports
                 </NavItem>
-                <NavItem to="/ai-assistant">
-                  <NavIcon>{getMenuIcon('assistant')}</NavIcon>
-                  AI Assistant
-                </NavItem>
               </>
             ) : (
               // Lecturer navigation

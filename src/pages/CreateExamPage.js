@@ -407,17 +407,19 @@ function toDatetimeLocal(dt) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-// Convert from local datetime to UTC by adding 7 hours
+// Convert from local datetime to UTC
+// datetime-local input returns "YYYY-MM-DDTHH:mm" (no timezone)
+// new Date() will parse it as local time and toISOString() converts to UTC
 function fromLocalToUTC(dt) {
   if (!dt) return null;
   
   // Create date object from local datetime string
+  // new Date("YYYY-MM-DDTHH:mm") parses as local timezone
   const localDate = new Date(dt);
   if (isNaN(localDate.getTime())) return null;
   
-  // Add 7 hours to convert to UTC
-  const utcDate = new Date(localDate.getTime() + (7 * 60 * 60 * 1000));
-  return utcDate.toISOString();
+  // toISOString() automatically converts to UTC
+  return localDate.toISOString();
 }
 
 function CreateExamPage() {
